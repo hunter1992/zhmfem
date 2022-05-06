@@ -6,7 +6,7 @@ pub struct Triangle<'tri> {
     k_matrix: Option<Vec<Vec<f64>>>,
 }
 
-impl <'tri> Triangle<'tri> {
+impl<'tri> Triangle<'tri> {
     /// generate a 2D triangle element
     pub fn new(id: usize, nodes: [&Node2D; 3]) -> Triangle {
         Triangle {
@@ -42,7 +42,7 @@ impl <'tri> Triangle<'tri> {
                 let k_mat = self.calc_k(args);
                 self.k_matrix = Some(k_mat);
                 &self.k_matrix.unwrap()
-            },
+            }
         }
     }
 
@@ -80,8 +80,7 @@ impl <'tri> Triangle<'tri> {
         };
         let pick_kij = |num: usize| (num % 2) as usize;
         let coef = ee * t / (4.0 * (1.0 - nu * nu) * self.area());
-        let k_mat = c![c![ coef * k(pick_k(i),
-                           pick_k(j))[pick_kij(i)][pick_kij(j)],
+        let k_mat = c![c![ coef * k(pick_k(i), pick_k(j))[pick_kij(i)][pick_kij(j)],
                            for i in 0..6 ],
                            for j in 0..6 ];
         k_mat
