@@ -35,7 +35,7 @@ impl <'tri> Triangle<'tri> {
     }
 
     /// cache stiffness matrix for element
-    pub fn k(&mut self, args: (f64, f64, f64)) -> Vec<Vec<f64>> {
+    pub fn k(&mut self, args: (f64, f64, f64)) -> &Vec<Vec<f64>> {
         match self.k_matrix {
             Some(k_mat) => &k_mat,
             None => {

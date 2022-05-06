@@ -20,10 +20,12 @@ fn run() {
 
     let tri1 = Triangle::new(2, [&node1, &node2, &node3]);
     tri1.info();
-    tri1.print_k();
 
     let rect1 = Rectangle::new(2, [&node1, &node2, &node3, &node4]);
     rect1.info();
+
+    // try to calculate tri1's stiffness matrix K
+    let tri1_k = tri1.k(parameters);
 
     let vec1 = Vector3::new(1.0, 2.0, 3.0);
     println!("{}", vec1);
