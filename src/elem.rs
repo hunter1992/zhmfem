@@ -35,6 +35,8 @@ impl<'tri> Triangle<'tri> {
     }
 
     /// cache stiffness matrix for element
+    /// 实现Triangle单元k矩阵的缓存功能,防止不停地调用calc_k
+    /// ！！！有Bug！！！
     pub fn k(&mut self, args: (f64, f64, f64)) -> &Vec<Vec<f64>> {
         match self.k_matrix {
             Some(k_mat) => &k_mat,
@@ -47,6 +49,7 @@ impl<'tri> Triangle<'tri> {
     }
 
     /// calculate element stiffness matrix K
+    /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, args: (f64, f64, f64)) -> Vec<Vec<f64>> {
         let (ee, nu, t) = args;
         let xs: [f64; 3] = self.xs();
@@ -54,7 +57,7 @@ impl<'tri> Triangle<'tri> {
 
         let idx = |x| x % 3;
         let b = c![ys[idx(i+1) as usize] - ys[idx(i+2) as usize],
-                   for i in 0..3];
+                   for i in 0..3]; // c!是cute包的宏,实现类似python列表推导
         let c = c![xs[idx(i+2) as usize] - xs[idx(i+1) as usize],
                    for i in 0..3];
 
