@@ -1,9 +1,15 @@
 use crate::node::*;
+use std::convert::TryInto;
+
+pub fn vec2arr<T, const N: usize>(v: Vec<T>) -> [T; N] {
+    v.try_into()
+        .unwrap_or_else(|v: Vec<T>| panic!("Vec len is {} not eq to N", v.len()))
+}
 
 pub struct Triangle<'tri> {
     pub id: usize,
     pub nodes: [&'tri Node2D; 3],
-    k_matrix: Option<&'tri mut Vec<Vec<f64>>>,
+    k_matrix: Option<[[f64; 6]; 6]>,
 }
 
 impl<'tri> Triangle<'tri> {
@@ -37,12 +43,12 @@ impl<'tri> Triangle<'tri> {
     /// cache stiffness matrix for element
     /// 实现Triangle单元k矩阵的缓存功能,防止不停地调用calc_k
     /// ！！！有Bug！！！
-    pub fn k<'a>(&'a self, args: (f64, f64, f64)) -> &'a Vec<Vec<f64>> {
+    pub fn k(&mut self, args: (f64, f64, f64)) -> &[[f64; 6]; 6] {
         match self.k_matrix {
             Some(k_mat) => &k_mat,
             None => {
                 let k_mat = self.calc_k(args);
-                self.k_matrix = Some(&mut k_mat);
+                self.k_matrix = Some(k_mat);
                 &self.k_matrix.unwrap()
             }
         }
@@ -50,18 +56,24 @@ impl<'tri> Triangle<'tri> {
 
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
-    fn calc_k(&self, args: (f64, f64, f64)) -> Vec<Vec<f64>> {
+    pub fn calc_k(&self, args: (f64, f64, f64)) -> [[f64; 6]; 6] {
         let (ee, nu, t) = args;
         let xs: [f64; 3] = self.xs();
         let ys: [f64; 3] = self.ys();
 
         let idx = |x| x % 3;
-        let b = c![ys[idx(i+1) as usize] - ys[idx(i+2) as usize],
-                   for i in 0..3]; // c!是cute包的宏,实现类似python列表推导
-        let c = c![xs[idx(i+2) as usize] - xs[idx(i+1) as usize],
-                   for i in 0..3];
+        let b = [
+            ys[idx(0 + 1) as usize] - ys[idx(0 + 2) as usize],
+            ys[idx(1 + 1) as usize] - ys[idx(1 + 2) as usize],
+            ys[idx(2 + 1) as usize] - ys[idx(2 + 2) as usize],
+        ];
+        let c = [
+            xs[idx(0 + 2) as usize] - xs[idx(0 + 1) as usize],
+            xs[idx(1 + 2) as usize] - xs[idx(1 + 1) as usize],
+            xs[idx(2 + 2) as usize] - xs[idx(2 + 1) as usize],
+        ];
 
-        let k = |i: usize, j: usize| {
+        let k_mat = |i: usize, j: usize| {
             [
                 [
                     b[i] * b[j] + 0.5 * (1.0 - nu) * c[i] * c[j],
@@ -73,20 +85,25 @@ impl<'tri> Triangle<'tri> {
                 ],
             ]
         };
-
-        let pick_k = |num: usize| {
+        let pick_kij = |num: usize| {
             if num % 2 == 0 {
                 (num / 2) as usize
             } else {
                 ((num - 1) / 2) as usize
             }
         };
-        let pick_kij = |num: usize| (num % 2) as usize;
+        let ij = |num: usize| (num % 2) as usize;
         let coef = ee * t / (4.0 * (1.0 - nu * nu) * self.area());
-        let k_mat = c![c![ coef * k(pick_k(i), pick_k(j))[pick_kij(i)][pick_kij(j)],
-                           for i in 0..6 ],
-                           for j in 0..6 ];
-        k_mat
+        let k = |i: usize, j: usize| coef * k_mat(pick_kij(i), pick_kij(j))[ij(i)][ij(j)];
+        let stiffness_matrix = [
+            [k(0, 0), k(0, 1), k(0, 2), k(0, 3), k(0, 4), k(0, 5)],
+            [k(1, 0), k(1, 1), k(1, 2), k(1, 3), k(1, 4), k(1, 5)],
+            [k(2, 0), k(2, 1), k(2, 2), k(2, 3), k(2, 4), k(2, 5)],
+            [k(3, 0), k(3, 1), k(3, 2), k(3, 3), k(3, 4), k(3, 5)],
+            [k(4, 0), k(4, 1), k(4, 2), k(4, 3), k(4, 4), k(4, 5)],
+            [k(5, 0), k(5, 1), k(5, 2), k(5, 3), k(5, 4), k(5, 5)],
+        ];
+        stiffness_matrix
     }
 
     pub fn info(&self) {

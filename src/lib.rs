@@ -45,9 +45,9 @@ mod test {
         assert_ne!([10.0f64, 11.0f64], tri2.nodes[0].coord);
         assert_eq!([1.0f64, 1.0f64], tri2.nodes[0].coord);
 
-        assert_eq!(vec![0.0, 0.0, 1.0], tri1.get_xs());
+        assert_eq!(vec![0.0, 0.0, 1.0], tri1.xs());
         assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_xs());
-        assert_ne!(vec![0.0, 0.0, 1.0], tri1.get_ys());
+        assert_ne!(vec![0.0, 0.0, 1.0], tri1.ys());
         assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_ys());
     }
 }

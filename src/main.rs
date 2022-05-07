@@ -1,6 +1,6 @@
 extern crate nalgebra as na;
 
-use na::{Matrix2x3, Vector3};
+use na::Vector3;
 use zhmfem::*;
 
 fn main() {
@@ -18,14 +18,15 @@ fn run() {
     let node3 = Node2D::new(3, [0.0, 1.0]);
     let node4 = Node2D::new(4, [1.0, 1.0]);
 
-    let tri1 = Triangle::new(2, [&node1, &node2, &node3]);
+    let tri1 = Triangle::new(1, [&node1, &node2, &node3]);
     tri1.info();
+    let tri1_k = tri1.calc_k(parameters);
+    println!("{:?}", tri1_k);
 
     let rect1 = Rectangle::new(2, [&node1, &node2, &node3, &node4]);
-    rect1.info();
 
     // try to calculate tri1's stiffness matrix K
-    let tri1_k = tri1.k(parameters);
+    //let tri1_k = tri1.k(parameters);
 
     let vec1 = Vector3::new(1.0, 2.0, 3.0);
     println!("{}", vec1);
