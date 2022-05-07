@@ -3,7 +3,7 @@ use crate::node::*;
 pub struct Triangle<'tri> {
     pub id: usize,
     pub nodes: [&'tri Node2D; 3],
-    k_matrix: Option<Vec<Vec<f64>>>,
+    k_matrix: Option<&'tri mut Vec<Vec<f64>>>,
 }
 
 impl<'tri> Triangle<'tri> {
@@ -37,12 +37,12 @@ impl<'tri> Triangle<'tri> {
     /// cache stiffness matrix for element
     /// 实现Triangle单元k矩阵的缓存功能,防止不停地调用calc_k
     /// ！！！有Bug！！！
-    pub fn k(&mut self, args: (f64, f64, f64)) -> &Vec<Vec<f64>> {
+    pub fn k<'a>(&'a self, args: (f64, f64, f64)) -> &'a Vec<Vec<f64>> {
         match self.k_matrix {
             Some(k_mat) => &k_mat,
             None => {
                 let k_mat = self.calc_k(args);
-                self.k_matrix = Some(k_mat);
+                self.k_matrix = Some(&mut k_mat);
                 &self.k_matrix.unwrap()
             }
         }
