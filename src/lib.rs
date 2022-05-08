@@ -1,5 +1,5 @@
-#[macro_use(c)]
-extern crate cute;
+//#[macro_use(c)]
+//extern crate cute;
 
 use std::convert::TryInto;
 
