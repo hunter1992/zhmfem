@@ -15,13 +15,16 @@ fn run() {
 
     let node1 = Node2D::new(1, [0.0, 0.0]);
     let node2 = Node2D::new(2, [1.0, 0.0]);
-    let node3 = Node2D::new(3, [0.0, 1.0]);
-    let node4 = Node2D::new(4, [1.0, 1.0]);
+    let node3 = Node2D::new(3, [1.0, 1.0]);
+    let node4 = Node2D::new(4, [0.0, 1.0]);
 
-    let tri1 = Triangle::new(1, [&node1, &node2, &node3]);
+    let mut tri1 = Triangle::new(1, [&node1, &node2, &node4]);
     tri1.info();
-    let tri1_k = tri1.calc_k(parameters);
-    println!("{:?}", tri1_k);
+    tri1.k_printer(parameters);
+
+    let mut tri2 = Triangle::new(2, [&node3, &node4, &node2]);
+    tri2.info();
+    tri2.k_printer(parameters);
 
     let rect1 = Rectangle::new(2, [&node1, &node2, &node3, &node4]);
 

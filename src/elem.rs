@@ -1,10 +1,4 @@
 use crate::node::*;
-use std::convert::TryInto;
-
-pub fn vec2arr<T, const N: usize>(v: Vec<T>) -> [T; N] {
-    v.try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("Vec len is {} not eq to N", v.len()))
-}
 
 pub struct Triangle<'tri> {
     pub id: usize,
@@ -41,23 +35,19 @@ impl<'tri> Triangle<'tri> {
     }
 
     /// cache stiffness matrix for element
-    /// 实现Triangle单元k矩阵的缓存功能,防止不停地调用calc_k
-    /// ！！！有Bug！！！
-    pub fn k(&mut self, args: (f64, f64, f64)) -> &[[f64; 6]; 6] {
-        match self.k_matrix {
-            Some(k_mat) => &k_mat,
-            None => {
-                let k_mat = self.calc_k(args);
-                self.k_matrix = Some(k_mat);
-                &self.k_matrix.unwrap()
-            }
+    pub fn k(&mut self, material_args: (f64, f64, f64)) -> &[[f64; 6]; 6] {
+        if self.k_matrix.is_none() {
+            self.k_matrix.get_or_insert(self.calc_k(material_args))
+        } else {
+            self.k_matrix.as_ref().unwrap()
         }
     }
 
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
-    pub fn calc_k(&self, args: (f64, f64, f64)) -> [[f64; 6]; 6] {
-        let (ee, nu, t) = args;
+    fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
+        println!("--->Calculating triangle[{}]'s stiffness matrix...", self.id);
+        let (ee, nu, t) = material_args;
         let xs: [f64; 3] = self.xs();
         let ys: [f64; 3] = self.ys();
 
@@ -106,6 +96,29 @@ impl<'tri> Triangle<'tri> {
         stiffness_matrix
     }
 
+    pub fn k_printer(&mut self, material_args: (f64, f64, f64)) {
+        if self.k_matrix.is_none() {
+            self.k_matrix = Some(self.calc_k(material_args));
+        }
+        print!("k{} = \n[", self.id);
+        for row in 0..6 {
+            if row == 0 {
+                print!("[");
+            } else {
+                print!(" [")
+            }
+            for col in 0..6 {
+                print!(" {:-9.6} ", self.k_matrix.unwrap()[row][col]);
+            }
+            if row == 5 {
+                println!("]]");
+            } else {
+                println!("]")
+            }
+        }
+        println!("");
+    }
+
     pub fn info(&self) {
         println!(
             "\nElement_2D Info:\n\tId:    {}\n\tArea:  {}\n\tType:  Triangle
@@ -116,6 +129,12 @@ impl<'tri> Triangle<'tri> {
             self.nodes[1],
             self.nodes[2]
         );
+        println!("  If you wanna:");
+        println!("        see the stiffness matrix, use:");
+        println!("               tri-elem_name.k_printer((ee, nu, t))");
+        println!("        or, just get the stiffness matrix:");
+        println!("               tri-elem_name.k((ee, nu, t))");
+        print!("\n");
     }
 
     pub fn area(&self) -> f64 {

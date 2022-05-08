@@ -1,11 +1,18 @@
 #[macro_use(c)]
 extern crate cute;
 
+use std::convert::TryInto;
+
 mod elem;
 mod node;
 
 pub use elem::*;
 pub use node::*;
+
+pub fn vec2arr<T, const N: usize>(v: Vec<T>) -> [T; N] {
+    v.try_into()
+        .unwrap_or_else(|v: Vec<T>| panic!("Vec len is {} not eq to N", v.len()))
+}
 
 #[cfg(test)]
 mod test {
