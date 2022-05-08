@@ -1,2 +1,2 @@
 # zhmfem
-A simple FEM(Finite element method) crate in Rust
+A simple FEM(Finite Element Method) crate in Rust
