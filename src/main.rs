@@ -13,22 +13,21 @@ fn run() {
     let t = 1.0f64;
     let parameters = (ee, nu, t);
 
-    let node1 = Node2D::new(1, [0.0, 0.0]);
-    let node2 = Node2D::new(2, [1.0, 0.0]);
-    let node3 = Node2D::new(3, [1.0, 1.0]);
-    let node4 = Node2D::new(4, [0.0, 1.0]);
+    let points: Vec<Vec<f64>> = vec![
+        vec![0.0, 0.0],
+        vec![1.0, 0.0],
+        vec![1.0, 1.0],
+        vec![0.0, 1.0],
+    ];
+    let elements: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
 
-    let mut tri1 = Triangle::new(1, [&node1, &node2, &node4]);
-    tri1.info();
+    let nodes = nodeslist_2d(&points);
+
+    let mut tri1 = Triangle::new(1, [&nodes[0], &nodes[1], &nodes[3]]);
+    let mut tri2 = Triangle::new(2, [&nodes[2], &nodes[3], &nodes[1]]);
+
     tri1.k_printer(parameters);
-
-    let mut tri2 = Triangle::new(2, [&node3, &node4, &node2]);
-    tri2.info();
     tri2.k_printer(parameters);
 
-    let rect1 = Rectangle::new(2, [&node1, &node2, &node3, &node4]);
-    rect1.info();
-
-    //let vec1 = Vector3::new(1.0, 2.0, 3.0);
-    //println!("{}", vec1);
+    //assembly(vec![tri1_k, tri2_k]);
 }

@@ -46,7 +46,7 @@ impl<'tri> Triangle<'tri> {
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
-        println!("--->Calculating triangle[{}]'s stiffness matrix...", self.id);
+        println!("\n--->Calculating triangle[{}]'s stiffness matrix...", self.id);
         let (ee, nu, t) = material_args;
         let xs: [f64; 3] = self.xs();
         let ys: [f64; 3] = self.ys();
@@ -100,6 +100,7 @@ impl<'tri> Triangle<'tri> {
         if self.k_matrix.is_none() {
             self.k_matrix = Some(self.calc_k(material_args));
         }
+        print!("\n");
         print!("k{} = \n[", self.id);
         for row in 0..6 {
             if row == 0 {
@@ -116,7 +117,6 @@ impl<'tri> Triangle<'tri> {
                 println!("]")
             }
         }
-        println!("");
     }
 
     pub fn info(&self) {
@@ -129,12 +129,12 @@ impl<'tri> Triangle<'tri> {
             self.nodes[1],
             self.nodes[2]
         );
-        println!("  If you wanna:");
-        println!("        see the stiffness matrix, use:");
-        println!("               tri-elem_name.k_printer((ee, nu, t))");
-        println!("        or, just get the stiffness matrix:");
-        println!("               tri-elem_name.k((ee, nu, t))");
-        print!("\n");
+        //println!("  If you wanna:");
+        //println!("        see the stiffness matrix, use:");
+        //println!("               tri-elem_name.k_printer((ee, nu, t))");
+        //println!("        or, just get the stiffness matrix:");
+        //println!("               tri-elem_name.k((ee, nu, t))");
+        //print!("\n");
     }
 
     pub fn area(&self) -> f64 {

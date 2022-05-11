@@ -14,6 +14,49 @@ pub fn vec2arr<T, const N: usize>(v: Vec<T>) -> [T; N] {
         .unwrap_or_else(|v: Vec<T>| panic!("Vec len is {} not eq to N", v.len()))
 }
 
+pub fn matrix_printer(mat: &[Vec<f64>]) {
+    print!("[");
+    for row in 0..mat.len() {
+        if row == 0 {
+            print!("[");
+        } else {
+            print!(" [");
+        }
+        for col in 0..mat[0].len() {
+            print!(" {:-9.6} ", mat[row][col]);
+        }
+        if row == mat.len() - 1 {
+            println!("]]");
+        } else {
+            println!("]");
+        }
+    }
+}
+
+pub fn nodeslist_1d(points: &[Vec<f64>]) -> Vec<Node1D> {
+    let mut nodes: Vec<Node1D> = Vec::new();
+    for (idx, point) in points.iter().enumerate() {
+        nodes.push(Node1D::new(idx + 1, [point[0]]));
+    }
+    nodes
+}
+
+pub fn nodeslist_2d(points: &[Vec<f64>]) -> Vec<Node2D> {
+    let mut nodes: Vec<Node2D> = Vec::new();
+    for (idx, point) in points.iter().enumerate() {
+        nodes.push(Node2D::new(idx + 1, [point[0], point[1]]));
+    }
+    nodes
+}
+
+pub fn nodeslist_3d(points: &[Vec<f64>]) -> Vec<Node3D> {
+    let mut nodes: Vec<Node3D> = Vec::new();
+    for (idx, point) in points.iter().enumerate() {
+        nodes.push(Node3D::new(idx + 1, [point[0], point[1], point[2]]));
+    }
+    nodes
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
