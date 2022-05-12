@@ -33,7 +33,7 @@ pub fn matrix_printer(mat: &[Vec<f64>]) {
     }
 }
 
-pub fn nodeslist_1d(points: &[Vec<f64>]) -> Vec<Node1D> {
+pub fn nodes1d_vec(points: &[Vec<f64>]) -> Vec<Node1D> {
     let mut nodes: Vec<Node1D> = Vec::new();
     for (idx, point) in points.iter().enumerate() {
         nodes.push(Node1D::new(idx + 1, [point[0]]));
@@ -41,7 +41,7 @@ pub fn nodeslist_1d(points: &[Vec<f64>]) -> Vec<Node1D> {
     nodes
 }
 
-pub fn nodeslist_2d(points: &[Vec<f64>]) -> Vec<Node2D> {
+pub fn nodes2d_vec(points: &[Vec<f64>]) -> Vec<Node2D> {
     let mut nodes: Vec<Node2D> = Vec::new();
     for (idx, point) in points.iter().enumerate() {
         nodes.push(Node2D::new(idx + 1, [point[0], point[1]]));
@@ -49,7 +49,7 @@ pub fn nodeslist_2d(points: &[Vec<f64>]) -> Vec<Node2D> {
     nodes
 }
 
-pub fn nodeslist_3d(points: &[Vec<f64>]) -> Vec<Node3D> {
+pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
     let mut nodes: Vec<Node3D> = Vec::new();
     for (idx, point) in points.iter().enumerate() {
         nodes.push(Node3D::new(idx + 1, [point[0], point[1], point[2]]));

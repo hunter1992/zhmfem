@@ -19,9 +19,9 @@ fn run() {
         vec![1.0, 1.0],
         vec![0.0, 1.0],
     ];
-    let elements: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
+    let nodes = nodes2d_vec(&points);
 
-    let nodes = nodeslist_2d(&points);
+    let elements: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
 
     let mut tri1 = Triangle::new(1, [&nodes[0], &nodes[1], &nodes[3]]);
     let mut tri2 = Triangle::new(2, [&nodes[2], &nodes[3], &nodes[1]]);

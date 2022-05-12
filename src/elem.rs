@@ -46,7 +46,10 @@ impl<'tri> Triangle<'tri> {
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
-        println!("\n--->Calculating triangle[{}]'s stiffness matrix...", self.id);
+        println!(
+            "\n--->Calculating triangle[{}]'s stiffness matrix...",
+            self.id
+        );
         let (ee, nu, t) = material_args;
         let xs: [f64; 3] = self.xs();
         let ys: [f64; 3] = self.ys();
@@ -119,6 +122,17 @@ impl<'tri> Triangle<'tri> {
         }
     }
 
+    pub fn area(&self) -> f64 {
+        let x1 = self.nodes[0].coord[0];
+        let y1 = self.nodes[0].coord[1];
+        let x2 = self.nodes[1].coord[0];
+        let y2 = self.nodes[1].coord[1];
+        let x3 = self.nodes[2].coord[0];
+        let y3 = self.nodes[2].coord[1];
+        let tri_area = 0.5 * ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)).abs();
+        tri_area
+    }
+
     pub fn info(&self) {
         println!(
             "\nElement_2D Info:\n\tId:    {}\n\tArea:  {}\n\tType:  Triangle
@@ -135,17 +149,6 @@ impl<'tri> Triangle<'tri> {
         //println!("        or, just get the stiffness matrix:");
         //println!("               tri-elem_name.k((ee, nu, t))");
         //print!("\n");
-    }
-
-    pub fn area(&self) -> f64 {
-        let x1 = self.nodes[0].coord[0];
-        let y1 = self.nodes[0].coord[1];
-        let x2 = self.nodes[1].coord[0];
-        let y2 = self.nodes[1].coord[1];
-        let x3 = self.nodes[2].coord[0];
-        let y3 = self.nodes[2].coord[1];
-        let tri_area = 0.5 * ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)).abs();
-        tri_area
     }
 }
 
