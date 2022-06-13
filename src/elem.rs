@@ -123,13 +123,9 @@ impl<'tri> Triangle<'tri> {
     }
 
     pub fn area(&self) -> f64 {
-        let x1 = self.nodes[0].coord[0];
-        let y1 = self.nodes[0].coord[1];
-        let x2 = self.nodes[1].coord[0];
-        let y2 = self.nodes[1].coord[1];
-        let x3 = self.nodes[2].coord[0];
-        let y3 = self.nodes[2].coord[1];
-        let tri_area = 0.5 * ((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)).abs();
+        let x = self.xs();
+        let y = self.ys();
+        let tri_area = 0.5 * ((x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0])).abs();
         tri_area
     }
 

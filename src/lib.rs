@@ -99,5 +99,8 @@ mod test {
         assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_xs());
         assert_ne!(vec![0.0, 0.0, 1.0], tri1.ys());
         assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_ys());
+
+        assert_eq!(0.5f64, tri1.area());
+        assert_eq!(0.5f64, tri2.area());
     }
 }

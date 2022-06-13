@@ -24,8 +24,8 @@ fn run() {
     let mut tri1 = Triangle::new(1, [&nodes[0], &nodes[1], &nodes[3]]);
     let mut tri2 = Triangle::new(2, [&nodes[2], &nodes[3], &nodes[1]]);
 
-    tri1.k_printer(parameters);
-    tri2.k_printer(parameters);
+    let k1 = tri1.k(parameters);
+    let k2 = tri2.k(parameters);
 
-    //assembly(vec![tri1_k, tri2_k]);
+    //let K = assembly(k1, k2);
 }
