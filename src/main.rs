@@ -24,8 +24,17 @@ fn run() {
     let mut tri1 = Triangle::new(1, [&nodes[0], &nodes[1], &nodes[3]]);
     let mut tri2 = Triangle::new(2, [&nodes[2], &nodes[3], &nodes[1]]);
 
-    let k1 = tri1.k(parameters);
-    let k2 = tri2.k(parameters);
+    k1 = tri1.k(parameters);
+    k2 = tri2.k(parameters);
 
-    //let K = assembly(k1, k2);
+    let K = assembly(k1, k2);
+}
+
+fn assembly_tri2D3N(
+    n_nodes: usize,
+    n_freedom: usize,
+    coupled_nodes: Vec<Vec<usize>>,
+    ks: Vec<Vec<&[[f64; 6]; 6]>>,
+) {
+    let k
 }

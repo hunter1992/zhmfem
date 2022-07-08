@@ -139,12 +139,12 @@ impl<'tri> Triangle<'tri> {
             self.nodes[1],
             self.nodes[2]
         );
-        //println!("  If you wanna:");
-        //println!("        see the stiffness matrix, use:");
-        //println!("               tri-elem_name.k_printer((ee, nu, t))");
-        //println!("        or, just get the stiffness matrix:");
-        //println!("               tri-elem_name.k((ee, nu, t))");
-        //print!("\n");
+        println!("  If you wanna:");
+        println!("        see the stiffness matrix, use:");
+        println!("               tri-elem_name.k_printer((ee, nu, t))");
+        println!("        or, just get the stiffness matrix:");
+        println!("               tri-elem_name.k((ee, nu, t))");
+        print!("\n");
     }
 }
 
