@@ -103,7 +103,6 @@ impl<'tri> Triangle<'tri> {
         if self.k_matrix.is_none() {
             self.k_matrix = Some(self.calc_k(material_args));
         }
-        print!("\n");
         print!("k{} = \n[", self.id);
         for row in 0..6 {
             if row == 0 {
@@ -120,6 +119,7 @@ impl<'tri> Triangle<'tri> {
                 println!("]")
             }
         }
+        println!("");
     }
 
     pub fn area(&self) -> f64 {

@@ -9,12 +9,17 @@ mod node;
 pub use elem::*;
 pub use node::*;
 
-pub fn vec2arr<T, const N: usize>(v: Vec<T>) -> [T; N] {
-    v.try_into()
-        .unwrap_or_else(|v: Vec<T>| panic!("Vec len is {} not eq to N", v.len()))
+pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
+    let mut rlt: Vec<Vec<usize>> = Vec::new();
+    for i in 0..aim.len() {
+        for j in 0..aim.len() {
+            rlt.push(vec![aim[i], aim[j]]);
+        }
+    }
+    rlt
 }
 
-pub fn matrix_printer(mat: &[Vec<f64>]) {
+pub fn print_vec2d(mat: &[Vec<f64>]) {
     print!("[");
     for row in 0..mat.len() {
         if row == 0 {
@@ -23,6 +28,25 @@ pub fn matrix_printer(mat: &[Vec<f64>]) {
             print!(" [");
         }
         for col in 0..mat[0].len() {
+            print!(" {:-9.6} ", mat[row][col]);
+        }
+        if row == mat.len() - 1 {
+            println!("]]");
+        } else {
+            println!("]");
+        }
+    }
+}
+
+pub fn print_arr2d(mat: &[[f64; 6]]) {
+    print!("[");
+    for row in 0..6 {
+        if row == 0 {
+            print!("[");
+        } else {
+            print!(" [");
+        }
+        for col in 0..6 {
             print!(" {:-9.6} ", mat[row][col]);
         }
         if row == mat.len() - 1 {
@@ -55,6 +79,21 @@ pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
         nodes.push(Node3D::new(idx + 1, [point[0], point[1], point[2]]));
     }
     nodes
+}
+
+pub fn tri2d3n_vec<'a>(nodes: &'a [Node2D], couples: &'a [Vec<usize>]) -> Vec<Triangle<'a>> {
+    let mut tri2d3n: Vec<Triangle> = Vec::new();
+    for (ele_id, cpld) in couples.iter().enumerate() {
+        tri2d3n.push(Triangle::new(
+            ele_id + 1,
+            [
+                &nodes[cpld[0] - 1],
+                &nodes[cpld[1] - 1],
+                &nodes[cpld[2] - 1],
+            ],
+        ));
+    }
+    tri2d3n
 }
 
 #[cfg(test)]
