@@ -1,8 +1,3 @@
-//#[macro_use(c)]
-//extern crate cute;
-
-use std::convert::TryInto;
-
 mod elem;
 mod node;
 
@@ -20,6 +15,7 @@ pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
 }
 
 pub fn print_vec2d(mat: &[Vec<f64>]) {
+    print!("\n");
     print!("[");
     for row in 0..mat.len() {
         if row == 0 {
@@ -94,6 +90,48 @@ pub fn tri2d3n_vec<'a>(nodes: &'a [Node2D], couples: &'a [Vec<usize>]) -> Vec<Tr
         ));
     }
     tri2d3n
+}
+
+pub fn global_k(
+    n_nodes: usize,
+    n_freedom: usize,
+    material: (f64, f64, f64),
+    coupled_nodes: &Vec<Vec<usize>>,
+    elem_vec: &mut Vec<Triangle>,
+) -> Vec<Vec<f64>> {
+    let mat_size: usize = n_nodes * n_freedom;
+    let mut kk: Vec<Vec<f64>> = vec![vec![0.0; mat_size]; mat_size];
+
+    if coupled_nodes.len() != elem_vec.len() {
+        println!("---> Error! From assemble_global_k func.");
+        println!("     The count of elements not equal to K mat size.");
+        panic!("---> Global K failed!");
+    }
+
+    // 计算并缓存每个单元的刚度矩阵
+    let ks: Vec<_> = elem_vec.iter_mut().map(|x| x.k(material)).collect();
+
+    // 获取单个单元内的节点数目N,构造0到N的range
+    // 用于遍历单个单元的局部刚度矩阵k
+    let n_nodes: Vec<usize> = (0..coupled_nodes[0].len()).collect();
+    let loc: Vec<Vec<usize>> = full_combination(&n_nodes);
+
+    // 整体刚度矩阵中需要修改的节点坐标对
+    // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
+    let Loc: Vec<Vec<Vec<usize>>> = coupled_nodes.iter().map(|x| full_combination(&x)).collect();
+
+    for i in 0..Loc.len() {
+        for j in 0..loc.len() {
+            for k in 0..n_freedom {
+                for l in 0..n_freedom {
+                    kk[(Loc[i][j][0] - 1) * n_freedom + k][(Loc[i][j][1] - 1) * n_freedom + l] = kk
+                        [(Loc[i][j][0] - 1) * n_freedom + k][(Loc[i][j][1] - 1) * n_freedom + l]
+                        + ks[i][loc[j][0] * n_freedom + k][loc[j][1] * n_freedom + l];
+                }
+            }
+        }
+    }
+    kk
 }
 
 #[cfg(test)]
