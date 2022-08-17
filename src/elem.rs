@@ -47,7 +47,7 @@ impl<'tri> Triangle<'tri> {
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
         println!(
-            "\n--->Calculating triangle[{}]'s stiffness matrix...",
+            "--->Calculating triangle[{}]'s stiffness matrix...\n",
             self.id
         );
         let (ee, nu, t) = material_args;

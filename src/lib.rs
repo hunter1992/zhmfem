@@ -15,7 +15,6 @@ pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
 }
 
 pub fn print_vec2d(mat: &[Vec<f64>]) {
-    print!("\n");
     print!("[");
     for row in 0..mat.len() {
         if row == 0 {
@@ -118,14 +117,16 @@ pub fn global_k(
 
     // 整体刚度矩阵中需要修改的节点坐标对
     // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
-    let Loc: Vec<Vec<Vec<usize>>> = coupled_nodes.iter().map(|x| full_combination(&x)).collect();
+    let loc_g: Vec<Vec<Vec<usize>>> = coupled_nodes.iter().map(|x| full_combination(&x)).collect();
 
-    for i in 0..Loc.len() {
+    for i in 0..loc_g.len() {
         for j in 0..loc.len() {
             for k in 0..n_freedom {
                 for l in 0..n_freedom {
-                    kk[(Loc[i][j][0] - 1) * n_freedom + k][(Loc[i][j][1] - 1) * n_freedom + l] = kk
-                        [(Loc[i][j][0] - 1) * n_freedom + k][(Loc[i][j][1] - 1) * n_freedom + l]
+                    kk[(loc_g[i][j][0] - 1) * n_freedom + k]
+                        [(loc_g[i][j][1] - 1) * n_freedom + l] = kk
+                        [(loc_g[i][j][0] - 1) * n_freedom + k]
+                        [(loc_g[i][j][1] - 1) * n_freedom + l]
                         + ks[i][loc[j][0] * n_freedom + k][loc[j][1] * n_freedom + l];
                 }
             }
@@ -135,7 +136,7 @@ pub fn global_k(
 }
 
 #[cfg(test)]
-mod test {
+mod testing {
     use super::*;
 
     #[test]
