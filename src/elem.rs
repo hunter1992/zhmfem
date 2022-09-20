@@ -1,4 +1,5 @@
 use crate::node::*;
+use std::fmt;
 
 pub struct Triangle<'tri> {
     pub id: usize,
@@ -47,7 +48,7 @@ impl<'tri> Triangle<'tri> {
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
         println!(
-            "--->Calculating triangle[{}]'s stiffness matrix...\n",
+            "\n--->Calculating triangle[{}]'s stiffness matrix...",
             self.id
         );
         let (ee, nu, t) = material_args;
@@ -128,9 +129,12 @@ impl<'tri> Triangle<'tri> {
         let tri_area = 0.5 * ((x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0])).abs();
         tri_area
     }
+}
 
-    pub fn info(&self) {
-        println!(
+impl fmt::Display for Triangle<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
             "\nElement_2D Info:\n\tId:    {}\n\tArea:  {}\n\tType:  Triangle
 \tCoord: {:?}\n\t       {:?}\n\t       {:?}",
             self.id,
@@ -138,13 +142,7 @@ impl<'tri> Triangle<'tri> {
             self.nodes[0],
             self.nodes[1],
             self.nodes[2]
-        );
-        println!("  If you wanna:");
-        println!("        see the stiffness matrix, use:");
-        println!("               tri-elem_name.k_printer((ee, nu, t))");
-        println!("        or, just get the stiffness matrix:");
-        println!("               tri-elem_name.k((ee, nu, t))");
-        print!("\n");
+        )
     }
 }
 
