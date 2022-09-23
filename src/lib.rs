@@ -33,18 +33,21 @@ pub fn print_vec2d(mat: &[Vec<f64>]) {
     }
 }
 
-pub fn print_arr2d(mat: &[[f64; 6]]) {
+pub fn print_arr2d<T, const R: usize, const C: usize>(arr: &[[T; C]; R])
+where
+    T: std::fmt::Display,
+{
     print!("[");
-    for row in 0..6 {
-        if row == 0 {
+    for r in 0..R {
+        if r == 0 {
             print!("[");
         } else {
             print!(" [");
         }
-        for col in 0..6 {
-            print!(" {:-9.6} ", mat[row][col]);
+        for c in 0..C {
+            print!(" {:-9.6} ", arr[r][c]);
         }
-        if row == mat.len() - 1 {
+        if r == arr.len() - 1 {
             println!("]]");
         } else {
             println!("]");

@@ -29,7 +29,10 @@ fn run() {
 
     // construct element by coupled nodes
     let mut tris: Vec<Triangle> = tri2d3n_vec(&nodes, &coupled_nodes);
-    println!("{}", tris[0]);
+    for i in tris.iter_mut() {
+        println!("{}", i);
+        print_arr2d(i.k(material));
+    }
 
     // assemble global stiffness matrix
     let globalk = global_k(
