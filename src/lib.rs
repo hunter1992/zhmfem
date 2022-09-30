@@ -16,7 +16,7 @@ pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
     rlt
 }
 
-pub fn print_vec2d(mat: &[Vec<f64>]) {
+pub fn print_2dvec(mat: &[Vec<f64>]) {
     for row in 0..mat.len() {
         if row == 0 {
             print!("[[");
@@ -34,7 +34,7 @@ pub fn print_vec2d(mat: &[Vec<f64>]) {
     }
 }
 
-pub fn print_arr2d<T, const R: usize, const C: usize>(arr: &[[T; C]; R])
+pub fn print_2darr<T, const R: usize, const C: usize>(arr: &[[T; C]; R])
 where
     T: std::fmt::Display,
 {
@@ -45,7 +45,7 @@ where
             print!(" [");
         }
         for c in 0..C {
-            print!(" {:-9.6} ", arr[r][c]);
+            print!(" {:-6.3} ", arr[r][c]);
         }
         if r == arr.len() - 1 {
             println!("]]");

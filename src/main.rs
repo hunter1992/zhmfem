@@ -31,7 +31,7 @@ fn run() {
     let mut tris: Vec<Triangle> = tri2d3n_vec(&nodes, &coupled_nodes);
     for i in tris.iter_mut() {
         println!("{}", i);
-        print_arr2d(i.k(material));
+        print_2darr(i.k(material));
     }
 
     // assemble global stiffness matrix
@@ -39,5 +39,5 @@ fn run() {
 
     // print the global K matrix
     println!("\nK =");
-    print_arr2d(&globalk);
+    print_2darr(&globalk);
 }
