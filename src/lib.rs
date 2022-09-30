@@ -1,3 +1,5 @@
+#![feature(generic_const_exprs)]
+
 mod elem;
 mod node;
 
@@ -94,15 +96,12 @@ pub fn tri2d3n_vec<'a>(nodes: &'a [Node2D], couples: &'a [Vec<usize>]) -> Vec<Tr
     tri2d3n
 }
 
-pub fn global_k(
-    n_nodes: usize,
-    n_freedom: usize,
+pub fn global_k<const N_NODES: usize, const N_FREEDOM: usize>(
     material: (f64, f64, f64),
     coupled_nodes: &Vec<Vec<usize>>,
     elem_vec: &mut Vec<Triangle>,
-) -> Vec<Vec<f64>> {
-    let mat_size: usize = n_nodes * n_freedom;
-    let mut kk: Vec<Vec<f64>> = vec![vec![0.0; mat_size]; mat_size];
+) -> [[f64; N_NODES * N_FREEDOM]; N_FREEDOM * N_NODES] {
+    let mut kk = [[0.0; N_NODES * N_FREEDOM]; N_FREEDOM * N_NODES];
 
     if coupled_nodes.len() != elem_vec.len() {
         println!("---> Error! From assemble_global_k func.");
@@ -124,13 +123,13 @@ pub fn global_k(
 
     for i in 0..loc_g.len() {
         for j in 0..loc.len() {
-            for k in 0..n_freedom {
-                for l in 0..n_freedom {
-                    kk[(loc_g[i][j][0] - 1) * n_freedom + k]
-                        [(loc_g[i][j][1] - 1) * n_freedom + l] = kk
-                        [(loc_g[i][j][0] - 1) * n_freedom + k]
-                        [(loc_g[i][j][1] - 1) * n_freedom + l]
-                        + ks[i][loc[j][0] * n_freedom + k][loc[j][1] * n_freedom + l];
+            for k in 0..N_FREEDOM {
+                for l in 0..N_FREEDOM {
+                    kk[(loc_g[i][j][0] - 1) * N_FREEDOM + k]
+                        [(loc_g[i][j][1] - 1) * N_FREEDOM + l] = kk
+                        [(loc_g[i][j][0] - 1) * N_FREEDOM + k]
+                        [(loc_g[i][j][1] - 1) * N_FREEDOM + l]
+                        + ks[i][loc[j][0] * N_FREEDOM + k][loc[j][1] * N_FREEDOM + l];
                 }
             }
         }

@@ -35,15 +35,9 @@ fn run() {
     }
 
     // assemble global stiffness matrix
-    let globalk = global_k(
-        points.len(),
-        points[0].len(),
-        material,
-        &coupled_nodes,
-        &mut tris,
-    );
+    let globalk = global_k::<4, 2>(material, &coupled_nodes, &mut tris);
 
     // print the global K matrix
-    println!("K =");
-    print_vec2d(&globalk);
+    println!("\nK =");
+    print_arr2d(&globalk);
 }
