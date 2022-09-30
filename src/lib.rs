@@ -17,10 +17,9 @@ pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
 }
 
 pub fn print_vec2d(mat: &[Vec<f64>]) {
-    print!("[");
     for row in 0..mat.len() {
         if row == 0 {
-            print!("[");
+            print!("[[");
         } else {
             print!(" [");
         }
