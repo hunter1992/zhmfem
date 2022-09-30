@@ -39,10 +39,9 @@ pub fn print_arr2d<T, const R: usize, const C: usize>(arr: &[[T; C]; R])
 where
     T: std::fmt::Display,
 {
-    print!("[");
     for r in 0..R {
         if r == 0 {
-            print!("[");
+            print!("[[");
         } else {
             print!(" [");
         }
