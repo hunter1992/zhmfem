@@ -1,5 +1,6 @@
-//extern crate nalgebra as na;
+extern crate nalgebra as na;
 
+use na::*;
 use zhmfem::*;
 
 fn main() {
@@ -35,9 +36,18 @@ fn run() {
     }
 
     // assemble global stiffness matrix
-    let globalk = global_k::<4, 2>(material, &coupled_nodes, &mut tris);
+    let k_arr = global_k::<4, 2>(material, &coupled_nodes, &mut tris);
 
     // print the global K matrix
     println!("\nK =");
-    print_2darr(&globalk);
+    print_2darr(&k_arr);
+
+    // 构造nalgebra矩阵准备计算
+    let k = SMatrix::<f64, 8, 8>::from(k_arr);
+
+    // 构造节点位移、约束力、外力列向量
+    let qe = vec![0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0]; // boolean
+    let fr = vec![0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0];
+    let qe_nonzero_idx = nonzero_index(&qe);
+    
 }

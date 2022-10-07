@@ -6,17 +6,10 @@ mod node;
 pub use elem::*;
 pub use node::*;
 
-pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
-    let mut rlt: Vec<Vec<usize>> = Vec::new();
-    for i in 0..aim.len() {
-        for j in 0..aim.len() {
-            rlt.push(vec![aim[i], aim[j]]);
-        }
-    }
-    rlt
-}
-
-pub fn print_2dvec(mat: &[Vec<f64>]) {
+pub fn print_2dvec<T>(mat: &[Vec<T>])
+where
+    T: std::fmt::Display,
+{
     for row in 0..mat.len() {
         if row == 0 {
             print!("[[");
@@ -24,7 +17,7 @@ pub fn print_2dvec(mat: &[Vec<f64>]) {
             print!(" [");
         }
         for col in 0..mat[0].len() {
-            print!(" {:-9.6} ", mat[row][col]);
+            print!(" {:-7.4} ", mat[row][col]);
         }
         if row == mat.len() - 1 {
             println!("]]");
@@ -45,7 +38,7 @@ where
             print!(" [");
         }
         for c in 0..C {
-            print!(" {:-6.3} ", arr[r][c]);
+            print!(" {:-7.4} ", arr[r][c]);
         }
         if r == arr.len() - 1 {
             println!("]]");
@@ -94,6 +87,16 @@ pub fn tri2d3n_vec<'a>(nodes: &'a [Node2D], couples: &'a [Vec<usize>]) -> Vec<Tr
     tri2d3n
 }
 
+pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
+    let mut rlt: Vec<Vec<usize>> = Vec::new();
+    for i in 0..aim.len() {
+        for j in 0..aim.len() {
+            rlt.push(vec![aim[i], aim[j]]);
+        }
+    }
+    rlt
+}
+
 pub fn global_k<const N_NODES: usize, const N_FREEDOM: usize>(
     material: (f64, f64, f64),
     coupled_nodes: &Vec<Vec<usize>>,
@@ -133,6 +136,16 @@ pub fn global_k<const N_NODES: usize, const N_FREEDOM: usize>(
         }
     }
     kk
+}
+
+pub fn nonzero_index<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {
+    let idx: Vec<usize> = container
+        .into_iter()
+        .enumerate()
+        .filter(|(_, &ele)| ele != 0.0)
+        .map(|(idx, _)| idx)
+        .collect();
+    idx
 }
 
 #[cfg(test)]
