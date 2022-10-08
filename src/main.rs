@@ -32,22 +32,28 @@ fn run() {
     let mut tris: Vec<Triangle> = tri2d3n_vec(&nodes, &coupled_nodes);
     for i in tris.iter_mut() {
         println!("{}", i);
-        print_2darr(i.k(material));
+        print_2darr("k", i.k(material));
     }
 
     // assemble global stiffness matrix
     let k_arr = global_k::<4, 2>(material, &coupled_nodes, &mut tris);
 
     // print the global K matrix
-    println!("\nK =");
-    print_2darr(&k_arr);
+    print_2darr("K", &k_arr);
 
     // 构造nalgebra矩阵准备计算
     let k = SMatrix::<f64, 8, 8>::from(k_arr);
 
     // 构造节点位移、约束力、外力列向量
     let qe = vec![0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0]; // boolean
-    let fr = vec![0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0];
     let qe_nonzero_idx = nonzero_index(&qe);
-    
+    let fe = vector![0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0];
+    let fe_eff = fe.select_rows(qe_nonzero_idx.iter());
+    let k_eff = k
+        .select_columns(qe_nonzero_idx.iter())
+        .select_rows(qe_nonzero_idx.iter());
+
+    // solve the K.q = F
+    let qe_unknown: Vec<f64> = k_eff.lu().solve(&fe_eff).unwrap().data.into();
+    print_1dvec("qe_unknown", &qe_unknown);
 }
