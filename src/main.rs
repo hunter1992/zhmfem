@@ -45,7 +45,7 @@ fn run() {
     let k = SMatrix::<f64, 8, 8>::from(k_arr);
 
     // 构造节点位移、约束力、外力列向量
-    let qe = vec![0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0]; // boolean
+    let mut qe = vec![0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0]; // boolean
     let qe_nonzero_idx = nonzero_index(&qe);
     let fe = vector![0.0, 0.0, -1.0, 0.0, 1.0, 0.0, 0.0, 0.0];
     let fe_eff = fe.select_rows(qe_nonzero_idx.iter());
@@ -55,5 +55,12 @@ fn run() {
 
     // solve the K.q = F
     let qe_unknown: Vec<f64> = k_eff.lu().solve(&fe_eff).unwrap().data.into();
-    print_1dvec("qe_unknown", &qe_unknown);
+
+    // completa qe by put qe_unknown into right position
+    let _ = qe_nonzero_idx
+        .iter()
+        .enumerate()
+        .map(|(i, &e)| qe[e] = qe_unknown[i])
+        .collect::<Vec<_>>();
+    print_1dvec("qe", &qe);
 }
