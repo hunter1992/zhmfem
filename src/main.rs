@@ -44,6 +44,8 @@ fn run() {
     // 构造nalgebra矩阵准备计算
     let k = SMatrix::<f64, 8, 8>::from(k_arr);
 
+    // 用Gauss积分求单元的刚度矩阵
+
     // 构造节点位移、约束力、外力列向量
     let mut qe = vec![0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0]; // boolean
     let qe_nonzero_idx = nonzero_index(&qe);
@@ -63,4 +65,6 @@ fn run() {
         .map(|(i, &e)| qe[e] = qe_unknown[i])
         .collect::<Vec<_>>();
     print_1dvec("qe", &qe);
+
+    tris[0].k_printer(material);
 }

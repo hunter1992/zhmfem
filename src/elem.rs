@@ -1,5 +1,10 @@
+extern crate nalgebra as na;
+
 use crate::node::*;
+use na::*;
 use std::fmt;
+
+type Jacobian2x2f = SMatrix<f64, 2, 2>;
 
 pub struct Triangle<'tri> {
     pub id: usize,
@@ -47,56 +52,41 @@ impl<'tri> Triangle<'tri> {
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
-        println!(
-            "\n--->Calculating triangle[{}]'s stiffness matrix...",
-            self.id
-        );
         let (ee, nu, t) = material_args;
-        let xs: [f64; 3] = self.xs();
-        let ys: [f64; 3] = self.ys();
+        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, 0.5 * (1.0 - nu)],
+        ]) * (ee / (1.0 - nu * nu));
 
-        let idx = |x| x % 3;
-        let b = [
-            ys[idx(0 + 1) as usize] - ys[idx(0 + 2) as usize],
-            ys[idx(1 + 1) as usize] - ys[idx(1 + 2) as usize],
-            ys[idx(2 + 1) as usize] - ys[idx(2 + 2) as usize],
-        ];
-        let c = [
-            xs[idx(0 + 2) as usize] - xs[idx(0 + 1) as usize],
-            xs[idx(1 + 2) as usize] - xs[idx(1 + 1) as usize],
-            xs[idx(2 + 2) as usize] - xs[idx(2 + 1) as usize],
-        ];
+        let x: [f64; 3] = self.xs();
+        let y: [f64; 3] = self.ys();
+        let dx21 = x[1] - x[0];
+        let dx31 = x[2] - x[0];
+        let dy21 = y[1] - y[0];
+        let dy31 = y[2] - y[0];
+        let jacobian = Jacobian2x2f::from([[dx21, dx31], [dy21, dy31]]);
+        let det_j = jacobian.determinant();
 
-        let k_mat = |i: usize, j: usize| {
-            [
-                [
-                    b[i] * b[j] + 0.5 * (1.0 - nu) * c[i] * c[j],
-                    nu * b[i] * c[j] + 0.5 * (1.0 - nu) * c[i] * b[j],
-                ],
-                [
-                    nu * c[i] * b[j] + 0.5 * (1.0 - nu) * b[i] * c[j],
-                    c[i] * c[j] + 0.5 * (1.0 - nu) * b[i] * b[j],
-                ],
-            ]
-        };
-        let pick_kij = |num: usize| {
-            if num % 2 == 0 {
-                (num / 2) as usize
-            } else {
-                ((num - 1) / 2) as usize
-            }
-        };
-        let ij = |num: usize| (num % 2) as usize;
-        let coef = ee * t / (4.0 * (1.0 - nu * nu) * self.area());
-        let k = |i: usize, j: usize| coef * k_mat(pick_kij(i), pick_kij(j))[ij(i)][ij(j)];
-        let stiffness_matrix = [
-            [k(0, 0), k(0, 1), k(0, 2), k(0, 3), k(0, 4), k(0, 5)],
-            [k(1, 0), k(1, 1), k(1, 2), k(1, 3), k(1, 4), k(1, 5)],
-            [k(2, 0), k(2, 1), k(2, 2), k(2, 3), k(2, 4), k(2, 5)],
-            [k(3, 0), k(3, 1), k(3, 2), k(3, 3), k(3, 4), k(3, 5)],
-            [k(4, 0), k(4, 1), k(4, 2), k(4, 3), k(4, 4), k(4, 5)],
-            [k(5, 0), k(5, 1), k(5, 2), k(5, 3), k(5, 4), k(5, 5)],
-        ];
+        let h_mat = SMatrix::<f64, 3, 4>::from([
+            [dy31, 0.0, -dx31],
+            [-dy21, 0.0, dx21],
+            [0.0, -dx31, dy31],
+            [0.0, dx21, -dy21],
+        ]) / (det_j.abs());
+
+        let q_mat = SMatrix::<f64, 4, 6>::from([
+            [-1., -1., 0., 0.],
+            [0., 0., -1., -1.],
+            [1., 0., 0., 0.],
+            [0., 0., 1., 0.],
+            [0., 1., 0., 0.],
+            [0., 0., 0., 1.],
+        ]);
+
+        let b_mat = h_mat * q_mat;
+        let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
+        let stiffness_matrix: [[f64; 6]; 6] = (0.5 * t * core).into();
         stiffness_matrix
     }
 
