@@ -1,6 +1,5 @@
 use std::fmt;
 
-#[derive(Debug)]
 pub struct Node1D {
     pub id: usize,
     pub coord: [f64; 1],
@@ -16,21 +15,27 @@ impl fmt::Display for Node1D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nNode_1D Info:\n\tId:    {}\n\tCoord: {:?}",
-            self.id, self.coord
+            "\nNode_1D Info:\n\tId:    {}\n\tCoord: [{}]",
+            self.id, self.coord[0]
         )
     }
 }
 
-#[derive(Debug)]
 pub struct Node2D {
     pub id: usize,
     pub coord: [f64; 2],
+    pub disps: [f64; 2],
+    pub force: [f64; 2],
 }
 
 impl Node2D {
     pub fn new(id: usize, coord: [f64; 2]) -> Node2D {
-        Node2D { id, coord }
+        Node2D {
+            id,
+            coord,
+            disps: [-1.0, -1.0],
+            force: [0.0, 0.0],
+        }
     }
 }
 
@@ -38,13 +43,18 @@ impl fmt::Display for Node2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nNode_2D Info:\n\tId:    {}\n\tCoord: {:?}",
-            self.id, self.coord
+            "\n\t\tNode{}:\n\t\tCoord: [{}, {}]  Disps: [{}, {}]  Force: [{}, {}]",
+            self.id,
+            self.coord[0],
+            self.coord[1],
+            self.disps[0],
+            self.disps[1],
+            self.force[0],
+            self.force[1]
         )
     }
 }
 
-#[derive(Debug)]
 pub struct Node3D {
     pub id: usize,
     pub coord: [f64; 3],
@@ -60,8 +70,8 @@ impl fmt::Display for Node3D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nNode_3D Info:\n\tId:    {}\n\tCoord: {:?}",
-            self.id, self.coord
+            "\nNode_3D Info:\n\tId:    {}\n\tCoord: [{}, {}, {}]",
+            self.id, self.coord[0], self.coord[1], self.coord[2]
         )
     }
 }

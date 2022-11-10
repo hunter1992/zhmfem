@@ -14,16 +14,18 @@ fn run() {
     let t = 1.0f64;
     let material = (ee, nu, t);
 
-    // input the points coordinates
-    let points: Vec<Vec<f64>> = vec![
+    // input the node coordinates
+    let coordinates: Vec<Vec<f64>> = vec![
         vec![0.0, 0.0],
         vec![1.0, 0.0],
         vec![1.0, 1.0],
         vec![0.0, 1.0],
     ];
+    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
 
     // transform points into nodes
-    let nodes = nodes2d_vec(&points);
+    let mut nodes = nodes2d_vec(&coordinates);
+    apply_nodes2d_0_disp(&mut nodes, &zero_disp_index);
 
     // list nodes ids in one element
     let coupled_nodes: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![2, 3, 4]];
@@ -32,7 +34,7 @@ fn run() {
     let mut tris: Vec<Triangle> = tri2d3n_vec(&nodes, &coupled_nodes);
     for i in tris.iter_mut() {
         println!("{}", i);
-        print_2darr("k", i.k(material));
+        i.k_printer(material);
     }
 
     // assemble global stiffness matrix
@@ -58,13 +60,11 @@ fn run() {
     // solve the K.q = F
     let qe_unknown: Vec<f64> = k_eff.lu().solve(&fe_eff).unwrap().data.into();
 
-    // completa qe by put qe_unknown into right position
+    // complete qe by put qe_unknown into right position
     let _ = qe_nonzero_idx
         .iter()
         .enumerate()
         .map(|(i, &e)| qe[e] = qe_unknown[i])
         .collect::<Vec<_>>();
     print_1dvec("qe", &qe);
-
-    tris[0].k_printer(material);
 }

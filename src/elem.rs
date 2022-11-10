@@ -6,6 +6,12 @@ use std::fmt;
 
 type Jacobian2x2f = SMatrix<f64, 2, 2>;
 
+pub trait K {
+    type Kmatrix;
+    fn k(&mut self, material: (f64, f64, f64)) -> &Self::Kmatrix;
+    fn k_printer(&mut self, material: (f64, f64, f64));
+}
+
 pub struct Triangle<'tri> {
     pub id: usize,
     pub nodes: [&'tri Node2D; 3],
@@ -38,15 +44,6 @@ impl<'tri> Triangle<'tri> {
             y_list[i] = self.nodes[i].coord[1];
         }
         y_list
-    }
-
-    /// cache stiffness matrix for element
-    pub fn k(&mut self, material_args: (f64, f64, f64)) -> &[[f64; 6]; 6] {
-        if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k(material_args))
-        } else {
-            self.k_matrix.as_ref().unwrap()
-        }
     }
 
     /// calculate element stiffness matrix K
@@ -85,12 +82,34 @@ impl<'tri> Triangle<'tri> {
         ]);
 
         let b_mat = h_mat * q_mat;
+        // Gauss integration, area of standard tri is 0.5
         let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
         let stiffness_matrix: [[f64; 6]; 6] = (0.5 * t * core).into();
         stiffness_matrix
     }
 
-    pub fn k_printer(&mut self, material_args: (f64, f64, f64)) {
+    pub fn area(&self) -> f64 {
+        let x = self.xs();
+        let y = self.ys();
+        let tri_area = 0.5 * ((x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0])).abs();
+        tri_area
+    }
+}
+
+impl<'tri> K for Triangle<'tri> {
+    type Kmatrix = [[f64; 6]; 6];
+
+    /// cache stiffness matrix for element
+    fn k(&mut self, material_args: (f64, f64, f64)) -> &Self::Kmatrix {
+        if self.k_matrix.is_none() {
+            self.k_matrix.get_or_insert(self.calc_k(material_args))
+        } else {
+            self.k_matrix.as_ref().unwrap()
+        }
+    }
+
+    /// print element's stiffness matrix
+    fn k_printer(&mut self, material_args: (f64, f64, f64)) {
         if self.k_matrix.is_none() {
             self.k_matrix = Some(self.calc_k(material_args));
         }
@@ -112,21 +131,14 @@ impl<'tri> Triangle<'tri> {
         }
         println!("");
     }
-
-    pub fn area(&self) -> f64 {
-        let x = self.xs();
-        let y = self.ys();
-        let tri_area = 0.5 * ((x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0])).abs();
-        tri_area
-    }
 }
 
 impl fmt::Display for Triangle<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nElement_2D Info:\n\tId:    {}\n\tArea:  {}\n\tType:  Triangle
-\tCoord: {:?}\n\t       {:?}\n\t       {:?}",
+            "\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Triangle
+\tNodes: {}\n\t       {}\n\t       {}",
             self.id,
             self.area(),
             self.nodes[0],
@@ -168,7 +180,7 @@ impl Rectangle<'_> {
     pub fn info(&self) {
         println!(
             "\nElement_2D Info:\n\tId:    {}\n\tArea:  {}\n\tType:  Rectangle
-\tCoord: {:?}\n\t       {:?}\n\t       {:?}\n\t       {:?}",
+\tNodes: {}\n\t       {}\n\t       {}\n\t       {}",
             self.id,
             self.area(),
             self.nodes[0],
@@ -179,12 +191,12 @@ impl Rectangle<'_> {
     }
 
     pub fn area(&self) -> f64 {
-        let tri1 = Triangle {
+        let tri1: Triangle = Triangle {
             id: 0,
             nodes: [self.nodes[0], self.nodes[1], self.nodes[2]],
             k_matrix: None,
         };
-        let tri2 = Triangle {
+        let tri2: Triangle = Triangle {
             id: 0,
             nodes: [self.nodes[3], self.nodes[1], self.nodes[2]],
             k_matrix: None,

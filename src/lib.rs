@@ -1,10 +1,13 @@
+#![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
 mod elem;
 mod node;
+mod part;
 
 pub use elem::*;
 pub use node::*;
+pub use part::*;
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])
 where
@@ -74,8 +77,8 @@ pub fn nodes1d_vec(points: &[Vec<f64>]) -> Vec<Node1D> {
 
 pub fn nodes2d_vec(points: &[Vec<f64>]) -> Vec<Node2D> {
     let mut nodes: Vec<Node2D> = Vec::new();
-    for (idx, point) in points.iter().enumerate() {
-        nodes.push(Node2D::new(idx + 1, [point[0], point[1]]));
+    for (idx, coord) in points.iter().enumerate() {
+        nodes.push(Node2D::new(idx + 1, [coord[0], coord[1]]));
     }
     nodes
 }
@@ -88,7 +91,13 @@ pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
     nodes
 }
 
-pub fn tri2d3n_vec<'a>(nodes: &'a [Node2D], couples: &'a [Vec<usize>]) -> Vec<Triangle<'a>> {
+pub fn apply_nodes2d_0_disp(nodes: &mut Vec<Node2D>, idx: &[usize]) {
+    for loc in idx.iter() {
+        nodes[loc / 2 as usize].disps[loc % 2] = 0.0;
+    }
+}
+
+pub fn tri2d3n_vec<'tri>(nodes: &'tri[Node2D], couples: &[Vec<usize>]) -> Vec<Triangle<'tri>> {
     let mut tri2d3n: Vec<Triangle> = Vec::new();
     for (ele_id, cpld) in couples.iter().enumerate() {
         tri2d3n.push(Triangle::new(
@@ -143,10 +152,8 @@ pub fn global_k<const N_NODES: usize, const N_FREEDOM: usize>(
             for k in 0..N_FREEDOM {
                 for l in 0..N_FREEDOM {
                     kk[(loc_g[i][j][0] - 1) * N_FREEDOM + k]
-                        [(loc_g[i][j][1] - 1) * N_FREEDOM + l] = kk
-                        [(loc_g[i][j][0] - 1) * N_FREEDOM + k]
-                        [(loc_g[i][j][1] - 1) * N_FREEDOM + l]
-                        + ks[i][loc[j][0] * N_FREEDOM + k][loc[j][1] * N_FREEDOM + l];
+                        [(loc_g[i][j][1] - 1) * N_FREEDOM + l] +=
+                        ks[i][loc[j][0] * N_FREEDOM + k][loc[j][1] * N_FREEDOM + l];
                 }
             }
         }
@@ -178,11 +185,10 @@ mod testing {
         assert_ne!(3usize, node2.id);
         assert_eq!(3usize, node3.id);
 
+        assert_eq!([1.0f64], node1.coord);
         assert_eq!([1.0f64, 2.0f64], node2.coord);
         assert_eq!([1.0f64, 2.0f64, 3.0f64], node3.coord);
-        assert_eq!([1.0f64], node1.coord);
     }
-
     #[test]
     fn gen_elements() {
         let node1 = Node2D::new(1, [0.0, 0.0]);
@@ -209,5 +215,20 @@ mod testing {
 
         assert_eq!(0.5f64, tri1.area());
         assert_eq!(0.5f64, tri2.area());
+    }
+
+    #[test]
+    fn gen_parts() {
+        let node1 = Node2D::new(1, [0.0, 0.0]);
+        let node2 = Node2D::new(2, [1.0, 0.0]);
+        let node3 = Node2D::new(3, [1.0, -1.0]);
+        let node4 = Node2D::new(4, [0.0, 1.0]);
+
+        let nodes_vec = vec![node1, node2, node3, node4];
+        let cpld_nodes = vec![vec![1, 2, 4], vec![2, 3, 4]];
+        let tris: Vec<Triangle> = tri2d3n_vec(&nodes_vec, &cpld_nodes);
+
+        let p1: Part<Triangle, 4, 2> = Part::new(1, tris, cpld_nodes);
+        assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
     }
 }
