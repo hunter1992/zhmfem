@@ -1,4 +1,4 @@
-use crate::elem::K;
+use crate::K;
 
 // two generic const:
 // N for N_NODE, F for N_FREEDOM

@@ -31,7 +31,7 @@ fn run() {
     let coupled_nodes: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![2, 3, 4]];
 
     // construct element by coupled nodes
-    let mut tris: Vec<Triangle> = tri2d3n_vec(&nodes, &coupled_nodes);
+    let mut tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes, &coupled_nodes);
     for i in tris.iter_mut() {
         println!("{}", i);
         i.k_printer(material);

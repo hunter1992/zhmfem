@@ -5,9 +5,15 @@ mod elem;
 mod node;
 mod part;
 
-pub use elem::*;
+pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
 pub use part::*;
+
+pub trait K {
+    type Kmatrix;
+    fn k(&mut self, material: (f64, f64, f64)) -> &Self::Kmatrix;
+    fn k_printer(&mut self, material: (f64, f64, f64));
+}
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])
 where
@@ -97,10 +103,10 @@ pub fn apply_nodes2d_0_disp(nodes: &mut Vec<Node2D>, idx: &[usize]) {
     }
 }
 
-pub fn tri2d3n_vec<'tri>(nodes: &'tri[Node2D], couples: &[Vec<usize>]) -> Vec<Triangle<'tri>> {
-    let mut tri2d3n: Vec<Triangle> = Vec::new();
+pub fn tri2d3n_vec<'tri>(nodes: &'tri [Node2D], couples: &[Vec<usize>]) -> Vec<Tri2D3N<'tri>> {
+    let mut tri2d3n: Vec<Tri2D3N> = Vec::new();
     for (ele_id, cpld) in couples.iter().enumerate() {
-        tri2d3n.push(Triangle::new(
+        tri2d3n.push(Tri2D3N::new(
             ele_id + 1,
             [
                 &nodes[cpld[0] - 1],
@@ -125,7 +131,7 @@ pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
 pub fn global_k<const N_NODES: usize, const N_FREEDOM: usize>(
     material: (f64, f64, f64),
     coupled_nodes: &Vec<Vec<usize>>,
-    elem_vec: &mut Vec<Triangle>,
+    elem_vec: &mut Vec<Tri2D3N>,
 ) -> [[f64; N_NODES * N_FREEDOM]; N_FREEDOM * N_NODES] {
     let mut kk = [[0.0; N_NODES * N_FREEDOM]; N_FREEDOM * N_NODES];
 
@@ -196,10 +202,10 @@ mod testing {
         let node3 = Node2D::new(3, [1.0, 0.0]);
         let node4 = Node2D::new(4, [1.0, 1.0]);
 
-        let tri1 = Triangle::new(1, [&node1, &node2, &node3]);
-        let tri2 = Triangle::new(2, [&node4, &node2, &node3]);
+        let tri1 = Tri2D3N::new(1, [&node1, &node2, &node3]);
+        let tri2 = Tri2D3N::new(2, [&node4, &node2, &node3]);
 
-        let rec1 = Rectangle::new(3, [&node1, &node2, &node3, &node4]);
+        let rec1 = Rec2D4N::new(3, [&node1, &node2, &node3, &node4]);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
