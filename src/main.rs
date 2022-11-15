@@ -67,4 +67,7 @@ fn run() {
         .map(|(i, &e)| qe[e] = qe_unknown[i])
         .collect::<Vec<_>>();
     print_1dvec("qe", &qe);
+
+    let mut p1: Part<Tri2D3N, 4, 2> = Part::new(1, tris, coupled_nodes);
+    p1.calc_k(material);
 }

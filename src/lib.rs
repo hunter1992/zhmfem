@@ -232,9 +232,9 @@ mod testing {
 
         let nodes_vec = vec![node1, node2, node3, node4];
         let cpld_nodes = vec![vec![1, 2, 4], vec![2, 3, 4]];
-        let tris: Vec<Triangle> = tri2d3n_vec(&nodes_vec, &cpld_nodes);
+        let tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes_vec, &cpld_nodes);
 
-        let p1: Part<Triangle, 4, 2> = Part::new(1, tris, cpld_nodes);
+        let p1: Part<Tri2D3N, 4, 2> = Part::new(1, tris, cpld_nodes);
         assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
     }
 }

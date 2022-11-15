@@ -92,14 +92,15 @@ impl<'tri> Tri2D3N<'tri> {
 }
 
 impl<'tri> K for Tri2D3N<'tri> {
-    type Kmatrix = [[f64; 6]; 6];
+    type Kmatrix = Option<[[f64; 6]; 6]>;
 
     /// cache stiffness matrix for element
     fn k(&mut self, material_args: (f64, f64, f64)) -> &Self::Kmatrix {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k(material_args))
+            self.k_matrix.get_or_insert(self.calc_k(material_args));
+            &self.k_matrix
         } else {
-            self.k_matrix.as_ref().unwrap()
+            &self.k_matrix
         }
     }
 
