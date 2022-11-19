@@ -44,6 +44,7 @@ impl<'tri> Tri2D3N<'tri> {
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
+        println!("\n>>> calculating k{} ......", self.id);
         let (ee, nu, t) = material_args;
         let elasticity_mat = SMatrix::<f64, 3, 3>::from([
             [1.0, nu, 0.0],
@@ -92,15 +93,14 @@ impl<'tri> Tri2D3N<'tri> {
 }
 
 impl<'tri> K for Tri2D3N<'tri> {
-    type Kmatrix = Option<[[f64; 6]; 6]>;
+    type Kmatrix = [[f64; 6]; 6];
 
     /// cache stiffness matrix for element
     fn k(&mut self, material_args: (f64, f64, f64)) -> &Self::Kmatrix {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k(material_args));
-            &self.k_matrix
+            self.k_matrix.get_or_insert(self.calc_k(material_args))
         } else {
-            &self.k_matrix
+            self.k_matrix.as_ref().unwrap()
         }
     }
 
