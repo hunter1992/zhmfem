@@ -1,9 +1,14 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
+#![feature(test)]
+
+extern crate test;
 
 mod elem;
 mod node;
 mod part;
+
+use std::collections::HashMap;
 
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
@@ -11,7 +16,9 @@ pub use part::*;
 
 pub trait K {
     type Kmatrix;
-    fn k(&mut self, material: (f64, f64, f64)) -> &Self::Kmatrix;
+    fn k(&mut self, material: (f64, f64, f64)) -> &Self::Kmatrix
+    where
+        Self::Kmatrix: std::ops::Index<usize>;
     fn k_printer(&mut self, material: (f64, f64, f64));
 }
 
@@ -81,11 +88,25 @@ pub fn nodes1d_vec(points: &[Vec<f64>]) -> Vec<Node1D> {
     nodes
 }
 
-pub fn nodes2d_vec(points: &[Vec<f64>]) -> Vec<Node2D> {
-    let mut nodes: Vec<Node2D> = Vec::new();
+pub fn nodes2d_vec(
+    points: &[Vec<f64>],
+    idx_0_disp: &[usize],
+    force: HashMap<usize, f64>,
+) -> Vec<Node2D> {
+    let mut nodes: Vec<Node2D> = Vec::with_capacity(points.len());
+
     for (idx, coord) in points.iter().enumerate() {
         nodes.push(Node2D::new(idx + 1, [coord[0], coord[1]]));
     }
+
+    for idx in idx_0_disp.iter() {
+        nodes[idx / 2].disps[idx % 2] = 0.0;
+    }
+
+    for (idx, &f) in &force {
+        nodes[idx / 2].force[idx % 2] = f;
+    }
+
     nodes
 }
 
@@ -95,12 +116,6 @@ pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
         nodes.push(Node3D::new(idx + 1, [point[0], point[1], point[2]]));
     }
     nodes
-}
-
-pub fn apply_nodes2d_0_disp(nodes: &mut Vec<Node2D>, idx: &[usize]) {
-    for loc in idx.iter() {
-        nodes[loc / 2 as usize].disps[loc % 2] = 0.0;
-    }
 }
 
 pub fn tri2d3n_vec<'tri>(nodes: &'tri [Node2D], couples: &[Vec<usize>]) -> Vec<Tri2D3N<'tri>> {
@@ -180,6 +195,7 @@ pub fn nonzero_index<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<u
 #[cfg(test)]
 mod testing {
     use super::*;
+    use test::Bencher;
 
     #[test]
     fn gen_nodes() {
@@ -230,11 +246,44 @@ mod testing {
         let node3 = Node2D::new(3, [1.0, -1.0]);
         let node4 = Node2D::new(4, [0.0, 1.0]);
 
-        let nodes_vec = vec![node1, node2, node3, node4];
-        let cpld_nodes = vec![vec![1, 2, 4], vec![2, 3, 4]];
-        let tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes_vec, &cpld_nodes);
+        let nodes = vec![node1, node2, node3, node4];
+        let cplds = vec![vec![1, 2, 4], vec![2, 3, 4]];
+        let tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes, &cplds);
+        let mtri = (1.0f64, 0.25f64, 1.0f64);
 
-        let p1: Part<Tri2D3N, 4, 2> = Part::new(1, tris, cpld_nodes);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cplds, mtri);
         assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
+        assert_ne!(p1.elems[1].nodes[1].coord[1], 1.0);
+
+        let nodes_disp = p1.get_nodes_disp(&nodes);
+        let nodes_force = p1.get_nodes_force(&nodes);
+        let disp = vec![-1., -1., -1., -1., -1., -1., -1., -1.];
+        let force = vec![0., 0., 0., 0., 0., 0., 0., 0.];
+        assert_eq!(disp, nodes_disp);
+        assert_eq!(force, nodes_force);
+    }
+
+    #[test]
+    fn calc_elem_k() {
+        let material = (1.0f64, 0.25f64, 1.0f64);
+
+        let node1 = Node2D::new(1, [0.0, 0.0]);
+        let node2 = Node2D::new(2, [1.0, 0.0]);
+        let node3 = Node2D::new(3, [1.0, 1.0]);
+        let node4 = Node2D::new(4, [0.0, 1.0]);
+
+        let mut tri1 = Tri2D3N::new(1, [&node1, &node2, &node4]);
+        let mut tri2 = Tri2D3N::new(2, [&node3, &node4, &node2]);
+
+        let k1 = tri1.k(material);
+        let k2 = tri2.k(material);
+
+        assert_eq!(k1, k2);
+    }
+
+    #[bench]
+    fn calc_elem_k_speed(b: &mut Bencher) {
+        b.iter(|| calc_elem_k());
+        // benchmark的结果是:277 +/- 15 ns/iter
     }
 }

@@ -1,6 +1,7 @@
 extern crate nalgebra as na;
 
 use na::*;
+use std::collections::HashMap;
 use zhmfem::*;
 
 fn main() {
@@ -15,30 +16,35 @@ fn run() {
     let material = (ee, nu, t);
 
     // input the node coordinates
-    let coordinates: Vec<Vec<f64>> = vec![
+    let coords: Vec<Vec<f64>> = vec![
         vec![0.0, 0.0],
         vec![1.0, 0.0],
         vec![1.0, 1.0],
         vec![0.0, 1.0],
     ];
-    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
+    let disp_0_idx: Vec<usize> = vec![0, 1, 6];
+    let force_index: Vec<usize> = vec![2, 4];
+    let force_value: Vec<f64> = vec![-1.0, 1.0];
+    let force_data: HashMap<usize, f64> = force_index
+        .into_iter()
+        .zip(force_value.into_iter())
+        .collect();
 
     // transform points into nodes
-    let mut nodes = nodes2d_vec(&coordinates);
-    apply_nodes2d_0_disp(&mut nodes, &zero_disp_index);
+    let nodes = nodes2d_vec(&coords, &disp_0_idx, force_data);
 
     // list nodes ids in one element
-    let coupled_nodes: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![2, 3, 4]];
+    let cpld: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![3, 4, 2]];
 
     // construct element by coupled nodes
-    let mut tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes, &coupled_nodes);
+    let mut tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes, &cpld);
     for i in tris.iter_mut() {
         println!("{}", i);
         i.k_printer(material);
     }
 
     // assemble global stiffness matrix
-    let k_arr = global_k::<4, 2>(material, &coupled_nodes, &mut tris);
+    let k_arr = global_k::<4, 2>(material, &cpld, &mut tris);
 
     // print the global K matrix
     print_2darr("K", &k_arr);
@@ -68,7 +74,6 @@ fn run() {
         .collect::<Vec<_>>();
     print_1dvec("qe", &qe);
 
-    let mut p1: Part<Tri2D3N, 4, 2> = Part::new(1, tris, coupled_nodes);
-    p1.cache_k(material);
-    p1.elems[0].k_printer(material);
+    let mut p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cpld, material);
+    print_2darr("K == ", p1.k());
 }

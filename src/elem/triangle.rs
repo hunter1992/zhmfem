@@ -96,7 +96,10 @@ impl<'tri> K for Tri2D3N<'tri> {
     type Kmatrix = [[f64; 6]; 6];
 
     /// cache stiffness matrix for element
-    fn k(&mut self, material_args: (f64, f64, f64)) -> &Self::Kmatrix {
+    fn k(&mut self, material_args: (f64, f64, f64)) -> &Self::Kmatrix
+    where
+        Self::Kmatrix: std::ops::Index<usize>,
+    {
         if self.k_matrix.is_none() {
             self.k_matrix.get_or_insert(self.calc_k(material_args))
         } else {
