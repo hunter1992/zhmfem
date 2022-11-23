@@ -44,13 +44,13 @@ fn run() {
     }
 
     // assemble global stiffness matrix
-    let k_arr = global_k::<4, 2>(material, &cpld, &mut tris);
+    let mut p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cpld, material);
 
     // print the global K matrix
-    print_2darr("K", &k_arr);
+    print_2darr("K", p1.k());
 
     // 构造nalgebra矩阵准备计算
-    let k = SMatrix::<f64, 8, 8>::from(k_arr);
+    let k = SMatrix::<f64, 8, 8>::from(*p1.k());
 
     // 用Gauss积分求单元的刚度矩阵
 
@@ -73,7 +73,4 @@ fn run() {
         .map(|(i, &e)| qe[e] = qe_unknown[i])
         .collect::<Vec<_>>();
     print_1dvec("qe", &qe);
-
-    let mut p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cpld, material);
-    print_2darr("K == ", p1.k());
 }

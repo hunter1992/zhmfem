@@ -44,7 +44,7 @@ impl<'tri> Tri2D3N<'tri> {
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
-        println!("\n>>> calculating k{} ......", self.id);
+        println!("\n>>> Calculating element k{} ......", self.id);
         let (ee, nu, t) = material_args;
         let elasticity_mat = SMatrix::<f64, 3, 3>::from([
             [1.0, nu, 0.0],

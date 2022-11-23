@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
-pub use part::*;
+pub use part::Part2D;
 
 pub trait K {
     type Kmatrix;
@@ -124,7 +124,7 @@ pub fn tri2d3n_vec<'tri>(nodes: &'tri [Node2D], couples: &[Vec<usize>]) -> Vec<T
         tri2d3n.push(Tri2D3N::new(
             ele_id + 1,
             [
-                &nodes[cpld[0] - 1],
+                &nodes[cpld[0] - 1], // 减1因为cpld中node编号从1开始
                 &nodes[cpld[1] - 1],
                 &nodes[cpld[2] - 1],
             ],
@@ -141,45 +141,6 @@ pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
         }
     }
     rlt
-}
-
-pub fn global_k<const N_NODES: usize, const N_FREEDOM: usize>(
-    material: (f64, f64, f64),
-    coupled_nodes: &Vec<Vec<usize>>,
-    elem_vec: &mut Vec<Tri2D3N>,
-) -> [[f64; N_NODES * N_FREEDOM]; N_FREEDOM * N_NODES] {
-    let mut kk = [[0.0; N_NODES * N_FREEDOM]; N_FREEDOM * N_NODES];
-
-    if coupled_nodes.len() != elem_vec.len() {
-        println!("---> Error! From assemble_global_k func.");
-        println!("     The count of elements not equal to K mat size.");
-        panic!("---> Global K failed!");
-    }
-
-    // 计算并缓存每个单元的刚度矩阵
-    let ks: Vec<_> = elem_vec.iter_mut().map(|x| x.k(material)).collect();
-
-    // 获取单个单元内的节点数目N,构造0到N的range
-    // 用于遍历单个单元的局部刚度矩阵k
-    let n_nodes: Vec<usize> = (0..coupled_nodes[0].len()).collect();
-    let loc: Vec<Vec<usize>> = full_combination(&n_nodes);
-
-    // 整体刚度矩阵中需要修改的节点坐标对
-    // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
-    let loc_g: Vec<Vec<Vec<usize>>> = coupled_nodes.iter().map(|x| full_combination(&x)).collect();
-
-    for i in 0..loc_g.len() {
-        for j in 0..loc.len() {
-            for k in 0..N_FREEDOM {
-                for l in 0..N_FREEDOM {
-                    kk[(loc_g[i][j][0] - 1) * N_FREEDOM + k]
-                        [(loc_g[i][j][1] - 1) * N_FREEDOM + l] +=
-                        ks[i][loc[j][0] * N_FREEDOM + k][loc[j][1] * N_FREEDOM + l];
-                }
-            }
-        }
-    }
-    kk
 }
 
 pub fn nonzero_index<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {

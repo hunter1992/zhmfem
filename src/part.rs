@@ -1,8 +1,8 @@
-use crate::{full_combination, node::*, K};
+use crate::{node::*, K};
 
 /// two generic const:
 /// N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
-pub struct Part2D<Elem: K, const N: usize, const F: usize, const M:usize>
+pub struct Part2D<Elem: K, const N: usize, const F: usize, const M: usize>
 where
     [[f64; N * F]; N * F]: Sized,
 {
@@ -13,7 +13,7 @@ where
     pub k_matrix: Option<[[f64; N * F]; N * F]>,
 }
 
-impl<Elem: K, const N: usize, const F: usize, const M:usize> Part2D<Elem, N, F, M>
+impl<Elem: K, const N: usize, const F: usize, const M: usize> Part2D<Elem, N, F, M>
 where
     [[f64; N * F]; N * F]: Sized,
 {
@@ -37,20 +37,30 @@ where
 
     /// Get displacement on all nodes
     pub fn get_nodes_disp(&self, nodes: &Vec<Node2D>) -> Vec<f64> {
+        if nodes.len() != N {
+            panic!("--->Total nodes number neq to Part's freedom!");
+        }
+
         let mut data: Vec<f64> = Vec::with_capacity(N * F);
         for node in nodes.iter() {
-            data.push(node.disps[0]);
-            data.push(node.disps[1]);
+            for disp in node.disps.iter() {
+                data.push(*disp);
+            }
         }
         data
     }
 
     /// Get force on all nodes
     pub fn get_nodes_force(&self, nodes: &Vec<Node2D>) -> Vec<f64> {
+        if nodes.len() != N {
+            panic!("--->Total nodes number neq to Part's freedom!");
+        }
+
         let mut data: Vec<f64> = Vec::with_capacity(N * F);
         for node in nodes.iter() {
-            data.push(node.force[0]);
-            data.push(node.force[1]);
+            for force in node.force.iter() {
+                data.push(*force);
+            }
         }
         data
     }
@@ -67,6 +77,7 @@ where
                 panic!("---> Assembly global K failed!");
             }
 
+            println!(">>> Assemble global K maytix ......");
             let mut part_k: [[f64; N * F]; N * F] = [[0.0; N * F]; N * F];
 
             // 计算并缓存每个单元的刚度矩阵
@@ -97,4 +108,26 @@ where
             self.k_matrix.as_ref().unwrap()
         }
     }
+
+    pub fn k_copyout(&mut self) -> [[f64; N * F]; N * F]
+    where
+        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [f64; M * F]>,
+    {
+        if self.k_matrix.is_none() {
+            self.k();
+            self.k_matrix.unwrap()
+        } else {
+            self.k_matrix.unwrap()
+        }
+    }
+}
+
+fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
+    let mut rlt: Vec<Vec<usize>> = Vec::new();
+    for i in 0..aim.len() {
+        for j in 0..aim.len() {
+            rlt.push(vec![aim[i], aim[j]]);
+        }
+    }
+    rlt
 }
