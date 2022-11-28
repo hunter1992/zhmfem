@@ -29,7 +29,6 @@ fn run() {
 
     // transform points into nodes
     let nodes = nodes2d_vec(&coords, &zero_disp, force_data);
-    print_1darr("node2_force", &nodes[1].force);
 
     // list nodes ids in one element
     let cpld: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![3, 4, 2]];
@@ -46,7 +45,6 @@ fn run() {
 
     let mut solver = Solver::new(p1.disps(&nodes), p1.forces(&nodes));
     solver.static_kmat = Some(*p1.k(material));
-    print_1darr("fe", solver.get_forces());
 
     print_2darr("K", p1.k(material));
     print_1darr("qe", solver.get_disps());
