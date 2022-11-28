@@ -7,19 +7,21 @@ extern crate test;
 mod elem;
 mod node;
 mod part;
+mod solver;
 
 use std::collections::HashMap;
 
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
 pub use part::Part2D;
+pub use solver::Solver;
 
 pub trait K {
     type Kmatrix;
-    fn k(&mut self, material: (f64, f64, f64)) -> &Self::Kmatrix
+    fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>;
-    fn k_printer(&mut self, material: (f64, f64, f64));
+    fn k_printer(&mut self, material: (f64, f64));
 }
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])
@@ -49,12 +51,23 @@ where
             print!(" {:-7.4} ", mat[row][col]);
         }
         if row == mat.len() - 1 {
-            println!("]]");
+            println!("]]\n");
         } else {
             println!("]");
         }
     }
-    println!("");
+}
+
+pub fn print_1darr<T, const C: usize>(name: &str, arr: &[T; C])
+where
+    T: std::fmt::Display,
+{
+    println!("{} =", name);
+    print!("[[");
+    for c in 0..C {
+        print!(" {:-7.4} ", arr[c]);
+    }
+    println!("]]\n");
 }
 
 pub fn print_2darr<T, const R: usize, const C: usize>(name: &str, arr: &[[T; C]; R])
@@ -72,12 +85,11 @@ where
             print!(" {:-7.4} ", arr[r][c]);
         }
         if r == arr.len() - 1 {
-            println!("]]");
+            println!("]]\n");
         } else {
             println!("]");
         }
     }
-    println!("");
 }
 
 pub fn nodes1d_vec(points: &[Vec<f64>]) -> Vec<Node1D> {
@@ -94,19 +106,15 @@ pub fn nodes2d_vec(
     force: HashMap<usize, f64>,
 ) -> Vec<Node2D> {
     let mut nodes: Vec<Node2D> = Vec::with_capacity(points.len());
-
     for (idx, coord) in points.iter().enumerate() {
         nodes.push(Node2D::new(idx + 1, [coord[0], coord[1]]));
     }
-
     for idx in idx_0_disp.iter() {
         nodes[idx / 2].disps[idx % 2] = 0.0;
     }
-
     for (idx, &f) in &force {
         nodes[idx / 2].force[idx % 2] = f;
     }
-
     nodes
 }
 
@@ -118,11 +126,16 @@ pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
     nodes
 }
 
-pub fn tri2d3n_vec<'tri>(nodes: &'tri [Node2D], couples: &[Vec<usize>]) -> Vec<Tri2D3N<'tri>> {
+pub fn tri2d3n_vec<'tri>(
+    thick: f64,
+    nodes: &'tri [Node2D],
+    couples: &[Vec<usize>],
+) -> Vec<Tri2D3N<'tri>> {
     let mut tri2d3n: Vec<Tri2D3N> = Vec::new();
     for (ele_id, cpld) in couples.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
             ele_id + 1,
+            thick,
             [
                 &nodes[cpld[0] - 1], // 减1因为cpld中node编号从1开始
                 &nodes[cpld[1] - 1],
@@ -131,16 +144,6 @@ pub fn tri2d3n_vec<'tri>(nodes: &'tri [Node2D], couples: &[Vec<usize>]) -> Vec<T
         ));
     }
     tri2d3n
-}
-
-pub fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
-    let mut rlt: Vec<Vec<usize>> = Vec::new();
-    for i in 0..aim.len() {
-        for j in 0..aim.len() {
-            rlt.push(vec![aim[i], aim[j]]);
-        }
-    }
-    rlt
 }
 
 pub fn nonzero_index<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {
@@ -178,11 +181,12 @@ mod testing {
         let node2 = Node2D::new(2, [0.0, 1.0]);
         let node3 = Node2D::new(3, [1.0, 0.0]);
         let node4 = Node2D::new(4, [1.0, 1.0]);
+        let thick = 1.0;
 
-        let tri1 = Tri2D3N::new(1, [&node1, &node2, &node3]);
-        let tri2 = Tri2D3N::new(2, [&node4, &node2, &node3]);
+        let tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node3]);
+        let tri2 = Tri2D3N::new(2, thick, [&node4, &node2, &node3]);
 
-        let rec1 = Rec2D4N::new(3, [&node1, &node2, &node3, &node4]);
+        let rec1 = Rec2D4N::new(3, thick, [&node1, &node2, &node3, &node4]);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
@@ -206,35 +210,36 @@ mod testing {
         let node2 = Node2D::new(2, [1.0, 0.0]);
         let node3 = Node2D::new(3, [1.0, -1.0]);
         let node4 = Node2D::new(4, [0.0, 1.0]);
+        let thick = 1.0;
 
         let nodes = vec![node1, node2, node3, node4];
         let cplds = vec![vec![1, 2, 4], vec![2, 3, 4]];
-        let tris: Vec<Tri2D3N> = tri2d3n_vec(&nodes, &cplds);
-        let mtri = (1.0f64, 0.25f64, 1.0f64);
+        let tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
 
-        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cplds, mtri);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cplds);
         assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
         assert_ne!(p1.elems[1].nodes[1].coord[1], 1.0);
 
-        let nodes_disp = p1.get_nodes_disp(&nodes);
-        let nodes_force = p1.get_nodes_force(&nodes);
         let disp = vec![-1., -1., -1., -1., -1., -1., -1., -1.];
         let force = vec![0., 0., 0., 0., 0., 0., 0., 0.];
+        let nodes_disp = p1.disps(&nodes);
+        let nodes_force = p1.forces(&nodes);
         assert_eq!(disp, nodes_disp);
         assert_eq!(force, nodes_force);
     }
 
     #[test]
     fn calc_elem_k() {
-        let material = (1.0f64, 0.25f64, 1.0f64);
+        let material = (1.0f64, 0.25f64);
 
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [1.0, 0.0]);
         let node3 = Node2D::new(3, [1.0, 1.0]);
         let node4 = Node2D::new(4, [0.0, 1.0]);
+        let thick = 1.0;
 
-        let mut tri1 = Tri2D3N::new(1, [&node1, &node2, &node4]);
-        let mut tri2 = Tri2D3N::new(2, [&node3, &node4, &node2]);
+        let mut tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node4]);
+        let mut tri2 = Tri2D3N::new(2, thick, [&node3, &node4, &node2]);
 
         let k1 = tri1.k(material);
         let k2 = tri2.k(material);
@@ -243,8 +248,8 @@ mod testing {
     }
 
     #[bench]
+    /// benchmark的结果是:277 +/- 15 ns/iter (Intel 8265U 插电)
     fn calc_elem_k_speed(b: &mut Bencher) {
         b.iter(|| calc_elem_k());
-        // benchmark的结果是:277 +/- 15 ns/iter
     }
 }

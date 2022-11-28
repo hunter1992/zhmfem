@@ -3,13 +3,14 @@ use crate::node::*;
 
 pub struct Rec2D4N<'rect> {
     pub id: usize,
+    pub thick: f64,
     pub nodes: [&'rect Node2D; 4],
 }
 
 impl Rec2D4N<'_> {
     /// generate a new Rec2D4N element
-    pub fn new(id: usize, nodes: [&Node2D; 4]) -> Rec2D4N {
-        Rec2D4N { id, nodes }
+    pub fn new(id: usize, thick: f64, nodes: [&Node2D; 4]) -> Rec2D4N {
+        Rec2D4N { id, thick, nodes }
     }
 
     /// get the x coords of nodes in Rec2D4N element
@@ -46,11 +47,13 @@ impl Rec2D4N<'_> {
     pub fn area(&self) -> f64 {
         let tri1: Tri2D3N = Tri2D3N {
             id: 0,
+            thick: self.thick,
             nodes: [self.nodes[0], self.nodes[1], self.nodes[2]],
             k_matrix: None,
         };
         let tri2: Tri2D3N = Tri2D3N {
             id: 0,
+            thick: self.thick,
             nodes: [self.nodes[3], self.nodes[1], self.nodes[2]],
             k_matrix: None,
         };

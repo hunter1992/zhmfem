@@ -1,7 +1,6 @@
 extern crate nalgebra as na;
 
-use crate::node::*;
-use crate::K;
+use crate::{node::Node2D, K};
 use na::*;
 use std::fmt;
 
@@ -9,15 +8,17 @@ type Jacobian2x2f = SMatrix<f64, 2, 2>;
 
 pub struct Tri2D3N<'tri> {
     pub id: usize,
+    pub thick: f64,
     pub nodes: [&'tri Node2D; 3],
     pub k_matrix: Option<[[f64; 6]; 6]>,
 }
 
 impl<'tri> Tri2D3N<'tri> {
     /// generate a 2D Tri2D3N element
-    pub fn new(id: usize, nodes: [&Node2D; 3]) -> Tri2D3N {
+    pub fn new(id: usize, thick: f64, nodes: [&Node2D; 3]) -> Tri2D3N {
         Tri2D3N {
             id,
+            thick,
             nodes,
             k_matrix: None,
         }
@@ -43,9 +44,13 @@ impl<'tri> Tri2D3N<'tri> {
 
     /// calculate element stiffness matrix K
     /// return a 6x6 matrix, elements are f64
-    fn calc_k(&self, material_args: (f64, f64, f64)) -> [[f64; 6]; 6] {
-        println!("\n>>> Calculating element k{} ......", self.id);
-        let (ee, nu, t) = material_args;
+    fn calc_k(&self, material_args: (f64, f64)) -> [[f64; 6]; 6] {
+        println!(
+            "\n>>> Calculating Tri2D3N#{}'s stiffness matrix k{} ......",
+            self.id, self.id
+        );
+        let t = self.thick;
+        let (ee, nu) = material_args;
         let elasticity_mat = SMatrix::<f64, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
@@ -96,23 +101,23 @@ impl<'tri> K for Tri2D3N<'tri> {
     type Kmatrix = [[f64; 6]; 6];
 
     /// cache stiffness matrix for element
-    fn k(&mut self, material_args: (f64, f64, f64)) -> &Self::Kmatrix
+    fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>,
     {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k(material_args))
+            self.k_matrix.get_or_insert(self.calc_k(material))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
     }
 
     /// print element's stiffness matrix
-    fn k_printer(&mut self, material_args: (f64, f64, f64)) {
+    fn k_printer(&mut self, material: (f64, f64)) {
         if self.k_matrix.is_none() {
-            self.k_matrix = Some(self.calc_k(material_args));
+            self.k_matrix = Some(self.calc_k(material));
         }
-        print!("k{} = \n[", self.id);
+        print!("Tri2D3N k{} = \n[", self.id);
         for row in 0..6 {
             if row == 0 {
                 print!("[");
