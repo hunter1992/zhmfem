@@ -7,14 +7,14 @@ extern crate test;
 mod elem;
 mod node;
 mod part;
-mod solver;
+mod calc;
 
 use std::collections::HashMap;
 
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
 pub use part::Part2D;
-pub use solver::Solver;
+pub use calc::Solver;
 
 pub trait K {
     type Kmatrix;
