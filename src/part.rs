@@ -1,4 +1,4 @@
-use crate::{node::*, K};
+use crate::{node::Node2D, K};
 
 /// three generic const:
 /// N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
@@ -29,7 +29,7 @@ where
     }
 
     /// Get displacement of all nodes
-    pub fn disps<'a>(&self, nodes: &'a Vec<Node2D>) -> [f64; N * F] {
+    pub fn disps<'a>(&self, nodes: &'a [Node2D]) -> [f64; N * F] {
         let mut data: [f64; N * F] = [0.0; N * F];
         for idx in 0..N {
             data[idx * 2] = nodes[idx].disps[0];
@@ -39,11 +39,11 @@ where
     }
 
     /// Get force of all nodes
-    pub fn forces<'a>(&self, nodes: &'a Vec<Node2D>) -> [f64; N * F] {
+    pub fn forces<'a>(&self, nodes: &'a [Node2D]) -> [f64; N * F] {
         let mut data: [f64; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx * 2] = nodes[idx].force[0];
-            data[idx * 2 + 1] = nodes[idx].force[1];
+            data[idx * 2] = nodes[idx].forces[0];
+            data[idx * 2 + 1] = nodes[idx].forces[1];
         }
         data
     }

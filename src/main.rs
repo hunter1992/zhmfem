@@ -1,5 +1,3 @@
-extern crate nalgebra as na;
-
 use std::collections::HashMap;
 use zhmfem::*;
 
@@ -28,7 +26,7 @@ fn run() {
         .collect();
 
     // transform points into nodes
-    let nodes = nodes2d_vec(&coords, &zero_disp, force_data);
+    let mut nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
 
     // list nodes ids in one element
     let cpld: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![3, 4, 2]];
@@ -42,11 +40,26 @@ fn run() {
 
     // assemble global stiffness matrix
     let mut p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cpld);
-
-    let mut solver = Solver::new(p1.disps(&nodes), p1.forces(&nodes));
-    solver.static_kmat = Some(*p1.k(material));
-
     print_2darr("K", p1.k(material));
-    print_1darr("qe", solver.get_disps());
-    print_1darr("fe", solver.get_forces());
+
+    // construct solver and solve the result
+    let mut solver: Solver<8> = Solver::new(p1.disps(&nodes), p1.forces(&nodes), *p1.k(material));
+    solver.solve_static();
+
+    // write the result into nodes
+    let disp = &solver.disps;
+    let force = &solver.forces;
+    for (i, node) in nodes.iter_mut().enumerate() {
+        node.disps[0] = disp[i * 2];
+        node.disps[1] = disp[i * 2 + 1];
+        node.forces[0] = force[i * 2];
+        node.forces[1] = force[i * 2 + 1];
+    }
+    print_1darr("qe", solver.disps_rlt());
+    print_1darr("fe", solver.forces_rlt());
+
+    for i in tris.iter() {
+        println!("{}", i);
+        i.k_printer(material);
+    }
 }

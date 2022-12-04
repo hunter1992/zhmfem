@@ -4,17 +4,16 @@
 
 extern crate test;
 
+mod calc;
 mod elem;
 mod node;
 mod part;
-mod calc;
 
-use std::collections::HashMap;
-
+pub use calc::Solver;
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
 pub use part::Part2D;
-pub use calc::Solver;
+use std::collections::HashMap;
 
 pub trait K {
     type Kmatrix;
@@ -103,7 +102,7 @@ pub fn nodes1d_vec(points: &[Vec<f64>]) -> Vec<Node1D> {
 pub fn nodes2d_vec(
     points: &[Vec<f64>],
     idx_0_disp: &[usize],
-    force: HashMap<usize, f64>,
+    force: &HashMap<usize, f64>,
 ) -> Vec<Node2D> {
     let mut nodes: Vec<Node2D> = Vec::with_capacity(points.len());
     for (idx, coord) in points.iter().enumerate() {
@@ -112,8 +111,8 @@ pub fn nodes2d_vec(
     for idx in idx_0_disp.iter() {
         nodes[idx / 2].disps[idx % 2] = 0.0;
     }
-    for (idx, &f) in &force {
-        nodes[idx / 2].force[idx % 2] = f;
+    for (idx, &f) in force {
+        nodes[idx / 2].forces[idx % 2] = f;
     }
     nodes
 }
@@ -137,7 +136,7 @@ pub fn tri2d3n_vec<'tri>(
             ele_id + 1,
             thick,
             [
-                &nodes[cpld[0] - 1], // 减1因为cpld中node编号从1开始
+                &nodes[cpld[0] - 1],
                 &nodes[cpld[1] - 1],
                 &nodes[cpld[2] - 1],
             ],

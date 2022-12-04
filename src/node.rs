@@ -21,11 +21,12 @@ impl fmt::Display for Node1D {
     }
 }
 
+#[derive(Debug)]
 pub struct Node2D {
     pub id: usize,
     pub coord: [f64; 2],
     pub disps: [f64; 2],
-    pub force: [f64; 2],
+    pub forces: [f64; 2],
 }
 
 impl Node2D {
@@ -34,7 +35,7 @@ impl Node2D {
             id,
             coord,
             disps: [-1.0, -1.0],
-            force: [0.0, 0.0],
+            forces: [0.0, 0.0],
         }
     }
 }
@@ -49,8 +50,8 @@ impl fmt::Display for Node2D {
             self.coord[1],
             self.disps[0],
             self.disps[1],
-            self.force[0],
-            self.force[1]
+            self.forces[0],
+            self.forces[1]
         )
     }
 }
