@@ -13,6 +13,7 @@ pub use calc::Solver;
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
 pub use node::*;
 pub use part::Part2D;
+
 use std::collections::HashMap;
 
 pub trait K {
@@ -109,10 +110,10 @@ pub fn nodes2d_vec(
         nodes.push(Node2D::new(idx + 1, [coord[0], coord[1]]));
     }
     for idx in idx_0_disp.iter() {
-        nodes[idx / 2].disps[idx % 2] = 0.0;
+        *nodes[idx / 2].disps[idx % 2].borrow_mut() = 0.0;
     }
     for (idx, &f) in force {
-        nodes[idx / 2].forces[idx % 2] = f;
+        *nodes[idx / 2].forces[idx % 2].borrow_mut() = f;
     }
     nodes
 }
@@ -213,16 +214,16 @@ mod testing {
 
         let nodes = vec![node1, node2, node3, node4];
         let cplds = vec![vec![1, 2, 4], vec![2, 3, 4]];
-        let tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
+        let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
 
-        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cplds);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds);
         assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
         assert_ne!(p1.elems[1].nodes[1].coord[1], 1.0);
 
         let disp = vec![-1., -1., -1., -1., -1., -1., -1., -1.];
         let force = vec![0., 0., 0., 0., 0., 0., 0., 0.];
-        let nodes_disp = p1.disps(&nodes);
-        let nodes_force = p1.forces(&nodes);
+        let nodes_disp = p1.disps();
+        let nodes_force = p1.forces();
         assert_eq!(disp, nodes_disp);
         assert_eq!(force, nodes_force);
     }

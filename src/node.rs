@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::fmt;
 
 pub struct Node1D {
@@ -21,12 +22,11 @@ impl fmt::Display for Node1D {
     }
 }
 
-#[derive(Debug)]
 pub struct Node2D {
     pub id: usize,
     pub coord: [f64; 2],
-    pub disps: [f64; 2],
-    pub forces: [f64; 2],
+    pub disps: [RefCell<f64>; 2],
+    pub forces: [RefCell<f64>; 2],
 }
 
 impl Node2D {
@@ -34,8 +34,8 @@ impl Node2D {
         Node2D {
             id,
             coord,
-            disps: [-1.0, -1.0],
-            forces: [0.0, 0.0],
+            disps: [RefCell::new(-1.0), RefCell::new(-1.0)],
+            forces: [RefCell::new(0.0), RefCell::new(0.0)],
         }
     }
 }
@@ -48,10 +48,10 @@ impl fmt::Display for Node2D {
             self.id,
             self.coord[0],
             self.coord[1],
-            self.disps[0],
-            self.disps[1],
-            self.forces[0],
-            self.forces[1]
+            self.disps[0].borrow(),
+            self.disps[1].borrow(),
+            self.forces[0].borrow(),
+            self.forces[1].borrow()
         )
     }
 }

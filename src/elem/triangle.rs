@@ -14,7 +14,7 @@ pub struct Tri2D3N<'tri> {
 }
 
 impl<'tri> Tri2D3N<'tri> {
-    /// generate a 2D Tri2D3N element
+    /// Generate a 2D Tri2D3N element
     pub fn new(id: usize, thick: f64, nodes: [&Node2D; 3]) -> Tri2D3N {
         Tri2D3N {
             id,
@@ -24,7 +24,7 @@ impl<'tri> Tri2D3N<'tri> {
         }
     }
 
-    /// get the x coords of nodes in tri element
+    /// Get the x coords of nodes in tri element
     pub fn xs(&self) -> [f64; 3] {
         let mut x_list = [0.0; 3];
         for i in 0..3 {
@@ -33,7 +33,7 @@ impl<'tri> Tri2D3N<'tri> {
         x_list
     }
 
-    /// get the y coords of nodes in tri element
+    /// Get the y coords of nodes in tri element
     pub fn ys(&self) -> [f64; 3] {
         let mut y_list = [0.0; 3];
         for i in 0..3 {
@@ -42,8 +42,29 @@ impl<'tri> Tri2D3N<'tri> {
         y_list
     }
 
-    /// calculate element stiffness matrix K
-    /// return a 6x6 matrix, elements are f64
+    /// Get nodes's disps in a element
+    pub fn disps(&self) -> [f64; 6] {
+        let mut disps = [0.0; 6];
+        for idx in 0..3 {
+            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
+            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+        }
+        disps
+    }
+
+    /// Calculate the Jacobian matrix of triangle element
+    pub fn jacobian(&self) -> [[f64; 2]; 2] {
+        let x: [f64; 3] = self.xs();
+        let y: [f64; 3] = self.ys();
+        let dx21 = x[1] - x[0];
+        let dx31 = x[2] - x[0];
+        let dy21 = y[1] - y[0];
+        let dy31 = y[2] - y[0];
+        [[dx21, dx31], [dy21, dy31]]
+    }
+
+    /// Calculate element stiffness matrix K
+    /// Return a 6x6 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64)) -> [[f64; 6]; 6] {
         println!(
             "\n>>> Calculating Tri2D3N#{}'s stiffness matrix k{} ......",
@@ -57,20 +78,16 @@ impl<'tri> Tri2D3N<'tri> {
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let x: [f64; 3] = self.xs();
-        let y: [f64; 3] = self.ys();
-        let dx21 = x[1] - x[0];
-        let dx31 = x[2] - x[0];
-        let dy21 = y[1] - y[0];
-        let dy31 = y[2] - y[0];
-        let jacobian = Jacobian2x2f::from([[dx21, dx31], [dy21, dy31]]);
+        let jacobian = Jacobian2x2f::from(self.jacobian());
         let det_j = jacobian.determinant();
 
+        let x: [f64; 3] = self.xs();
+        let y: [f64; 3] = self.ys();
         let h_mat = SMatrix::<f64, 3, 4>::from([
-            [dy31, 0.0, -dx31],
-            [-dy21, 0.0, dx21],
-            [0.0, -dx31, dy31],
-            [0.0, dx21, -dy21],
+            [y[2] - y[0], 0.0, x[0] - x[2]],
+            [y[0] - y[1], 0.0, x[1] - x[0]],
+            [0.0, x[0] - x[2], y[2] - y[0]],
+            [0.0, x[1] - x[0], y[0] - y[1]],
         ]) / (det_j.abs());
 
         let q_mat = SMatrix::<f64, 4, 6>::from([
@@ -100,7 +117,7 @@ impl<'tri> Tri2D3N<'tri> {
 impl<'tri> K for Tri2D3N<'tri> {
     type Kmatrix = [[f64; 6]; 6];
 
-    /// cache stiffness matrix for element
+    /// Cache stiffness matrix for element
     fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>,
@@ -112,7 +129,7 @@ impl<'tri> K for Tri2D3N<'tri> {
         }
     }
 
-    /// print element's stiffness matrix
+    /// Print element's stiffness matrix
     fn k_printer(&mut self, material: (f64, f64)) {
         if self.k_matrix.is_none() {
             self.k_matrix = Some(self.calc_k(material));

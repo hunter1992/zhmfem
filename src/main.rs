@@ -26,7 +26,7 @@ fn run() {
         .collect();
 
     // transform points into nodes
-    let mut nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
 
     // list nodes ids in one element
     let cpld: Vec<Vec<usize>> = vec![vec![1, 2, 4], vec![3, 4, 2]];
@@ -39,27 +39,23 @@ fn run() {
     }
 
     // assemble global stiffness matrix
-    let mut p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, tris, cpld);
+    let mut p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cpld);
     print_2darr("K", p1.k(material));
 
     // construct solver and solve the result
-    let mut solver: Solver<8> = Solver::new(p1.disps(&nodes), p1.forces(&nodes), *p1.k(material));
+    let mut solver: Solver<8> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
     solver.solve_static();
 
-    // write the result into nodes
-    let disp = &solver.disps;
-    let force = &solver.forces;
-    for (i, node) in nodes.iter_mut().enumerate() {
-        node.disps[0] = disp[i * 2];
-        node.disps[1] = disp[i * 2 + 1];
-        node.forces[0] = force[i * 2];
-        node.forces[1] = force[i * 2 + 1];
-    }
-    print_1darr("qe", solver.disps_rlt());
-    print_1darr("fe", solver.forces_rlt());
+    p1.write_result(&solver);
 
-    for i in tris.iter() {
-        println!("{}", i);
-        i.k_printer(material);
-    }
+    print_1darr("qe", &p1.disps());
+    print_1darr("fe", &p1.forces());
+
+    println!("Part[{}] deform energy: {}", p1.id, p1.strain_energy());
+    println!("Part[{}] force work: {}", p1.id, p1.force_work());
+    println!(
+        "Part[{}] potential energy: {}",
+        p1.id,
+        p1.potential_energy()
+    );
 }
