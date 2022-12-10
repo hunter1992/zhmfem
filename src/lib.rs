@@ -6,11 +6,13 @@ extern crate test;
 
 mod calc;
 mod elem;
+mod mesh;
 mod node;
 mod part;
 
 pub use calc::Solver;
 pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
+pub use mesh::plane;
 pub use node::*;
 pub use part::Part2D;
 
