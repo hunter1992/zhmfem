@@ -2,61 +2,43 @@ use std::collections::HashMap;
 use zhmfem::*;
 
 fn main() {
-    run();
-}
+    println!("");
+    println!("      ========================================");
+    println!("      ========== WELCOME TO zhmfem! ==========");
+    println!("      ========================================\n");
+    println!(">>> check the examples under 'zhmfem/examples/' path using:");
+    println!("        cargo run --examples <example-name>");
 
-fn run() {
-    // set material parameters
     let thick = 1.0f64;
     let material = (1.0f64, 0.25f64);
+    //let thick = 0.1f64;
+    //let material = (30000000.0f64, 0.3f64);
 
-    // initial input data
-    const R: usize = 5;
-    const C: usize = 5;
-    const M: usize = 3;
-    const F: usize = 2;
-    let r1 = plane::Rectangle::new([0.0, 0.0], [1.0, 1.0]);
-    let (coords, cpld) = r1.mesh_with_tri(R, C);
+    //let coords: Vec<Vec<f64>> = vec![vec![1., 0.], vec![2., 0.], vec![2.25, 1.5], vec![1.25, 1.]];
+    let coords: Vec<Vec<f64>> = vec![vec![0., 0.], vec![1., 0.], vec![1.0, 1.0], vec![0.0, 1.0]];
+    let cplds: Vec<Vec<usize>> = vec![vec![1, 2, 3, 4]];
 
-    let zero_disp: Vec<usize> = vec![0, 1, 40];
-    let force_index: Vec<usize> = vec![8, 48];
-    let force_value: Vec<f64> = vec![-1.0, 1.0];
-    let force_data: HashMap<usize, f64> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
+    let zero_disp: Vec<usize> = vec![0, 1, 6];
+    let force_idx: Vec<usize> = vec![2, 4];
+    let force_vle: Vec<f64> = vec![-1., 1.];
+    let force_data: HashMap<usize, f64> =
+        force_idx.into_iter().zip(force_vle.into_iter()).collect();
 
-    // transform points into nodes
     let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
+    let mut rects: Vec<Quad2D4N> = rec2d4n_vec(thick, &nodes, &cplds);
 
-    // construct element by coupled nodes
-    let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
-    //for i in tris.iter_mut() {
-    //    println!("{}", i);
-    //    i.k_printer(material);
-    //}
+    println!("{}", rects[0]);
+    print_2darr("k1", rects[0].k(material));
 
-    // assemble global stiffness matrix
-    let mut p1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tris, &cpld);
-    //print_2darr("K", p1.k(material));
-
-    //print_1darr("qe", &p1.disps());
-    //print_1darr("fe", &p1.forces());
-
-    // construct solver and solve the result
-    let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
+    let mut p1: Part2D<Quad2D4N, 4, 2, 4> = Part2D::new(1, &nodes, &mut rects, &cplds);
+    let mut solver: Solver<8> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
     solver.solve_static();
-
     p1.write_result(&solver);
 
-    //print_1darr("qe", &p1.disps());
-    //print_1darr("fe", &p1.forces());
+    print_1darr("qe", &p1.disps());
+    print_1darr("fe", &p1.forces());
 
-    println!("Part[{}] deform energy: {}", p1.id, p1.strain_energy());
-    println!("Part[{}] force work: {}", p1.id, p1.force_work());
-    println!(
-        "Part[{}] potential energy: {}",
-        p1.id,
-        p1.potential_energy()
-    );
+    println!("deform energy: {}", p1.strain_energy());
+    println!("force work: {}", p1.force_work());
+    println!("potential energy: {}", p1.potential_energy());
 }

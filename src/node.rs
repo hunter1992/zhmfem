@@ -44,7 +44,7 @@ impl fmt::Display for Node2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\n\t\tNode{}:\n\t\tCoord: [{}, {}]  Disps: [{}, {}]  Force: [{}, {}]",
+            "\n\t\tNode{}:\n\t\tCoord: [{:-7.3}, {:-7.3}]  Disps: [{:-7.4}, {:-7.4}]  Force: [{:-7.4}, {:-7.4}]",
             self.id,
             self.coord[0],
             self.coord[1],

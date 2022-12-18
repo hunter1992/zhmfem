@@ -11,7 +11,7 @@ mod node;
 mod part;
 
 pub use calc::Solver;
-pub use elem::{rectangle::Rec2D4N, triangle::Tri2D3N};
+pub use elem::{rectangle::Quad2D4N, triangle::Tri2D3N};
 pub use mesh::plane;
 pub use node::*;
 pub use part::Part2D;
@@ -107,6 +107,10 @@ pub fn nodes2d_vec(
     idx_0_disp: &[usize],
     force: &HashMap<usize, f64>,
 ) -> Vec<Node2D> {
+    if points[0].len() != 2 {
+        panic!(">>> Error from nodes2d_vec, the input points aren't 2D!");
+    }
+
     let mut nodes: Vec<Node2D> = Vec::with_capacity(points.len());
     for (idx, coord) in points.iter().enumerate() {
         nodes.push(Node2D::new(idx + 1, [coord[0], coord[1]]));
@@ -146,6 +150,27 @@ pub fn tri2d3n_vec<'tri>(
         ));
     }
     tri2d3n
+}
+
+pub fn rec2d4n_vec<'rect>(
+    thick: f64,
+    nodes: &'rect [Node2D],
+    couples: &[Vec<usize>],
+) -> Vec<Quad2D4N<'rect>> {
+    let mut rec2d4n: Vec<Quad2D4N> = Vec::new();
+    for (ele_id, cpld) in couples.iter().enumerate() {
+        rec2d4n.push(Quad2D4N::new(
+            ele_id + 1,
+            thick,
+            [
+                &nodes[cpld[0] - 1],
+                &nodes[cpld[1] - 1],
+                &nodes[cpld[2] - 1],
+                &nodes[cpld[3] - 1],
+            ],
+        ))
+    }
+    rec2d4n
 }
 
 pub fn nonzero_index<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {
@@ -188,7 +213,7 @@ mod testing {
         let tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node3]);
         let tri2 = Tri2D3N::new(2, thick, [&node4, &node2, &node3]);
 
-        let rec1 = Rec2D4N::new(3, thick, [&node1, &node2, &node3, &node4]);
+        let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4]);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
@@ -198,12 +223,13 @@ mod testing {
         assert_eq!([1.0f64, 1.0f64], tri2.nodes[0].coord);
 
         assert_eq!(vec![0.0, 0.0, 1.0], tri1.xs());
-        assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_xs());
+        assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.xs());
         assert_ne!(vec![0.0, 0.0, 1.0], tri1.ys());
-        assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_ys());
+        assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.ys());
 
         assert_eq!(0.5f64, tri1.area());
         assert_eq!(0.5f64, tri2.area());
+        assert_eq!(1.0f64, rec1.area());
     }
 
     #[test]

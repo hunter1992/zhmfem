@@ -106,6 +106,7 @@ impl<'tri> Tri2D3N<'tri> {
         stiffness_matrix
     }
 
+    /// Get triangle element area value
     pub fn area(&self) -> f64 {
         let x = self.xs();
         let y = self.ys();
@@ -139,7 +140,7 @@ impl<'tri> K for Tri2D3N<'tri> {
             if row == 0 {
                 print!("[");
             } else {
-                print!(" [")
+                print!(" [");
             }
             for col in 0..6 {
                 print!(" {:-9.6} ", self.k_matrix.unwrap()[row][col]);
@@ -147,7 +148,7 @@ impl<'tri> K for Tri2D3N<'tri> {
             if row == 5 {
                 println!("]]");
             } else {
-                println!("]")
+                println!("]");
             }
         }
         println!("");
