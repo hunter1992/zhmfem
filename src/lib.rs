@@ -11,7 +11,7 @@ mod node;
 mod part;
 
 pub use calc::Solver;
-pub use elem::{rectangle::Quad2D4N, triangle::Tri2D3N};
+pub use elem::{quadrila::Quad2D4N, triangle::Tri2D3N};
 pub use mesh::plane;
 pub use node::*;
 pub use part::Part2D;
@@ -152,7 +152,7 @@ pub fn tri2d3n_vec<'tri>(
     tri2d3n
 }
 
-pub fn rec2d4n_vec<'rect>(
+pub fn quad2d4n_vec<'rect>(
     thick: f64,
     nodes: &'rect [Node2D],
     couples: &[Vec<usize>],
