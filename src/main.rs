@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use zhmfem::*;
-
 fn main() {
     println!("");
     println!("      ========================================");
