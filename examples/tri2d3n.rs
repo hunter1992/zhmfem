@@ -54,5 +54,7 @@ fn main() {
 
     for i in tris.iter() {
         println!("{}", i);
+        i.print_strain();
+        i.print_stress(material);
     }
 }

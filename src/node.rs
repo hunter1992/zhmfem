@@ -34,7 +34,7 @@ impl Node2D {
         Node2D {
             id,
             coord,
-            disps: [RefCell::new(-1.0), RefCell::new(-1.0)],
+            disps: [RefCell::new(-1024.0), RefCell::new(-1024.0)],
             forces: [RefCell::new(0.0), RefCell::new(0.0)],
         }
     }
@@ -44,7 +44,7 @@ impl fmt::Display for Node2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\n\t\tNode{}:\n\t\tCoord: [{:-7.3}, {:-7.3}]  Disps: [{:-7.4}, {:-7.4}]  Force: [{:-7.4}, {:-7.4}]",
+            "\n\t\tNode{}:\n\t\tCoord: [{:-7.4}, {:-7.4}]  Disps: [{:-7.4}, {:-7.4}]  Force: [{:-7.4}, {:-7.4}]",
             self.id,
             self.coord[0],
             self.coord[1],

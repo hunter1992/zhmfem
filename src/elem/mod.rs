@@ -1,2 +1,1 @@
-pub mod triangle;
-pub mod quadrila;
+pub mod dim2;

@@ -11,7 +11,7 @@ mod node;
 mod part;
 
 pub use calc::Solver;
-pub use elem::{quadrila::Quad2D4N, triangle::Tri2D3N};
+pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
 pub use mesh::plane;
 pub use node::*;
 pub use part::Part2D;

@@ -52,6 +52,57 @@ impl<'tri> Tri2D3N<'tri> {
         disps
     }
 
+    /// Get nodes's force in a element
+    pub fn forces(&self) -> [f64; 6] {
+        let mut forces = [0.0; 6];
+        for idx in 0..3 {
+            forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
+            forces[2 * idx + 1] = *self.nodes[idx].forces[1].borrow();
+        }
+        forces
+    }
+
+    /// Get element's strain vector
+    pub fn strain(&self) -> [f64; 3] {
+        let jecobian_mat = Jacobian2x2f::from(self.jacobian());
+        let b_mat = self.geometry_mat(jecobian_mat.determinant());
+        let elem_nodes_disps = SMatrix::<f64, 6, 1>::from(self.disps());
+        let strain_vlaue: [f64; 3] = (b_mat * elem_nodes_disps).into();
+        strain_vlaue
+    }
+
+    /// Get element's strss vector
+    pub fn stress(&self, material_args: (f64, f64)) -> [f64; 3] {
+        let (ee, nu) = material_args;
+        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, 0.5 * (1.0 - nu)],
+        ]) * (ee / (1.0 - nu * nu));
+
+        let strain = SMatrix::<f64, 3, 1>::from(self.strain());
+        let stress: [f64; 3] = (elasticity_mat * strain).into();
+        stress
+    }
+
+    /// Print element's strain value
+    pub fn print_strain(&self) {
+        let strain = self.strain();
+        println!(
+            "\nstrain value of elem[{}]:\n\tE_xx = {:-9.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
+            self.id, strain[0], strain[1], strain[2]
+        );
+    }
+
+    /// Print element's strss value
+    pub fn print_stress(&self, material_args: (f64, f64)) {
+        let stress = self.stress(material_args);
+        println!(
+            "\nstress value of elem[{}]:\n\tS_xx = {:-9.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
+            self.id, stress[0], stress[1], stress[2]
+        );
+    }
+
     /// Calculate the Jacobian matrix of triangle element
     pub fn jacobian(&self) -> [[f64; 2]; 2] {
         let x: [f64; 3] = self.xs();
@@ -81,6 +132,14 @@ impl<'tri> Tri2D3N<'tri> {
         let jacobian = Jacobian2x2f::from(self.jacobian());
         let det_j = jacobian.determinant();
 
+        let b_mat = self.geometry_mat(det_j);
+        // Gauss integration, area of standard tri is 0.5
+        let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
+        let stiffness_matrix: [[f64; 6]; 6] = (0.5 * t * core).into();
+        stiffness_matrix
+    }
+
+    fn geometry_mat(&self, det_j: f64) -> SMatrix<f64, 3, 6> {
         let x: [f64; 3] = self.xs();
         let y: [f64; 3] = self.ys();
         let h_mat = SMatrix::<f64, 3, 4>::from([
@@ -99,11 +158,7 @@ impl<'tri> Tri2D3N<'tri> {
             [0., 0., 0., 1.],
         ]);
 
-        let b_mat = h_mat * q_mat;
-        // Gauss integration, area of standard tri is 0.5
-        let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
-        let stiffness_matrix: [[f64; 6]; 6] = (0.5 * t * core).into();
-        stiffness_matrix
+        h_mat * q_mat
     }
 
     /// Get triangle element area value
