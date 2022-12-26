@@ -57,4 +57,6 @@ fn main() {
         i.print_strain();
         i.print_stress(material);
     }
+    print_1darr("\nDisp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
+    print_1darr("\nDisp at (1, 1)", &tris[1].point_disp([1.0, 1.0]));
 }

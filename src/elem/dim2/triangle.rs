@@ -103,6 +103,47 @@ impl<'tri> Tri2D3N<'tri> {
         );
     }
 
+    /// Disp of any points within element
+    pub fn point_disp(&self, point_coord: [f64; 2]) -> [f64; 2] {
+        let x = point_coord[0];
+        let y = point_coord[1];
+        let n0 = self.shape_mat_i(0usize)(x, y);
+        let n1 = self.shape_mat_i(1usize)(x, y);
+        let n2 = self.shape_mat_i(2usize)(x, y);
+
+        let disps = self.disps();
+        let u = n0 * disps[0] + n1 * disps[2] + n2 * disps[4];
+        let v = n0 * disps[1] + n1 * disps[3] + n2 * disps[5];
+        [u, v]
+    }
+
+    /// Get shape matrix element N_i
+    fn shape_mat_i(&self, i: usize) -> impl Fn(f64, f64) -> f64 {
+        let area = self.area();
+        let xs = self.xs();
+        let ys = self.ys();
+        let idx = |x: usize| (x % 3) as usize;
+        let a = [
+            xs[idx(0 + 1) as usize] * ys[idx(0 + 2) as usize]
+                - xs[idx(0 + 2) as usize] * ys[idx(0 + 1) as usize],
+            xs[idx(1 + 1) as usize] * ys[idx(1 + 2) as usize]
+                - xs[idx(1 + 2) as usize] * ys[idx(1 + 1) as usize],
+            xs[idx(2 + 1) as usize] * ys[idx(2 + 2) as usize]
+                - xs[idx(2 + 2) as usize] * ys[idx(2 + 1) as usize],
+        ];
+        let b = [
+            ys[idx(0 + 1) as usize] - ys[idx(0 + 2) as usize],
+            ys[idx(1 + 1) as usize] - ys[idx(1 + 2) as usize],
+            ys[idx(2 + 1) as usize] - ys[idx(2 + 2) as usize],
+        ];
+        let c = [
+            xs[idx(0 + 2) as usize] - xs[idx(0 + 1) as usize],
+            xs[idx(1 + 2) as usize] - xs[idx(1 + 1) as usize],
+            xs[idx(2 + 2) as usize] - xs[idx(2 + 1) as usize],
+        ];
+        move |x: f64, y: f64| 0.5 * (a[i] + x * b[i] + y * c[i]) / area
+    }
+
     /// Calculate the Jacobian matrix of triangle element
     pub fn jacobian(&self) -> [[f64; 2]; 2] {
         let x: [f64; 3] = self.xs();

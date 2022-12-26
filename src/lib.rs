@@ -33,7 +33,7 @@ where
     println!("{} =", name);
     print!("[[");
     for ele in vec.iter() {
-        print!(" {:-7.4} ", &ele);
+        print!(" {:-9.6} ", &ele);
     }
     println!("]]\n");
 }
@@ -50,7 +50,7 @@ where
             print!(" [");
         }
         for col in 0..mat[0].len() {
-            print!(" {:-7.4} ", mat[row][col]);
+            print!(" {:-9.6} ", mat[row][col]);
         }
         if row == mat.len() - 1 {
             println!("]]\n");
@@ -67,7 +67,7 @@ where
     println!("{} =", name);
     print!("[[");
     for c in 0..C {
-        print!(" {:-7.4} ", arr[c]);
+        print!(" {:-9.6} ", arr[c]);
     }
     println!("]]\n");
 }
@@ -84,7 +84,7 @@ where
             print!(" [");
         }
         for c in 0..C {
-            print!(" {:-7.4} ", arr[r][c]);
+            print!(" {:-9.6} ", arr[r][c]);
         }
         if r == arr.len() - 1 {
             println!("]]\n");
