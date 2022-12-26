@@ -48,15 +48,27 @@ fn main() {
     print_1darr("qe", &p1.disps());
     print_1darr("fe", &p1.forces());
 
-    println!("deform energy: {}", p1.strain_energy());
-    println!("force work: {}", p1.force_work());
-    println!("potential energy: {}", p1.potential_energy());
+    println!(">>> System energy:");
+    println!("\tE_d: {:-9.6} (deform energy)", p1.strain_energy());
+    println!("\tW_f: {:-9.6} (exforce works)", p1.force_work());
+    println!("\tE_p: {:-9.6} (potential energy)", p1.potential_energy());
+
+    println!("\n==================== ELEMENT INFO ====================");
 
     for i in tris.iter() {
         println!("{}", i);
+        print_2darr(
+            "\n>>> triangle element's stiffness matrix k",
+            &i.k_matrix.unwrap(),
+        );
         i.print_strain();
         i.print_stress(material);
     }
-    print_1darr("\nDisp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
-    print_1darr("\nDisp at (1, 1)", &tris[1].point_disp([1.0, 1.0]));
+
+    println!();
+    print_1darr("Disp at (0.3, 0.3)", &tris[0].point_disp([0.3, 0.3]));
+    print_1darr("Disp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
+
+    print_1darr("Disp at (0.8, 0.8)", &tris[1].point_disp([0.8, 0.8]));
+    print_1darr("Disp at (1, 1)", &tris[1].point_disp([1.0, 1.0]));
 }
