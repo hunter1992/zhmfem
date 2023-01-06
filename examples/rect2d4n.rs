@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use zhmfem::*;
 
 fn main() {
+    // ------ Part 1: set parameters ------
     // set material parameters
-    let material = (1.0f64, 0.25f64); //Young's modulud & Poisson's ratio
+    let material = (1.0f64, 0.25f64); // Young's modulus and Poisson's ratio
 
     // rectangular simulation area parameters
     let thick = 1.0f64;
@@ -13,14 +14,17 @@ fn main() {
     // number of nodes and freedom
     const R: usize = 2; // rows of nodes
     const C: usize = 2; // columns of nodes
-    const M: usize = 3; // node num in single element
+    const M: usize = 4; // node num in single element
     const F: usize = 2; // freedom num in single node
 
+    // ------ Part 2: set problems ------
     // construct the solid and mesh it
     let solid1 = plane::Rectangle::new([0.0, 0.0], [W, H]);
-    let (coords, cpld) = solid1.mesh_with_tri(R, C);
+    let (coords, cpld) = solid1.mesh_with_rect(R, C);
 
-    // set boundary conditions and loads
+    // set boundary conditions and mesh it
+    // The following two lines are set for
+    // a specific problem,not general code
     let zero_disp: Vec<usize> = vec![0, 1, (R - 1) * C * 2];
     let force_index: Vec<usize> = vec![(C - 1) * 2, (R * C - 1) * 2];
     let force_value: Vec<f64> = vec![-1.0, 1.0];
@@ -29,15 +33,14 @@ fn main() {
         .zip(force_value.into_iter())
         .collect();
 
-    // transform points into nodes
+    // tramsform points into nodes
     let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
 
     // construct elements by coupled nodes
-    let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
+    let mut rects: Vec<Quad2D4N> = quad2d4n_vec(thick, &nodes, &cpld);
 
     // assemble global stiffness matrix
-    let mut p1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tris, &cpld);
-    println!("");
+    let mut p1: Part2D<Quad2D4N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut rects, &cpld);
     p1.k(material);
     p1.k_printer(0.0);
 
@@ -55,19 +58,20 @@ fn main() {
     println!("\tW_f: {:-9.6} (exforce works)", p1.force_work());
     println!("\tE_p: {:-9.6} (potential energy)", p1.potential_energy());
 
-    println!("\n==================== ELEMENT INFO ====================");
-
-    for i in tris.iter() {
+    for i in rects.iter() {
         println!("{}", i);
         i.k_printer(0.0);
-        i.print_strain();
-        i.print_stress(material);
     }
 
-    println!();
-    print_1darr("Disp at (0.3, 0.3)", &tris[0].point_disp([0.3, 0.3]));
-    print_1darr("Disp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
-
-    print_1darr("Disp at (0.8, 0.8)", &tris[1].point_disp([0.8, 0.8]));
-    print_1darr("Disp at (1, 1)", &tris[1].point_disp([1.0, 1.0]));
+    println!(
+        "{}-{}-{}-{}",
+        rects[0].shape_mat_i(0)(1., 0.),
+        rects[0].shape_mat_i(1)(1., 0.),
+        rects[0].shape_mat_i(2)(1., 0.),
+        rects[0].shape_mat_i(3)(1., 0.),
+    );
+    print_1darr("Disp at (0, 0)", &rects[0].point_disp([0.0, 0.0]));
+    print_1darr("Disp at (1, 0)", &rects[0].point_disp([1.0, 0.0]));
+    print_1darr("Disp at (1, 1)", &rects[0].point_disp([1.0, 1.0]));
+    print_1darr("Disp at (0, 1)", &rects[0].point_disp([0.0, 1.0]));
 }

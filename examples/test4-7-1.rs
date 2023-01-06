@@ -3,12 +3,10 @@ use zhmfem::*;
 
 fn main() {
     // set material parameters
-    let material = (1.0f64, 0.25f64); //Young's modulud & Poisson's ratio
+    let material = (10000000.0f64, 0.33f64); //Young's modulud & Poisson's ratio
 
     // rectangular simulation area parameters
-    let thick = 1.0f64;
-    const W: f64 = 1.0; // width
-    const H: f64 = 1.0; // height
+    let thick = 0.1f64;
 
     // number of nodes and freedom
     const R: usize = 2; // rows of nodes
@@ -17,20 +15,20 @@ fn main() {
     const F: usize = 2; // freedom num in single node
 
     // construct the solid and mesh it
-    let solid1 = plane::Rectangle::new([0.0, 0.0], [W, H]);
-    let (coords, cpld) = solid1.mesh_with_tri(R, C);
+    let points = vec![vec![2., 1.], vec![2., 0.], vec![0., 1.], vec![0., 0.]];
+    let cpld = vec![vec![1, 3, 2], vec![4, 2, 3]];
 
     // set boundary conditions and loads
-    let zero_disp: Vec<usize> = vec![0, 1, (R - 1) * C * 2];
-    let force_index: Vec<usize> = vec![(C - 1) * 2, (R * C - 1) * 2];
-    let force_value: Vec<f64> = vec![-1.0, 1.0];
+    let zero_disp: Vec<usize> = vec![4, 5, 6, 7];
+    let force_index: Vec<usize> = vec![1, 3];
+    let force_value: Vec<f64> = vec![-50000.0, -50000.0];
     let force_data: HashMap<usize, f64> = force_index
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
 
     // transform points into nodes
-    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&points, &zero_disp, &force_data);
 
     // construct elements by coupled nodes
     let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
@@ -39,7 +37,8 @@ fn main() {
     let mut p1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tris, &cpld);
     println!("");
     p1.k(material);
-    p1.k_printer(0.0);
+    p1.k_printer(6.0);
+    print_2darr("\nK", p1.k(material));
 
     // construct solver and solve the case
     let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
@@ -59,15 +58,8 @@ fn main() {
 
     for i in tris.iter() {
         println!("{}", i);
-        i.k_printer(0.0);
+        i.k_printer(6.0);
         i.print_strain();
         i.print_stress(material);
     }
-
-    println!();
-    print_1darr("Disp at (0.3, 0.3)", &tris[0].point_disp([0.3, 0.3]));
-    print_1darr("Disp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
-
-    print_1darr("Disp at (0.8, 0.8)", &tris[1].point_disp([0.8, 0.8]));
-    print_1darr("Disp at (1, 1)", &tris[1].point_disp([1.0, 1.0]));
 }
