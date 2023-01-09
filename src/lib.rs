@@ -2,6 +2,7 @@
 #![feature(generic_const_exprs)]
 #![feature(test)]
 
+extern crate nalgebra as na;
 extern crate test;
 
 mod calc;
@@ -13,17 +14,20 @@ mod part;
 pub use calc::Solver;
 pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
 pub use mesh::plane;
+pub use na::*;
 pub use node::*;
 pub use part::Part2D;
 
 use std::collections::HashMap;
+
+type Jacobian2D = SMatrix<f64, 2, 2>;
 
 pub trait K {
     type Kmatrix;
     fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>;
-    fn k_printer(&mut self, material: (f64, f64));
+    fn k_printer(&self, n_exp: f64);
 }
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])
@@ -33,7 +37,7 @@ where
     println!("{} =", name);
     print!("[[");
     for ele in vec.iter() {
-        print!(" {:-9.6} ", &ele);
+        print!(" {:-7.4} ", &ele);
     }
     println!("]]\n");
 }
@@ -50,7 +54,7 @@ where
             print!(" [");
         }
         for col in 0..mat[0].len() {
-            print!(" {:-9.6} ", mat[row][col]);
+            print!(" {:-7.4} ", mat[row][col]);
         }
         if row == mat.len() - 1 {
             println!("]]\n");
@@ -67,7 +71,7 @@ where
     println!("{} =", name);
     print!("[[");
     for c in 0..C {
-        print!(" {:-9.6} ", arr[c]);
+        print!(" {:-7.4} ", arr[c]);
     }
     println!("]]\n");
 }
@@ -84,7 +88,7 @@ where
             print!(" [");
         }
         for c in 0..C {
-            print!(" {:-9.6} ", arr[r][c]);
+            print!(" {:-13.4} ", arr[r][c]);
         }
         if r == arr.len() - 1 {
             println!("]]\n");
@@ -248,7 +252,9 @@ mod testing {
         assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
         assert_ne!(p1.elems[1].nodes[1].coord[1], 1.0);
 
-        let disp = vec![-1., -1., -1., -1., -1., -1., -1., -1.];
+        let disp = vec![
+            -1024., -1024., -1024., -1024., -1024., -1024., -1024., -1024.,
+        ];
         let force = vec![0., 0., 0., 0., 0., 0., 0., 0.];
         let nodes_disp = p1.disps();
         let nodes_force = p1.forces();

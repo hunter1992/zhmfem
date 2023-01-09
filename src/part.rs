@@ -138,6 +138,37 @@ where
             self.k_matrix.as_ref().unwrap()
         }
     }
+
+    /// Print part's global stiffness matrix
+    pub fn k_printer(&mut self, n_exp: f64) {
+        if self.k_matrix.is_none() {
+            println!(
+                "!!! Part #{}'s K matrix is empty! call k() to calc it.",
+                self.id
+            );
+        }
+
+        print!("Part #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
+        for row in 0..N * F {
+            if row == 0 {
+                print!("[");
+            } else {
+                print!(" [");
+            }
+            for col in 0..N * F {
+                print!(
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                );
+            }
+            if row == (N * F - 1) {
+                println!("]]");
+            } else {
+                println!("]");
+            }
+        }
+        println!("");
+    }
 }
 
 fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
