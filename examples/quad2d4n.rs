@@ -4,7 +4,7 @@ use zhmfem::*;
 fn main() {
     // ------ Part 1: set parameters ------
     // set material parameters
-    let material = (30000000.0f64, 0.3f64); // Young's modulus and Poisson's ratio
+    let material = (3000000.0f64, 0.3f64); // Young's modulus and Poisson's ratio
 
     // quad area
     let thick = 0.1f64;
@@ -28,9 +28,9 @@ fn main() {
     // set boundary conditions and mesh it
     // The following two lines are set for
     // a specific problem,not general code
-    let zero_disp: Vec<usize> = vec![0];
-    let force_index: Vec<usize> = vec![0];
-    let force_value: Vec<f64> = vec![0.0];
+    let zero_disp: Vec<usize> = vec![0, 1, 2, 3];
+    let force_index: Vec<usize> = vec![4];
+    let force_value: Vec<f64> = vec![30000.0];
     let force_data: HashMap<usize, f64> = force_index
         .into_iter()
         .zip(force_value.into_iter())
@@ -47,4 +47,11 @@ fn main() {
     let mut p1: Part2D<Quad2D4N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut quads, &cpld);
     p1.k(material);
     p1.k_printer(6.0);
+
+    let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
+    solver.solve_static();
+    p1.write_result(&solver);
+
+    print_1darr("qe", &p1.disps());
+    print_1darr("fe", &p1.forces());
 }
