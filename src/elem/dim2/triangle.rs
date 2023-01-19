@@ -1,6 +1,6 @@
 use crate::{node::Node2D, Jacobian2D, K};
 use na::*;
-use std::fmt;
+use std::fmt::{self, Write};
 
 pub struct Tri2D3N<'tri> {
     pub id: usize,
@@ -209,12 +209,26 @@ impl<'tri> Tri2D3N<'tri> {
             self.id, stress[0], stress[1], stress[2]
         );
     }
+
+    /// Get element's info string
+    pub fn info(&self) -> String {
+        format!(
+            "\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Tri2D3N
+\tNodes: {}\n\t       {}\n\t       {}\n",
+            self.id,
+            self.area(),
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2]
+        )
+    }
 }
 
+/// Implement zhm::K trait for triangle element
 impl<'tri> K for Tri2D3N<'tri> {
     type Kmatrix = [[f64; 6]; 6];
 
-    /// Cache stiffness matrix for element
+    /// Cache stiffness matrix for triangle element
     fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>,
@@ -226,16 +240,16 @@ impl<'tri> K for Tri2D3N<'tri> {
         }
     }
 
-    /// Print element's stiffness matrix
+    /// Print triangle element's stiffness matrix
     fn k_printer(&self, n_exp: f64) {
         if self.k_matrix.is_none() {
-            println!(
+            panic!(
                 "!!! Tri2D3N#{}'s k mat is empty! call k() to calc it.",
                 self.id
             );
         }
 
-        print!("Tri2D3N k{} =  (* 10^{})\n[", self.id, n_exp as u8);
+        print!("\nTri2D3N k{} =  (* 10^{})\n[", self.id, n_exp as u8);
         for row in 0..6 {
             if row == 0 {
                 print!("[");
@@ -255,6 +269,32 @@ impl<'tri> K for Tri2D3N<'tri> {
             }
         }
         println!("");
+    }
+
+    /// Return triangle elem's stiffness matrix's format string
+    fn k_string(&self, n_exp: f64) -> String {
+        let mut k_matrix = String::new();
+        for row in 0..6 {
+            if row == 0 {
+                write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, " [").expect("!!! Write tri k_mat failed!");
+            }
+            for col in 0..6 {
+                write!(
+                    k_matrix,
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                )
+                .expect("!!! Write tri k_mat failed!");
+            }
+            if row == 5 {
+                write!(k_matrix, "]]").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, "]\n").expect("!!! Write tri k_mat failed!");
+            }
+        }
+        k_matrix
     }
 }
 

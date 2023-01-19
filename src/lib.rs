@@ -28,6 +28,7 @@ pub trait K {
     where
         Self::Kmatrix: std::ops::Index<usize>;
     fn k_printer(&self, n_exp: f64);
+    fn k_string(&self, n_exp: f64) -> String;
 }
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])

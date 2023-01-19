@@ -1,12 +1,12 @@
 use std::collections::HashMap;
+use std::io::{BufWriter, Write};
 use zhmfem::*;
 
 fn main() {
     // set material parameters
+    let thick = 1.0f64;
     let material = (1.0f64, 0.25f64); //Young's modulud & Poisson's ratio
 
-    // rectangular simulation area parameters
-    let thick = 1.0f64;
     const W: f64 = 1.0; // width
     const H: f64 = 1.0; // height
 
@@ -65,9 +65,36 @@ fn main() {
     }
 
     println!();
-    print_1darr("Disp at (0.3, 0.3)", &tris[0].point_disp([0.3, 0.3]));
     print_1darr("Disp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
+    print_1darr("Strain at (1, 0)", &tris[0].strain());
+    print_1darr("Stress at (1, 0)", &tris[0].stress(material));
+
+    print_1darr("Disp at (0.8, 0.8)", &tris[0].point_disp([0.8, 0.8]));
+    print_1darr("Strain at (0.8, 0.8)", &tris[0].strain());
+    print_1darr("Stress at (0.8,0.8)", &tris[0].stress(material));
 
     print_1darr("Disp at (0.8, 0.8)", &tris[1].point_disp([0.8, 0.8]));
-    print_1darr("Disp at (1, 1)", &tris[1].point_disp([1.0, 1.0]));
+    print_1darr("Strain at (0.8, 0.8)", &tris[1].strain());
+    print_1darr("Stress at (0.8,0.8)", &tris[1].stress(material));
+
+    // Write the result into file
+    let file_name = "tri2d3n_result.txt";
+    let file = std::fs::File::create(file_name).unwrap();
+    let mut writer = BufWriter::new(file);
+    write!(writer, "\n>>> FEM calculating result:").expect("Write error!");
+
+    for elem in tris.iter() {
+        write!(writer, "{}", elem.info()).expect("Write info failed!");
+        write!(writer, "\tStrain: {:-9.6?}\n", elem.strain()).expect("Write strain failed!");
+        write!(writer, "\tStress: {:-9.6?}\n", elem.stress(material))
+            .expect("Write stress failed!");
+        write!(
+            writer,
+            "\n\tStiffness matrix k{} = \n{}\n",
+            elem.id,
+            elem.k_string(0.0)
+        )
+        .expect("!!! Write k matrix failed!");
+    }
+    writer.flush().expect("!!! Flush failed!");
 }

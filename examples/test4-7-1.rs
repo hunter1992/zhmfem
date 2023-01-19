@@ -38,7 +38,6 @@ fn main() {
     println!("");
     p1.k(material);
     p1.k_printer(6.0);
-    print_2darr("\nK", p1.k(material));
 
     // construct solver and solve the case
     let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));

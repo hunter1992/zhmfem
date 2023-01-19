@@ -4,11 +4,18 @@ use std::fmt;
 pub struct Node1D {
     pub id: usize,
     pub coord: [f64; 1],
+    pub disps: [RefCell<f64>; 1],
+    pub forces: [RefCell<f64>; 1],
 }
 
 impl Node1D {
     pub fn new(id: usize, coord: [f64; 1]) -> Node1D {
-        Node1D { id, coord }
+        Node1D {
+            id,
+            coord,
+            disps: [RefCell::new(-1024.0)],
+            forces: [RefCell::new(0.0)],
+        }
     }
 }
 
@@ -16,8 +23,11 @@ impl fmt::Display for Node1D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nNode_1D Info:\n\tId:    {}\n\tCoord: [{}]",
-            self.id, self.coord[0]
+            "\n\t\tNode{}:  1D\n\t\t\tCoord: [{:-7.4}]\n\t\t\tDisps: [{:-7.4}]\n\t\t\tForce: [{:-7.4}]",
+            self.id,
+            self.coord[0],
+            self.disps[0].borrow(),
+            self.forces[0].borrow(),
         )
     }
 }

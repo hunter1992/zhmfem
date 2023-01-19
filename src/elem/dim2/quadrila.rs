@@ -1,7 +1,7 @@
 use super::triangle::Tri2D3N;
 use crate::{node::Node2D, Jacobian2D, K};
 use na::*;
-use std::fmt;
+use std::fmt::{self, Write};
 
 pub struct Quad2D4N<'quad> {
     pub id: usize,
@@ -206,10 +206,11 @@ impl<'quad> Quad2D4N<'quad> {
     }
 }
 
+/// Implement zhm::K trait for quad element
 impl<'quad> K for Quad2D4N<'quad> {
     type Kmatrix = [[f64; 8]; 8];
 
-    /// Cache stiffness matrix for element
+    /// Cache stiffness matrix for quad element
     fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>,
@@ -221,12 +222,13 @@ impl<'quad> K for Quad2D4N<'quad> {
         }
     }
 
+    /// Print quad element's stiffness matrix
     fn k_printer(&self, n_exp: f64) {
         if self.k_matrix.is_none() {
-            println!(
+            panic!(
                 "!!! Quad2D4N#{}'s k mat is empty! call k() to calc it.",
                 self.id
-            );
+            )
         }
 
         print!("Quad2D4N k{} =  (* 10^{})\n[", self.id, n_exp as i32);
@@ -249,6 +251,32 @@ impl<'quad> K for Quad2D4N<'quad> {
             }
         }
         println!("");
+    }
+
+    /// Return quad elem's stiffness matrix's format string
+    fn k_string(&self, n_exp: f64) -> String {
+        let mut k_matrix = String::new();
+        for row in 0..8 {
+            if row == 0 {
+                write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, " [").expect("!!! Write tri k_mat failed!");
+            }
+            for col in 0..8 {
+                write!(
+                    k_matrix,
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                )
+                .expect("!!! Write tri k_mat failed!");
+            }
+            if row == 5 {
+                write!(k_matrix, "]]").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, "]\n").expect("!!! Write tri k_mat failed!");
+            }
+        }
+        k_matrix
     }
 }
 
