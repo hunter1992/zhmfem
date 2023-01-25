@@ -77,6 +77,7 @@ fn main() {
     print_1darr("Strain at (0.8, 0.8)", &tris[1].strain());
     print_1darr("Stress at (0.8,0.8)", &tris[1].stress(material));
 
+    /*
     // Write the result into file
     let file_name = "tri2d3n_result.txt";
     let file = std::fs::File::create(file_name).unwrap();
@@ -97,4 +98,5 @@ fn main() {
         .expect("!!! Write k matrix failed!");
     }
     writer.flush().expect("!!! Flush failed!");
+    */
 }

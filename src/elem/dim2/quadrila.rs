@@ -111,7 +111,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get shape matrix element N_i
-    pub fn shape_mat_i(&self, i: usize) -> impl Fn(f64, f64) -> f64 {
+    fn shape_mat_i(&self, i: usize) -> impl Fn(f64, f64) -> f64 {
         /* The shape mat of quad elem:
          * |N1   0    N2   0    N3   0    N4   0 |
          * |0    N1   0    N2   0    N3   0    N4|  */
@@ -187,8 +187,6 @@ impl<'quad> Quad2D4N<'quad> {
         ];
 
         let mut k_matrix = SMatrix::<f64, 8, 8>::from([[0.0; 8]; 8]);
-
-        //
         for row in 0..2 {
             for col in 0..2 {
                 let j_raw = self.jacobian(int_pts[row][col]);
@@ -203,6 +201,43 @@ impl<'quad> Quad2D4N<'quad> {
 
         let stiffness_matrix: [[f64; 8]; 8] = (self.thick * k_matrix).into();
         stiffness_matrix
+    }
+
+    /// Get element's strain vector
+    pub fn strain(&self, xi_eta: [f64; 2]) -> [f64; 3] {
+        let j_raw = self.jacobian(xi_eta);
+        let det_j = Jacobian2D::from(self.jacobian(xi_eta)).determinant();
+        let b_mat = self.geometry_mat(j_raw, det_j, xi_eta);
+        let elem_nodes_disps = SMatrix::<f64, 8, 1>::from(self.disps());
+        let strain_vector: [f64; 3] = (b_mat * elem_nodes_disps).into();
+        strain_vector
+    }
+
+    /// Get element's strss vector
+    pub fn stress(&self, xi_eta: [f64; 2], material_args: (f64, f64)) -> [f64; 3] {
+        let (ee, nu) = material_args;
+        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, 0.5 * (1.0 - nu)],
+        ]) * (ee / (1.0 - nu * nu));
+
+        let strain = SMatrix::<f64, 3, 1>::from(self.strain(xi_eta));
+        let stress: [f64; 3] = (elasticity_mat * strain).into();
+        stress
+    }
+
+    /// Get element's info string
+    pub fn info(&self) -> String {
+        format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Quad2D4N
+\tNodes: {}\n\t       {}\n\t       {}\n\t       {}\n\t",
+            self.id,
+            self.area(),
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2],
+            self.nodes[3],
+        )
     }
 }
 
@@ -250,7 +285,7 @@ impl<'quad> K for Quad2D4N<'quad> {
                 println!("]");
             }
         }
-        println!("");
+        print!("\n");
     }
 
     /// Return quad elem's stiffness matrix's format string

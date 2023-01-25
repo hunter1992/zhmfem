@@ -105,7 +105,7 @@ where
             }
 
             println!(
-                ">>> Assembling Part2D#{}'s global stiffness matrix K{} ......",
+                "\n>>> Assembling Part2D#{}'s global stiffness matrix K{} ......",
                 self.id, self.id
             );
             let mut part_k: [[f64; N * F]; N * F] = [[0.0; N * F]; N * F];

@@ -83,6 +83,14 @@ impl Rectangle {
         let l_step = length / ((cols - 1) as f64);
         let h_step = height / ((rows - 1) as f64);
 
+        // generate the coupled nodes in single element
+        /* the result of the mesh is similar to
+         *    4—————3
+         *    |     |
+         *    |     |
+         *    |     |
+         *    1—————2
+         */
         for r in 0..rows {
             for c in 0..cols {
                 points.push(vec![x0 + c as f64 * l_step, y0 + r as f64 * h_step]);
