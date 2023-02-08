@@ -282,6 +282,30 @@ mod testing {
         assert_eq!(k1, k2);
     }
 
+    #[test]
+    fn mesh_rect_with_tri() {
+        // set rect's width and height
+        const W: f64 = 1.0;
+        const H: f64 = 1.0;
+
+        // number of nodes and freedom
+        const R: usize = 2; //rows of nodes
+        const C: usize = 2; //rows of nodes
+
+        let rect_geo = plane::Rectangle::new([0., 0.], [W, H]);
+        let (coords, coupled_nodes) = rect_geo.mesh_with_tri(R, C);
+
+        assert_eq!(coords, [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
+        assert_eq!(coupled_nodes, [[1, 2, 3], [4, 3, 2]]);
+        /*   3____4
+         *   |\   |
+         *   | \  |
+         *   |  \ |
+         *   |___\|
+         *   1    2
+         */
+    }
+
     #[bench]
     /// benchmark的结果是:277 +/- 15 ns/iter (Intel 8265U 插电)
     fn calc_elem_k_speed(b: &mut Bencher) {

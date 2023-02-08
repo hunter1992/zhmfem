@@ -54,7 +54,6 @@ fn main() {
     println!("\tE_d: {:-9.6} (deform energy)", p1.strain_energy());
     println!("\tW_f: {:-9.6} (exforce works)", p1.force_work());
     println!("\tE_p: {:-9.6} (potential energy)", p1.potential_energy());
-
     println!("\n==================== ELEMENT INFO ====================");
 
     for i in tris.iter() {
@@ -79,10 +78,10 @@ fn main() {
 
     /*
     // Write the result into file
-    let file_name = "tri2d3n_result.txt";
+    let file_name = "/home/zhm/Desktop/tri2d3n_result.txt";
     let file = std::fs::File::create(file_name).unwrap();
     let mut writer = BufWriter::new(file);
-    write!(writer, "\n>>> FEM calculating result:").expect("Write error!");
+    write!(writer, ">>> ZHMFEM calculating result:").expect("Write error!");
 
     for elem in tris.iter() {
         write!(writer, "{}", elem.info()).expect("Write info failed!");

@@ -2,8 +2,8 @@ type Points = Vec<Vec<f64>>;
 type Coupls = Vec<Vec<usize>>;
 
 pub struct Rectangle {
-    point1: [f64; 2],
-    point2: [f64; 2],
+    pub point1: [f64; 2],
+    pub point2: [f64; 2],
 }
 
 impl Rectangle {
