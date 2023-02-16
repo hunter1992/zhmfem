@@ -33,30 +33,34 @@ fn main() {
     let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
 
     // construct elements by coupled nodes
-    let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
+    let mut tri_vec: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
 
     // assemble global stiffness matrix
-    let mut p1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tris, &cpld);
+    let mut part1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tri_vec, &cpld);
     println!("");
-    p1.k(material);
-    p1.k_printer(0.0);
+    part1.k(material);
+    part1.k_printer(0.0);
 
     // construct solver and solve the case
-    let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
+    let mut solver: Solver<{ R * C * F }> =
+        Solver::new(part1.disps(), part1.forces(), *part1.k(material));
     solver.solve_static();
 
-    p1.write_result(&solver);
+    part1.write_result(&solver);
 
-    print_1darr("qe", &p1.disps());
-    print_1darr("fe", &p1.forces());
+    print_1darr("qe", &part1.disps());
+    print_1darr("fe", &part1.forces());
 
     println!(">>> System energy:");
-    println!("\tE_d: {:-9.6} (deform energy)", p1.strain_energy());
-    println!("\tW_f: {:-9.6} (exforce works)", p1.force_work());
-    println!("\tE_p: {:-9.6} (potential energy)", p1.potential_energy());
+    println!("\tE_d: {:-9.6} (deform energy)", part1.strain_energy());
+    println!("\tW_f: {:-9.6} (exforce works)", part1.force_work());
+    println!(
+        "\tE_p: {:-9.6} (potential energy)",
+        part1.potential_energy()
+    );
     println!("\n==================== ELEMENT INFO ====================");
 
-    for i in tris.iter() {
+    for i in tri_vec.iter() {
         println!("{}", i);
         i.k_printer(0.0);
         i.print_strain();
@@ -64,26 +68,25 @@ fn main() {
     }
 
     println!();
-    print_1darr("Disp at (1, 0)", &tris[0].point_disp([1.0, 0.0]));
-    print_1darr("Strain at (1, 0)", &tris[0].strain());
-    print_1darr("Stress at (1, 0)", &tris[0].stress(material));
+    print_1darr("Disp at (1, 0)", &tri_vec[0].point_disp([1.0, 0.0]));
+    print_1darr("Strain at (1, 0)", &tri_vec[0].strain());
+    print_1darr("Stress at (1, 0)", &tri_vec[0].stress(material));
 
-    print_1darr("Disp at (0.8, 0.8)", &tris[0].point_disp([0.8, 0.8]));
-    print_1darr("Strain at (0.8, 0.8)", &tris[0].strain());
-    print_1darr("Stress at (0.8,0.8)", &tris[0].stress(material));
+    print_1darr("Disp at (0.8, 0.8)", &tri_vec[0].point_disp([0.8, 0.8]));
+    print_1darr("Strain at (0.8, 0.8)", &tri_vec[0].strain());
+    print_1darr("Stress at (0.8,0.8)", &tri_vec[0].stress(material));
 
-    print_1darr("Disp at (0.8, 0.8)", &tris[1].point_disp([0.8, 0.8]));
-    print_1darr("Strain at (0.8, 0.8)", &tris[1].strain());
-    print_1darr("Stress at (0.8,0.8)", &tris[1].stress(material));
+    print_1darr("Disp at (0.8, 0.8)", &tri_vec[1].point_disp([0.8, 0.8]));
+    print_1darr("Strain at (0.8, 0.8)", &tri_vec[1].strain());
+    print_1darr("Stress at (0.8,0.8)", &tri_vec[1].stress(material));
 
-    /*
     // Write the result into file
     let file_name = "/home/zhm/Desktop/tri2d3n_result.txt";
     let file = std::fs::File::create(file_name).unwrap();
     let mut writer = BufWriter::new(file);
     write!(writer, ">>> ZHMFEM calculating result:").expect("Write error!");
 
-    for elem in tris.iter() {
+    for elem in tri_vec.iter() {
         write!(writer, "{}", elem.info()).expect("Write info failed!");
         write!(writer, "\tStrain: {:-9.6?}\n", elem.strain()).expect("Write strain failed!");
         write!(writer, "\tStress: {:-9.6?}\n", elem.stress(material))
@@ -97,5 +100,4 @@ fn main() {
         .expect("!!! Write k matrix failed!");
     }
     writer.flush().expect("!!! Flush failed!");
-    */
 }
