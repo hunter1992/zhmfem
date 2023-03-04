@@ -95,7 +95,7 @@ fn main() {
             writer,
             "\n\tStiffness matrix k{} = \n{}\n",
             elem.id,
-            elem.k_string(0.0)
+            elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
         )
         .expect("!!! Write k matrix failed!");
     }
