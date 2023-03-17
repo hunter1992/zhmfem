@@ -12,6 +12,8 @@ mod node;
 mod part;
 
 pub use calc::Solver;
+pub use elem::dim1::rod;
+pub use elem::dim1::rod::Rod1D2N;
 pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
 pub use mesh::plane;
 pub use na::*;
@@ -209,6 +211,15 @@ mod testing {
     }
     #[test]
     fn gen_elements() {
+        // 1D
+        let node_a = Node1D::new(1, [0.0]);
+        let node_b = Node1D::new(2, [1.0]);
+        let node_c = Node1D::new(3, [3.0]);
+
+        let rod1 = Rod1D2N::new(1, 1.0, [&node_a, &node_b]);
+        let rod2 = Rod1D2N::new(2, 1.0, [&node_b, &node_c]);
+
+        // 2D
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [0.0, 1.0]);
         let node3 = Node2D::new(3, [1.0, 0.0]);
