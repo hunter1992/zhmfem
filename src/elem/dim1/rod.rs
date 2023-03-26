@@ -53,6 +53,28 @@ impl<'rod> Rod1D2N<'rod> {
         forces
     }
 
+    /// Get point's disp in element coord
+    pub fn point_disp(&self, point_coord: [f64; 1]) -> [f64; 1] {
+        let x = point_coord[0];
+        let n0 = self.shape_mat_i(0usize)(x);
+        let n1 = self.shape_mat_i(1usize)(x);
+
+        let node_disps = self.disps();
+        let u = n0 * node_disps[0] + n1 * node_disps[1];
+        [u]
+    }
+
+    /// Get shape matrix element N_i
+    fn shape_mat_i(&self, i: usize) -> impl Fn(f64) -> f64 {
+        /* The shape mat of rod elem:
+         * [N1 N2]  which is a 1x2 mat */
+        let a: [f64; 2] = [1.0, 0.0];
+        let b: [f64; 2] = [-1.0, 1.0];
+        let length = self.length();
+
+        move |x: f64| a[i] + b[i] * x / length
+    }
+
     /// Calculate element stiffness matrix K
     /// Return a 2x2 matrix, elements are f64
     fn calc_k(&self, material_args: (f64, f64)) -> [[f64; 2]; 2] {
@@ -66,6 +88,21 @@ impl<'rod> Rod1D2N<'rod> {
                 * (ee * self.sec_area / self.length()))
             .into();
         stiffness_matrix
+    }
+
+    /// Get element's strain vector, in 1d it's a scale
+    pub fn strain(&self) -> [f64; 1] {
+        let iden: f64 = 1.0 / self.length();
+        let node_disps = self.disps();
+        let strain: [f64; 1] = [-iden * node_disps[0] + iden * node_disps[1]];
+        strain
+    }
+
+    /// Get element's stress vector, in 1d it's a scale
+    pub fn stree(&self, material_args: (f64, f64)) -> [f64; 1] {
+        let (ee, _nu) = material_args;
+        let stress: [f64; 1] = [ee * self.strain()[0]];
+        stress
     }
 
     /// Get element's info string

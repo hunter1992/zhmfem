@@ -101,10 +101,24 @@ where
     }
 }
 
-pub fn nodes1d_vec(points: &[Vec<f64>]) -> Vec<Node1D> {
-    let mut nodes: Vec<Node1D> = Vec::new();
-    for (idx, point) in points.iter().enumerate() {
-        nodes.push(Node1D::new(idx + 1, [point[0]]));
+pub fn nodes1d_vec(
+    points: &[Vec<f64>],
+    idx_0_disp: &[usize],
+    force: &HashMap<usize, f64>,
+) -> Vec<Node1D> {
+    if points[0].len() != 1 {
+        panic!(">>> Error from nodes1d_vec, the input points aren't 1D!");
+    }
+
+    let mut nodes: Vec<Node1D> = Vec::with_capacity(points.len());
+    for (idx, coord) in points.iter().enumerate() {
+        nodes.push(Node1D::new(idx + 1, [coord[0]]));
+    }
+    for idx in idx_0_disp.iter() {
+        *nodes[idx / 1].disps[idx % 1].borrow_mut() = 0.0;
+    }
+    for (idx, &f) in force {
+        *nodes[idx / 1].forces[idx % 1].borrow_mut() = f;
     }
     nodes
 }
