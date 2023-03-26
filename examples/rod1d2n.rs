@@ -6,9 +6,6 @@ fn main() {
     let section_area = 1.0f64;
     let material = (8.0f64, 0.25f64);
 
-    let node1 = Node1D::new(1, [0.0]);
-    let node2 = Node1D::new(2, [1.0]);
-
     let points = vec![vec![0.0], vec![1.0]];
     let cpld = vec![vec![1, 2]];
     let zero_disp: Vec<usize> = vec![0];
