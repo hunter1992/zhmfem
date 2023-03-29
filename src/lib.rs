@@ -153,6 +153,24 @@ pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
     nodes
 }
 
+/// Construct vector of rod1d2n elements
+pub fn rod1d2n_vec<'rod>(
+    sec_area: f64,
+    nodes: &'rod [Node1D],
+    couples: &[Vec<usize>],
+) -> Vec<Rod1D2N<'rod>> {
+    let mut rod1d2n: Vec<Rod1D2N> = Vec::new();
+    for (ele_id, cpld) in couples.iter().enumerate() {
+        rod1d2n.push(Rod1D2N::new(
+            ele_id + 1,
+            sec_area,
+            [&nodes[cpld[0] - 1], &nodes[cpld[1] - 1]],
+        ));
+    }
+    rod1d2n
+}
+
+/// Construct vector of tri2d3n elements
 pub fn tri2d3n_vec<'tri>(
     thick: f64,
     nodes: &'tri [Node2D],
@@ -173,6 +191,7 @@ pub fn tri2d3n_vec<'tri>(
     tri2d3n
 }
 
+/// Construct vector of quad2d4n elements
 pub fn quad2d4n_vec<'rect>(
     thick: f64,
     nodes: &'rect [Node2D],
@@ -223,6 +242,7 @@ mod testing {
         assert_eq!([1.0f64, 2.0f64], node2.coord);
         assert_eq!([1.0f64, 2.0f64, 3.0f64], node3.coord);
     }
+
     #[test]
     fn gen_elements() {
         // 1D

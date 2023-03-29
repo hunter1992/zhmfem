@@ -16,9 +16,10 @@ fn main() {
 
     let nodes: Vec<Node1D> = nodes1d_vec(&points, &zero_disp, &force_data);
 
-    for i in nodes {
-        println!("{}", i);
-    }
+    let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(section_area, &nodes, &cpld);
+
+    rod_vec[0].k(material);
+    rod_vec[0].k_printer(0.0);
 
     /*
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";

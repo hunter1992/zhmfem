@@ -99,7 +99,7 @@ impl<'rod> Rod1D2N<'rod> {
     }
 
     /// Get element's stress vector, in 1d it's a scale
-    pub fn stree(&self, material_args: (f64, f64)) -> [f64; 1] {
+    pub fn stress(&self, material_args: (f64, f64)) -> [f64; 1] {
         let (ee, _nu) = material_args;
         let stress: [f64; 1] = [ee * self.strain()[0]];
         stress

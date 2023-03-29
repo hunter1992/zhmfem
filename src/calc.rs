@@ -67,6 +67,7 @@ impl<const N: usize> Solver<N> {
     }
 }
 
+/// 将Kmat中节点位移已知的自由度找出来
 fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {
     let idx: Vec<usize> = container
         .into_iter()
