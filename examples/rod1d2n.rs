@@ -20,6 +20,7 @@ fn main() {
 
     rod_vec[0].k(material);
     rod_vec[0].k_printer(0.0);
+    print_1darr("strain:", &rod_vec[0].strain());
 
     /*
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";
