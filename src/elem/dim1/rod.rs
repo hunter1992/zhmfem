@@ -92,9 +92,9 @@ impl<'rod> Rod1D2N<'rod> {
 
     /// Get element's strain vector, in 1d it's a scale
     pub fn strain(&self) -> [f64; 1] {
-        let iden: f64 = 1.0 / self.length();
+        let unit: f64 = 1.0 / self.length();
         let node_disps = self.disps();
-        let strain: [f64; 1] = [-iden * node_disps[0] + iden * node_disps[1]];
+        let strain: [f64; 1] = [-unit * node_disps[0] + unit * node_disps[1]];
         strain
     }
 

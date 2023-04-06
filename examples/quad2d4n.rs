@@ -36,7 +36,7 @@ fn main() {
         .zip(force_value.into_iter())
         .collect();
 
-    // tramsform points into nodes
+    // transform points into nodes
     let nodes: Vec<Node2D> = nodes2d_vec(&points, &zero_disp, &force_data);
 
     // construct elements by coupled nodes
