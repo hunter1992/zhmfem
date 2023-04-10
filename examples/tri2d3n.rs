@@ -44,7 +44,7 @@ fn main() {
     // construct solver and solve the case
     let mut solver: Solver<{ R * C * F }> =
         Solver::new(part1.disps(), part1.forces(), *part1.k(material));
-    solver.solve_static();
+    solver.solve_static_lu();
 
     part1.write_result(&solver);
 
@@ -81,6 +81,7 @@ fn main() {
     print_1darr("Stress at (0.8,0.8)", &tri_vec[1].stress(material));
 
     // Write the result into file
+    /*
     let file_name = "/home/zhm/Desktop/tri2d3n_result.txt";
     let file = std::fs::File::create(file_name).unwrap();
     let mut writer = BufWriter::new(file);
@@ -100,4 +101,5 @@ fn main() {
         .expect("!!! Write k matrix failed!");
     }
     writer.flush().expect("!!! Flush failed!");
+    */
 }

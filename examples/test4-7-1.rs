@@ -41,7 +41,7 @@ fn main() {
 
     // construct solver and solve the case
     let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
-    solver.solve_static();
+    solver.solve_static_lu();
 
     p1.write_result(&solver);
 

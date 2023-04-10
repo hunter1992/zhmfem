@@ -2,6 +2,8 @@ extern crate nalgebra as na;
 
 use na::*;
 
+/// 线性方程组求解的直接法有LU分解、高斯消去、列主元消去等
+/// 但这些方法的缺点在于：对系数矩阵的要求太高，通用性受限。
 pub struct Solver<const N: usize> {
     state: bool,
     pub disps: [f64; N],
@@ -22,7 +24,7 @@ impl<const N: usize> Solver<N> {
     /// get disp on every single node
     pub fn disps_rlt(&mut self) -> &[f64; N] {
         if self.state == false {
-            self.solve_static();
+            self.solve_static_lu();
             &self.disps
         } else {
             &self.disps
@@ -32,14 +34,15 @@ impl<const N: usize> Solver<N> {
     /// get force on every single node
     pub fn forces_rlt(&mut self) -> &[f64; N] {
         if self.state == false {
-            self.solve_static();
+            self.solve_static_lu();
             &self.forces
         } else {
             &self.forces
         }
     }
 
-    pub fn solve_static(&mut self) {
+    /// 使用LU分解求解线性方程组
+    pub fn solve_static_lu(&mut self) {
         if self.disps.len() != N || self.forces.len() != N {
             panic!("---> Error! from Solve::solve_static func.");
         }

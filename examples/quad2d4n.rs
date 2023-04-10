@@ -49,7 +49,7 @@ fn main() {
     p1.k_printer(6.0);
 
     let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
-    solver.solve_static();
+    solver.solve_static_lu();
     p1.write_result(&solver);
 
     print_1darr("qe", &p1.disps());
