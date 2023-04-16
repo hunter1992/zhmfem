@@ -48,9 +48,10 @@ fn main() {
     p1.k(material);
     p1.k_printer(6.0);
 
-    let mut solver: Solver<{ R * C * F }> = Solver::new(p1.disps(), p1.forces(), *p1.k(material));
-    solver.solve_static_lu();
-    p1.write_result(&solver);
+    let mut eqs: LinearEqs<{ R * C * F }> =
+        LinearEqs::new(p1.disps(), p1.forces(), *p1.k(material));
+    eqs.lu_solver();
+    p1.write_result(&eqs);
 
     print_1darr("qe", &p1.disps());
     print_1darr("fe", &p1.forces());

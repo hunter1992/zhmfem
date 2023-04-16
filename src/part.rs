@@ -1,6 +1,6 @@
 extern crate nalgebra as na;
 
-use crate::{calc::Solver, node::Node2D, K};
+use crate::{calc::LinearEqs, node::Node2D, K};
 use na::*;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
@@ -81,7 +81,7 @@ where
     }
 
     /// Write the disp and force result into nodes
-    pub fn write_result(&self, slv: &Solver<{ N * F }>) {
+    pub fn write_result(&self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
         let force = slv.forces;
         for (idx, node) in self.nodes.iter().enumerate() {

@@ -42,11 +42,12 @@ fn main() {
     part1.k_printer(0.0);
 
     // construct solver and solve the case
-    let mut solver: Solver<{ R * C * F }> =
-        Solver::new(part1.disps(), part1.forces(), *part1.k(material));
-    solver.solve_static_lu();
+    let mut eqs: LinearEqs<{ R * C * F }> =
+        LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
+    //eqs.lu_solver();
+    eqs.jacobian_iter_solver(0.001);
 
-    part1.write_result(&solver);
+    part1.write_result(&eqs);
 
     print_1darr("qe", &part1.disps());
     print_1darr("fe", &part1.forces());

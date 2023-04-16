@@ -11,7 +11,7 @@ mod mesh;
 mod node;
 mod part;
 
-pub use calc::Solver;
+pub use calc::LinearEqs;
 pub use elem::dim1::rod;
 pub use elem::dim1::rod::Rod1D2N;
 pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
