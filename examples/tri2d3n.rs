@@ -45,7 +45,7 @@ fn main() {
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
     //eqs.lu_solver();
-    eqs.jacobian_iter_solver(0.001);
+    eqs.gauss_seidel_iter_solver(0.0001);
 
     part1.write_result(&eqs);
 

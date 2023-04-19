@@ -1,6 +1,5 @@
 extern crate nalgebra as na;
 
-use crate::print_2darr;
 use na::*;
 
 /// Linear equations: A*x = b,
@@ -25,7 +24,7 @@ impl<const N: usize> LinearEqs<N> {
     /// get disp on every single node
     pub fn disps_rlt(&mut self) -> &[f64; N] {
         if self.state == false {
-            self.lu_solver();
+            self.lu_direct_solver();
             &self.disps
         } else {
             &self.disps
@@ -35,7 +34,7 @@ impl<const N: usize> LinearEqs<N> {
     /// get force on every single node
     pub fn forces_rlt(&mut self) -> &[f64; N] {
         if self.state == false {
-            self.lu_solver();
+            self.lu_direct_solver();
             &self.forces
         } else {
             &self.forces
@@ -43,13 +42,10 @@ impl<const N: usize> LinearEqs<N> {
     }
 
     /// 使用LU分解求解线性方程组(直接法)  A * x = b
-    pub fn lu_solver(&mut self) {
-        if self.disps.len() != N || self.forces.len() != N {
-            panic!("---> Error! from calc::LinearEqs::lu_solver func.");
-        }
-
+    pub fn lu_direct_solver(&mut self) {
+        // pre-process
+        let kmat = SMatrix::<f64, N, N>::from(self.static_kmat).transpose();
         let force = SVector::from(self.forces);
-        let kmat = SMatrix::<f64, N, N>::from(self.static_kmat);
 
         let disps_unknown_idx = nonzero_disps_idx(&self.disps);
         let force_known = force.select_rows(disps_unknown_idx.iter());
@@ -60,7 +56,7 @@ impl<const N: usize> LinearEqs<N> {
         // solve the K.q = F by LU decomposition
         let disps_unknown: Vec<f64> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
 
-        // 写入计算得到的位移和节点力
+        // write result into fields
         let _: Vec<_> = disps_unknown_idx
             .iter()
             .enumerate()
@@ -70,49 +66,60 @@ impl<const N: usize> LinearEqs<N> {
         self.state = true;
     }
 
-    /// 使用雅可比迭代求解线性方程组(数值方法)
-    pub fn jacobian_iter_solver(&mut self, calc_error: f64) {
+    /// 使用Guass-Seidel迭代求解线性方程组(数值方法)
+    /// solve 'A*x = F' using Gauss-Seidel iterator:
+    ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
+    pub fn gauss_seidel_iter_solver(&mut self, calc_error: f64) {
+        // pre-process
         let force = SVector::from(self.forces);
-        let kmat = SMatrix::<f64, N, N>::from(self.static_kmat);
-        let kmat_diag = SMatrix::<f64, N, N>::from(diag_mat(&self.static_kmat));
-        let tri_l = SMatrix::<f64, N, N>::from(tri_l(&self.static_kmat));
-        let tri_u = SMatrix::<f64, N, N>::from(tri_u(&self.static_kmat));
+        let kmat = SMatrix::<f64, N, N>::from(self.static_kmat).transpose();
+        let kmat_diag = SMatrix::<f64, N, N>::from(triangle_partition(&self.static_kmat, 0));
+        let kmat_up = SMatrix::<f64, N, N>::from(triangle_partition(&self.static_kmat, 1));
+        let kmat_low = SMatrix::<f64, N, N>::from(triangle_partition(&self.static_kmat, -1));
 
         let disps_unknown_idx = nonzero_disps_idx(&self.disps);
         let size = disps_unknown_idx.len();
 
-        /* solve 'A*x = F' using jacobian iterator:
-         *     x(k+1) = x(k) * [E - (D^-1)*A] + (D^-1)*F  */
-
-        let E = DMatrix::<f64>::identity(size, size);
-        let F = force.select_rows(disps_unknown_idx.iter());
-        let A = kmat
+        // construct Gauss-Seidel iter method
+        let f = force.select_rows(disps_unknown_idx.iter());
+        let d = kmat_diag
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
-        let D = kmat_diag
+        let l = kmat_low
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
-        let L = tri_l
+        let u = kmat_up
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
-        let U = tri_u
-            .select_columns(disps_unknown_idx.iter())
-            .select_rows(disps_unknown_idx.iter());
-        let ttmp = (&D + &L).try_inverse().unwrap();
-        let B = -&ttmp * U;
+        let grad = -&((&d + &l).try_inverse().unwrap());
         let mut x = DVector::<f64>::zeros(size);
 
         let mut count: usize = 0;
         loop {
-            let tmp = &B * &x + &ttmp * &F;
-            println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
+            // x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
+            let tmp = &grad * &u * &x - &grad * &f;
+            // println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
 
             if (&tmp - &x).abs().max() < calc_error {
+                println!(
+                    ">>> Gauss-Seidel method down!\n\tresult: iter = {},\n\t\terr  = {:8.6}\n",
+                    count,
+                    (&tmp - &x).abs().max()
+                );
                 break;
             }
             x = tmp;
             count += 1usize;
         }
+
+        // write result
+        let _: Vec<_> = disps_unknown_idx
+            .iter()
+            .enumerate()
+            .map(|(i, &idx)| self.disps[idx] = x[i])
+            .collect();
+        self.forces = (((kmat * SVector::from(self.disps)) - force) + force).into();
+        self.state = true;
     }
 }
 
@@ -127,36 +134,24 @@ fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<u
     idx
 }
 
-/// 求方阵对角线元素其余元素为0的同尺寸方阵
-fn diag_mat<const N: usize>(square_mat: &[[f64; N]; N]) -> [[f64; N]; N] {
+/// 取方阵的偏移上、下三角阵，或仅含对角元素的方阵
+fn triangle_partition<const N: usize>(square_mat: &[[f64; N]; N], mode: isize) -> [[f64; N]; N] {
     let mut rlt: [[f64; N]; N] = [[0.0; N]; N];
-    for i in 0..N {
-        for j in 0..N {
-            if i == j {
+    if mode > 0 {
+        for i in mode as usize..N {
+            for j in 0..i {
                 rlt[i][j] = square_mat[i][j];
             }
         }
-    }
-    rlt
-}
-fn tri_l<const N: usize>(square_mat: &[[f64; N]; N]) -> [[f64; N]; N] {
-    let mut rlt: [[f64; N]; N] = [[0.0; N]; N];
-    for i in 0..N {
-        for j in 0..N {
-            if i > j {
-                rlt[i][j] = square_mat[i][j];
+    } else if mode < 0 {
+        for i in (-mode) as usize..N {
+            for j in 0..i {
+                rlt[j][i] = square_mat[j][i];
             }
         }
-    }
-    rlt
-}
-fn tri_u<const N: usize>(square_mat: &[[f64; N]; N]) -> [[f64; N]; N] {
-    let mut rlt: [[f64; N]; N] = [[0.0; N]; N];
-    for i in 0..N {
-        for j in 0..N {
-            if i < j {
-                rlt[i][j] = square_mat[i][j];
-            }
+    } else {
+        for i in 0..N {
+            rlt[i][i] = square_mat[i][i];
         }
     }
     rlt
