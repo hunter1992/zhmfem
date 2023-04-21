@@ -1,23 +1,23 @@
 extern crate nalgebra as na;
 
-use crate::{calc::LinearEqs, node::Node2D, K};
+use crate::{calc::LinearEqs, node::Node2D, Dtype, K};
 use na::*;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
 pub struct Part2D<'a, Elem: K, const N: usize, const F: usize, const M: usize>
 where
-    [[f64; N * F]; N * F]: Sized,
+    [[Dtype; N * F]; N * F]: Sized,
 {
     pub id: usize,
     pub nodes: &'a [Node2D],
     pub elems: &'a mut [Elem],
     pub cplds: &'a [Vec<usize>],
-    pub k_matrix: Option<[[f64; N * F]; N * F]>,
+    pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
 }
 
 impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Part2D<'a, Elem, N, F, M>
 where
-    [[f64; N * F]; N * F]: Sized,
+    [[Dtype; N * F]; N * F]: Sized,
 {
     pub fn new(
         id: usize,
@@ -26,7 +26,7 @@ where
         cplds: &'a [Vec<usize>],
     ) -> Self
     where
-        [[f64; N * F]; N * F]: Sized,
+        [[Dtype; N * F]; N * F]: Sized,
     {
         Part2D {
             id,
@@ -38,8 +38,8 @@ where
     }
 
     /// Get displacement of all nodes
-    pub fn disps(&self) -> [f64; N * F] {
-        let mut data: [f64; N * F] = [0.0; N * F];
+    pub fn disps(&self) -> [Dtype; N * F] {
+        let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
             data[idx * 2] = *self.nodes[idx].disps[0].borrow();
             data[idx * 2 + 1] = *self.nodes[idx].disps[1].borrow();
@@ -48,8 +48,8 @@ where
     }
 
     /// Get force of all nodes
-    pub fn forces(&self) -> [f64; N * F] {
-        let mut data: [f64; N * F] = [0.0; N * F];
+    pub fn forces(&self) -> [Dtype; N * F] {
+        let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
             data[idx * 2] = *self.nodes[idx].forces[0].borrow();
             data[idx * 2 + 1] = *self.nodes[idx].forces[1].borrow();
@@ -58,25 +58,25 @@ where
     }
 
     /// Get the deform energy of the part
-    pub fn strain_energy(&self) -> f64 {
+    pub fn strain_energy(&self) -> Dtype {
         if self.k_matrix.is_none() {
             panic!("---> Error! Part[{}]'s stiffness matrix is null!", self.id);
         }
-        let q = SMatrix::<f64, { N * F }, 1>::from(self.disps());
-        let k = SMatrix::<f64, { N * F }, { N * F }>::from(self.k_matrix.unwrap()).transpose();
-        let rlt: [[f64; 1]; 1] = (q.transpose() * k * q).into();
+        let q = SMatrix::<Dtype, { N * F }, 1>::from(self.disps());
+        let k = SMatrix::<Dtype, { N * F }, { N * F }>::from(self.k_matrix.unwrap()).transpose();
+        let rlt: [[Dtype; 1]; 1] = (q.transpose() * k * q).into();
         0.5 * rlt[0][0]
     }
 
     /// Get the external force work on the part
-    pub fn force_work(&self) -> f64 {
-        let q = SMatrix::<f64, { N * F }, 1>::from(self.disps());
-        let f = SMatrix::<f64, { N * F }, 1>::from(self.forces());
-        let rlt: [[f64; 1]; 1] = (f.transpose() * q).into();
+    pub fn force_work(&self) -> Dtype {
+        let q = SMatrix::<Dtype, { N * F }, 1>::from(self.disps());
+        let f = SMatrix::<Dtype, { N * F }, 1>::from(self.forces());
+        let rlt: [[Dtype; 1]; 1] = (f.transpose() * q).into();
         rlt[0][0]
     }
 
-    pub fn potential_energy(&self) -> f64 {
+    pub fn potential_energy(&self) -> Dtype {
         self.strain_energy() - self.force_work()
     }
 
@@ -93,9 +93,9 @@ where
     }
 
     /// Assemble the global stiffness mat K
-    pub fn k(&mut self, material: (f64, f64)) -> &[[f64; N * F]; N * F]
+    pub fn k(&mut self, material: (Dtype, Dtype)) -> &[[Dtype; N * F]; N * F]
     where
-        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [f64; M * F]>,
+        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
     {
         if self.k_matrix.is_none() {
             if self.cplds.len() != self.elems.len() {
@@ -108,7 +108,7 @@ where
                 "\n>>> Assembling Part2D#{}'s global stiffness matrix K{} ......",
                 self.id, self.id
             );
-            let mut part_k: [[f64; N * F]; N * F] = [[0.0; N * F]; N * F];
+            let mut part_k: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
 
             // 计算并缓存每个单元的刚度矩阵
             let elem_ks: Vec<_> = self.elems.iter_mut().map(|x| x.k(material)).collect();
@@ -140,7 +140,7 @@ where
     }
 
     /// Print part's global stiffness matrix
-    pub fn k_printer(&mut self, n_exp: f64) {
+    pub fn k_printer(&mut self, n_exp: Dtype) {
         if self.k_matrix.is_none() {
             println!(
                 "!!! Part #{}'s K matrix is empty! call k() to calc it.",
@@ -158,7 +158,7 @@ where
             for col in 0..N * F {
                 print!(
                     " {:>-10.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == (N * F - 1) {

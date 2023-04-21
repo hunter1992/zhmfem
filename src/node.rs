@@ -1,15 +1,16 @@
+use crate::Dtype;
 use std::cell::RefCell;
 use std::fmt;
 
 pub struct Node1D {
     pub id: usize,
-    pub coord: [f64; 1],
-    pub disps: [RefCell<f64>; 1],
-    pub forces: [RefCell<f64>; 1],
+    pub coord: [Dtype; 1],
+    pub disps: [RefCell<Dtype>; 1],
+    pub forces: [RefCell<Dtype>; 1],
 }
 
 impl Node1D {
-    pub fn new(id: usize, coord: [f64; 1]) -> Node1D {
+    pub fn new(id: usize, coord: [Dtype; 1]) -> Node1D {
         Node1D {
             id,
             coord,
@@ -34,13 +35,13 @@ impl fmt::Display for Node1D {
 
 pub struct Node2D {
     pub id: usize,
-    pub coord: [f64; 2],
-    pub disps: [RefCell<f64>; 2],
-    pub forces: [RefCell<f64>; 2],
+    pub coord: [Dtype; 2],
+    pub disps: [RefCell<Dtype>; 2],
+    pub forces: [RefCell<Dtype>; 2],
 }
 
 impl Node2D {
-    pub fn new(id: usize, coord: [f64; 2]) -> Node2D {
+    pub fn new(id: usize, coord: [Dtype; 2]) -> Node2D {
         Node2D {
             id,
             coord,
@@ -68,11 +69,11 @@ impl fmt::Display for Node2D {
 
 pub struct Node3D {
     pub id: usize,
-    pub coord: [f64; 3],
+    pub coord: [Dtype; 3],
 }
 
 impl Node3D {
-    pub fn new(id: usize, coord: [f64; 3]) -> Node3D {
+    pub fn new(id: usize, coord: [Dtype; 3]) -> Node3D {
         Node3D { id, coord }
     }
 }

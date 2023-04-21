@@ -1,18 +1,20 @@
-type Points = Vec<Vec<f64>>;
+use crate::Dtype;
+
+type Points = Vec<Vec<Dtype>>;
 type Coupls = Vec<Vec<usize>>;
 
 pub struct Rectangle {
-    pub point1: [f64; 2],
-    pub point2: [f64; 2],
+    pub point1: [Dtype; 2],
+    pub point2: [Dtype; 2],
 }
 
 impl Rectangle {
-    pub fn new(point1: [f64; 2], point2: [f64; 2]) -> Self {
+    pub fn new(point1: [Dtype; 2], point2: [Dtype; 2]) -> Self {
         Rectangle { point1, point2 }
     }
 
     pub fn mesh_with_tri(&self, rows: usize, cols: usize) -> (Points, Coupls) {
-        let mut points: Vec<Vec<f64>> = vec![];
+        let mut points: Vec<Vec<Dtype>> = vec![];
         let mut coupls: Vec<Vec<usize>> = vec![];
 
         let x0 = if self.point2[0] > self.point1[0] {
@@ -27,13 +29,13 @@ impl Rectangle {
         };
         let length = (self.point2[0] - self.point1[0]).abs();
         let height = (self.point2[1] - self.point1[1]).abs();
-        let l_step = length / ((cols - 1) as f64);
-        let h_step = height / ((rows - 1) as f64);
+        let l_step = length / ((cols - 1) as Dtype);
+        let h_step = height / ((rows - 1) as Dtype);
 
         // fill the nodes coords vector
         for r in 0..rows {
             for c in 0..cols {
-                points.push(vec![x0 + c as f64 * l_step, y0 + r as f64 * h_step]);
+                points.push(vec![x0 + c as Dtype * l_step, y0 + r as Dtype * h_step]);
             }
         }
 
@@ -65,7 +67,7 @@ impl Rectangle {
     }
 
     pub fn mesh_with_rect(&self, rows: usize, cols: usize) -> (Points, Coupls) {
-        let mut points: Vec<Vec<f64>> = vec![];
+        let mut points: Vec<Vec<Dtype>> = vec![];
         let mut coupls: Vec<Vec<usize>> = vec![];
 
         let x0 = if self.point2[0] > self.point1[0] {
@@ -80,8 +82,8 @@ impl Rectangle {
         };
         let length = (self.point2[0] - self.point1[0]).abs();
         let height = (self.point2[1] - self.point1[1]).abs();
-        let l_step = length / ((cols - 1) as f64);
-        let h_step = height / ((rows - 1) as f64);
+        let l_step = length / ((cols - 1) as Dtype);
+        let h_step = height / ((rows - 1) as Dtype);
 
         // generate the coupled nodes in single element
         /* the result of the mesh is similar to
@@ -93,7 +95,7 @@ impl Rectangle {
          */
         for r in 0..rows {
             for c in 0..cols {
-                points.push(vec![x0 + c as f64 * l_step, y0 + r as f64 * h_step]);
+                points.push(vec![x0 + c as Dtype * l_step, y0 + r as Dtype * h_step]);
             }
         }
 

@@ -22,15 +22,16 @@ pub use part::Part2D;
 
 use std::collections::HashMap;
 
-type Jacobian2D = SMatrix<f64, 2, 2>;
+pub type Dtype = f64;
+pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
 pub trait K {
     type Kmatrix;
-    fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
+    fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>;
-    fn k_printer(&self, n_exp: f64);
-    fn k_string(&self, n_exp: f64) -> String;
+    fn k_printer(&self, n_exp: Dtype);
+    fn k_string(&self, n_exp: Dtype) -> String;
 }
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])
@@ -102,9 +103,9 @@ where
 }
 
 pub fn nodes1d_vec(
-    points: &[Vec<f64>],
+    points: &[Vec<Dtype>],
     idx_0_disp: &[usize],
-    force: &HashMap<usize, f64>,
+    force: &HashMap<usize, Dtype>,
 ) -> Vec<Node1D> {
     if points[0].len() != 1 {
         panic!(">>> Error from nodes1d_vec, the input points aren't 1D!");
@@ -124,9 +125,9 @@ pub fn nodes1d_vec(
 }
 
 pub fn nodes2d_vec(
-    points: &[Vec<f64>],
+    points: &[Vec<Dtype>],
     idx_0_disp: &[usize],
-    force: &HashMap<usize, f64>,
+    force: &HashMap<usize, Dtype>,
 ) -> Vec<Node2D> {
     if points[0].len() != 2 {
         panic!(">>> Error from nodes2d_vec, the input points aren't 2D!");
@@ -145,7 +146,7 @@ pub fn nodes2d_vec(
     nodes
 }
 
-pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
+pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
     let mut nodes: Vec<Node3D> = Vec::new();
     for (idx, point) in points.iter().enumerate() {
         nodes.push(Node3D::new(idx + 1, [point[0], point[1], point[2]]));
@@ -155,7 +156,7 @@ pub fn nodes3d_vec(points: &[Vec<f64>]) -> Vec<Node3D> {
 
 /// Construct vector of rod1d2n elements
 pub fn rod1d2n_vec<'rod>(
-    sec_area: f64,
+    sec_area: Dtype,
     nodes: &'rod [Node1D],
     couples: &[Vec<usize>],
 ) -> Vec<Rod1D2N<'rod>> {
@@ -172,7 +173,7 @@ pub fn rod1d2n_vec<'rod>(
 
 /// Construct vector of tri2d3n elements
 pub fn tri2d3n_vec<'tri>(
-    thick: f64,
+    thick: Dtype,
     nodes: &'tri [Node2D],
     couples: &[Vec<usize>],
 ) -> Vec<Tri2D3N<'tri>> {
@@ -193,7 +194,7 @@ pub fn tri2d3n_vec<'tri>(
 
 /// Construct vector of quad2d4n elements
 pub fn quad2d4n_vec<'rect>(
-    thick: f64,
+    thick: Dtype,
     nodes: &'rect [Node2D],
     couples: &[Vec<usize>],
 ) -> Vec<Quad2D4N<'rect>> {
@@ -213,7 +214,7 @@ pub fn quad2d4n_vec<'rect>(
     rec2d4n
 }
 
-pub fn nonzero_index<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {
+pub fn nonzero_index<'a, T: IntoIterator<Item = &'a Dtype>>(container: T) -> Vec<usize> {
     let idx: Vec<usize> = container
         .into_iter()
         .enumerate()
@@ -238,7 +239,7 @@ mod testing {
         assert_ne!(3usize, node2.id);
         assert_eq!(3usize, node3.id);
 
-        assert_eq!([1.0f64], node1.coord);
+        assert_eq!([1.0Dtype], node1.coord);
         assert_eq!([1.0f64, 2.0f64], node2.coord);
         assert_eq!([1.0f64, 2.0f64, 3.0f64], node3.coord);
     }

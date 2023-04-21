@@ -1,18 +1,19 @@
 extern crate nalgebra as na;
 
+use crate::Dtype;
 use na::*;
 
 /// Linear equations: A*x = b,
 /// In this case: A for static_kmat, x for disps, b for forces
 pub struct LinearEqs<const N: usize> {
     state: bool,
-    pub disps: [f64; N],
-    pub forces: [f64; N],
-    pub static_kmat: [[f64; N]; N],
+    pub disps: [Dtype; N],
+    pub forces: [Dtype; N],
+    pub static_kmat: [[Dtype; N]; N],
 }
 
 impl<const N: usize> LinearEqs<N> {
-    pub fn new(disps: [f64; N], forces: [f64; N], static_kmat: [[f64; N]; N]) -> Self {
+    pub fn new(disps: [Dtype; N], forces: [Dtype; N], static_kmat: [[Dtype; N]; N]) -> Self {
         LinearEqs {
             disps,
             forces,
@@ -22,7 +23,7 @@ impl<const N: usize> LinearEqs<N> {
     }
 
     /// get disp on every single node
-    pub fn disps_rlt(&mut self) -> &[f64; N] {
+    pub fn disps_rlt(&mut self) -> &[Dtype; N] {
         if self.state == false {
             self.lu_direct_solver();
             &self.disps
@@ -32,7 +33,7 @@ impl<const N: usize> LinearEqs<N> {
     }
 
     /// get force on every single node
-    pub fn forces_rlt(&mut self) -> &[f64; N] {
+    pub fn forces_rlt(&mut self) -> &[Dtype; N] {
         if self.state == false {
             self.lu_direct_solver();
             &self.forces
@@ -44,7 +45,7 @@ impl<const N: usize> LinearEqs<N> {
     /// 使用LU分解求解线性方程组(直接法)  A * x = b
     pub fn lu_direct_solver(&mut self) {
         // pre-process
-        let kmat = SMatrix::<f64, N, N>::from(self.static_kmat).transpose();
+        let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
         let force = SVector::from(self.forces);
 
         let disps_unknown_idx = nonzero_disps_idx(&self.disps);
@@ -54,7 +55,7 @@ impl<const N: usize> LinearEqs<N> {
             .select_rows(disps_unknown_idx.iter());
 
         // solve the K.q = F by LU decomposition
-        let disps_unknown: Vec<f64> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
+        let disps_unknown: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
 
         // write result into fields
         let _: Vec<_> = disps_unknown_idx
@@ -69,13 +70,13 @@ impl<const N: usize> LinearEqs<N> {
     /// 使用Guass-Seidel迭代求解线性方程组(数值方法)
     /// solve 'A*x = F' using Gauss-Seidel iterator:
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
-    pub fn gauss_seidel_iter_solver(&mut self, calc_error: f64) {
+    pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) {
         // pre-process
         let force = SVector::from(self.forces);
-        let kmat = SMatrix::<f64, N, N>::from(self.static_kmat).transpose();
-        let kmat_diag = SMatrix::<f64, N, N>::from(triangle_partition(&self.static_kmat, 0));
-        let kmat_up = SMatrix::<f64, N, N>::from(triangle_partition(&self.static_kmat, 1));
-        let kmat_low = SMatrix::<f64, N, N>::from(triangle_partition(&self.static_kmat, -1));
+        let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
+        let kmat_diag = SMatrix::<Dtype, N, N>::from(triangle_partition(&self.static_kmat, 0));
+        let kmat_up = SMatrix::<Dtype, N, N>::from(triangle_partition(&self.static_kmat, 1));
+        let kmat_low = SMatrix::<Dtype, N, N>::from(triangle_partition(&self.static_kmat, -1));
 
         let disps_unknown_idx = nonzero_disps_idx(&self.disps);
         let size = disps_unknown_idx.len();
@@ -92,7 +93,7 @@ impl<const N: usize> LinearEqs<N> {
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
         let grad = -&((&d + &l).try_inverse().unwrap());
-        let mut x = DVector::<f64>::zeros(size);
+        let mut x = DVector::<Dtype>::zeros(size);
 
         let mut count: usize = 0;
         loop {
@@ -124,7 +125,7 @@ impl<const N: usize> LinearEqs<N> {
 }
 
 /// 将Kmat中节点位移已知的自由度找出来
-fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<usize> {
+fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a Dtype>>(container: T) -> Vec<usize> {
     let idx: Vec<usize> = container
         .into_iter()
         .enumerate()
@@ -135,8 +136,11 @@ fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a f64>>(container: T) -> Vec<u
 }
 
 /// 取方阵的偏移上、下三角阵，或仅含对角元素的方阵
-fn triangle_partition<const N: usize>(square_mat: &[[f64; N]; N], mode: isize) -> [[f64; N]; N] {
-    let mut rlt: [[f64; N]; N] = [[0.0; N]; N];
+fn triangle_partition<const N: usize>(
+    square_mat: &[[Dtype; N]; N],
+    mode: isize,
+) -> [[Dtype; N]; N] {
+    let mut rlt: [[Dtype; N]; N] = [[0.0; N]; N];
     if mode > 0 {
         for i in mode as usize..N {
             for j in 0..i {

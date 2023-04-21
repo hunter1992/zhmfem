@@ -1,17 +1,17 @@
-use crate::{node::Node2D, Jacobian2D, K};
+use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
 
 pub struct Tri2D3N<'tri> {
     pub id: usize,
-    pub thick: f64,
+    pub thick: Dtype,
     pub nodes: [&'tri Node2D; 3],
-    pub k_matrix: Option<[[f64; 6]; 6]>,
+    pub k_matrix: Option<[[Dtype; 6]; 6]>,
 }
 
 impl<'tri> Tri2D3N<'tri> {
     /// Generate a 2D Tri2D3N element
-    pub fn new(id: usize, thick: f64, nodes: [&Node2D; 3]) -> Tri2D3N {
+    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 3]) -> Tri2D3N {
         Tri2D3N {
             id,
             thick,
@@ -21,7 +21,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get the x-coords of nodes in tri element
-    pub fn xs(&self) -> [f64; 3] {
+    pub fn xs(&self) -> [Dtype; 3] {
         let mut x_list = [0.0; 3];
         for i in 0..3 {
             x_list[i] = self.nodes[i].coord[0];
@@ -30,7 +30,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get the y-coords of nodes in tri element
-    pub fn ys(&self) -> [f64; 3] {
+    pub fn ys(&self) -> [Dtype; 3] {
         let mut y_list = [0.0; 3];
         for i in 0..3 {
             y_list[i] = self.nodes[i].coord[1];
@@ -39,7 +39,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get triangle element area value
-    pub fn area(&self) -> f64 {
+    pub fn area(&self) -> Dtype {
         let x = self.xs();
         let y = self.ys();
         let dx_21 = x[1] - x[0];
@@ -50,9 +50,9 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Calculate the Jacobian matrix of triangle element
-    pub fn jacobian(&self) -> [[f64; 2]; 2] {
-        let x: [f64; 3] = self.xs();
-        let y: [f64; 3] = self.ys();
+    pub fn jacobian(&self) -> [[Dtype; 2]; 2] {
+        let x: [Dtype; 3] = self.xs();
+        let y: [Dtype; 3] = self.ys();
         let dx_21 = x[1] - x[0];
         let dx_31 = x[2] - x[0];
         let dy_21 = y[1] - y[0];
@@ -61,7 +61,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get nodes' disps vector in tri element
-    pub fn disps(&self) -> [f64; 6] {
+    pub fn disps(&self) -> [Dtype; 6] {
         let mut disps = [0.0; 6];
         for idx in 0..3 {
             disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
@@ -71,7 +71,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get nodes's force vector in tri element
-    pub fn forces(&self) -> [f64; 6] {
+    pub fn forces(&self) -> [Dtype; 6] {
         let mut forces = [0.0; 6];
         for idx in 0..3 {
             forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
@@ -81,7 +81,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get any point's disps vector in tri element
-    pub fn point_disp(&self, point_coord: [f64; 2]) -> [f64; 2] {
+    pub fn point_disp(&self, point_coord: [Dtype; 2]) -> [Dtype; 2] {
         let x = point_coord[0];
         let y = point_coord[1];
         let n0 = self.shape_mat_i(0usize)(x, y);
@@ -95,7 +95,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get shape matrix element N_i
-    fn shape_mat_i(&self, i: usize) -> impl Fn(f64, f64) -> f64 {
+    fn shape_mat_i(&self, i: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         /* The shape mat of tri elem:
          * |N1  0   N2  0   N3  0 |
          * |0   N1  0   N2  0   N3| */
@@ -118,21 +118,21 @@ impl<'tri> Tri2D3N<'tri> {
             xs[idx(1 + 2)] - xs[idx(1 + 1)],
             xs[idx(2 + 2)] - xs[idx(2 + 1)],
         ];
-        move |x: f64, y: f64| 0.5 * (a[i] + x * b[i] + y * c[i]) / area
+        move |x: Dtype, y: Dtype| 0.5 * (a[i] + x * b[i] + y * c[i]) / area
     }
 
     /// Element's B matrix, B mat is the combination of diff(N)
-    fn geometry_mat(&self, det_j: f64) -> SMatrix<f64, 3, 6> {
-        let x: [f64; 3] = self.xs();
-        let y: [f64; 3] = self.ys();
-        let h_mat = SMatrix::<f64, 3, 4>::from([
+    fn geometry_mat(&self, det_j: Dtype) -> SMatrix<Dtype, 3, 6> {
+        let x: [Dtype; 3] = self.xs();
+        let y: [Dtype; 3] = self.ys();
+        let h_mat = SMatrix::<Dtype, 3, 4>::from([
             [y[2] - y[0], 0.0, x[0] - x[2]],
             [y[0] - y[1], 0.0, x[1] - x[0]],
             [0.0, x[0] - x[2], y[2] - y[0]],
             [0.0, x[1] - x[0], y[0] - y[1]],
         ]) / (det_j.abs());
 
-        let q_mat = SMatrix::<f64, 4, 6>::from([
+        let q_mat = SMatrix::<Dtype, 4, 6>::from([
             [-1., -1., 0., 0.],
             [0., 0., -1., -1.],
             [1., 0., 0., 0.],
@@ -145,14 +145,14 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Calculate element stiffness matrix K
-    /// Return a 6x6 matrix, elements are f64
-    fn calc_k(&self, material_args: (f64, f64)) -> [[f64; 6]; 6] {
+    /// Return a 6x6 matrix, elements are Dtype
+    fn calc_k(&self, material_args: (Dtype, Dtype)) -> [[Dtype; 6]; 6] {
         println!(
             "\n>>> Calculating Tri2D3N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
         let (ee, nu) = material_args;
-        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
             [0.0, 0.0, 0.5 * (1.0 - nu)],
@@ -164,30 +164,30 @@ impl<'tri> Tri2D3N<'tri> {
         let b_mat = self.geometry_mat(det_j);
         // Gauss integration, area of standard tri is 0.5
         let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
-        let stiffness_matrix: [[f64; 6]; 6] = (0.5 * self.thick * core).into();
+        let stiffness_matrix: [[Dtype; 6]; 6] = (0.5 * self.thick * core).into();
         stiffness_matrix
     }
 
     /// Get element's strain vector
-    pub fn strain(&self) -> [f64; 3] {
+    pub fn strain(&self) -> [Dtype; 3] {
         let jecobian_mat = Jacobian2D::from(self.jacobian());
         let b_mat = self.geometry_mat(jecobian_mat.determinant());
-        let elem_nodes_disps = SMatrix::<f64, 6, 1>::from(self.disps());
-        let strain_vector: [f64; 3] = (b_mat * elem_nodes_disps).into();
+        let elem_nodes_disps = SMatrix::<Dtype, 6, 1>::from(self.disps());
+        let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
         strain_vector
     }
 
     /// Get element's strss vector
-    pub fn stress(&self, material_args: (f64, f64)) -> [f64; 3] {
+    pub fn stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
-        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let strain = SMatrix::<f64, 3, 1>::from(self.strain());
-        let stress: [f64; 3] = (elasticity_mat * strain).into();
+        let strain = SMatrix::<Dtype, 3, 1>::from(self.strain());
+        let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
     }
 
@@ -201,7 +201,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Print element's strss value
-    pub fn print_stress(&self, material_args: (f64, f64)) {
+    pub fn print_stress(&self, material_args: (Dtype, Dtype)) {
         let stress = self.stress(material_args);
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-9.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
@@ -224,10 +224,10 @@ impl<'tri> Tri2D3N<'tri> {
 
 /// Implement zhm::K trait for triangle element
 impl<'tri> K for Tri2D3N<'tri> {
-    type Kmatrix = [[f64; 6]; 6];
+    type Kmatrix = [[Dtype; 6]; 6];
 
     /// Cache stiffness matrix for triangle element
-    fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
+    fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>,
     {
@@ -239,7 +239,7 @@ impl<'tri> K for Tri2D3N<'tri> {
     }
 
     /// Print triangle element's stiffness matrix
-    fn k_printer(&self, n_exp: f64) {
+    fn k_printer(&self, n_exp: Dtype) {
         if self.k_matrix.is_none() {
             panic!(
                 "!!! Tri2D3N#{}'s k mat is empty! call k() to calc it.",
@@ -257,7 +257,7 @@ impl<'tri> K for Tri2D3N<'tri> {
             for col in 0..6 {
                 print!(
                     " {:>-10.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == 5 {
@@ -270,7 +270,7 @@ impl<'tri> K for Tri2D3N<'tri> {
     }
 
     /// Return triangle elem's stiffness matrix's format string
-    fn k_string(&self, n_exp: f64) -> String {
+    fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
         for row in 0..6 {
             if row == 0 {
@@ -282,7 +282,7 @@ impl<'tri> K for Tri2D3N<'tri> {
                 write!(
                     k_matrix,
                     " {:>-10.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("!!! Write tri k_mat failed!");
             }

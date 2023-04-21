@@ -1,18 +1,18 @@
 use super::triangle::Tri2D3N;
-use crate::{node::Node2D, Jacobian2D, K};
+use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
 
 pub struct Quad2D4N<'quad> {
     pub id: usize,
-    pub thick: f64,
+    pub thick: Dtype,
     pub nodes: [&'quad Node2D; 4],
-    pub k_matrix: Option<[[f64; 8]; 8]>,
+    pub k_matrix: Option<[[Dtype; 8]; 8]>,
 }
 
 impl<'quad> Quad2D4N<'quad> {
     /// generate a new Rec2D4N element
-    pub fn new(id: usize, thick: f64, nodes: [&Node2D; 4]) -> Quad2D4N {
+    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 4]) -> Quad2D4N {
         Quad2D4N {
             id,
             thick,
@@ -22,7 +22,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// get the x-coords of nodes in Rec2D4N element
-    pub fn xs(&self) -> [f64; 4] {
+    pub fn xs(&self) -> [Dtype; 4] {
         let mut x_list = [0.0; 4];
         for i in 0..4 {
             x_list[i] = self.nodes[i].coord[0];
@@ -31,7 +31,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// get the y-coords of nodes in tri element
-    pub fn ys(&self) -> [f64; 4] {
+    pub fn ys(&self) -> [Dtype; 4] {
         let mut y_list = [0.0; 4];
         for i in 0..4 {
             y_list[i] = self.nodes[i].coord[1];
@@ -40,7 +40,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get the rectangle element area
-    pub fn area(&self) -> f64 {
+    pub fn area(&self) -> Dtype {
         let tri1: Tri2D3N = Tri2D3N {
             id: 0,
             thick: self.thick,
@@ -57,26 +57,26 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Calculate the Jacobian matrix of quadrilateral
-    pub fn jacobian(&self, xi_eta: [f64; 2]) -> [[f64; 2]; 2] {
-        let x: [f64; 4] = self.xs();
-        let y: [f64; 4] = self.ys();
-        let xi: f64 = xi_eta[0];
-        let eta: f64 = xi_eta[1];
+    pub fn jacobian(&self, xi_eta: [Dtype; 2]) -> [[Dtype; 2]; 2] {
+        let x: [Dtype; 4] = self.xs();
+        let y: [Dtype; 4] = self.ys();
+        let xi: Dtype = xi_eta[0];
+        let eta: Dtype = xi_eta[1];
 
-        let p_xi: f64 = 1.0 + xi;
-        let n_xi: f64 = 1.0 - xi;
-        let p_eta: f64 = 1.0 + eta;
-        let n_eta: f64 = 1.0 - eta;
+        let p_xi: Dtype = 1.0 + xi;
+        let n_xi: Dtype = 1.0 - xi;
+        let p_eta: Dtype = 1.0 + eta;
+        let n_eta: Dtype = 1.0 - eta;
 
-        let x_d_xi: f64 = 0.25 * (-n_eta * x[0] + n_eta * x[1] + p_eta * x[2] - p_eta * x[3]);
-        let y_d_xi: f64 = 0.25 * (-n_eta * y[0] + n_eta * y[1] + p_eta * y[2] - p_eta * y[3]);
-        let x_d_eta: f64 = 0.25 * (-n_xi * x[0] - p_xi * x[1] + p_xi * x[2] + n_xi * x[3]);
-        let y_d_eta: f64 = 0.25 * (-n_xi * y[0] - p_xi * y[1] + p_xi * y[2] + n_xi * y[3]);
+        let x_d_xi: Dtype = 0.25 * (-n_eta * x[0] + n_eta * x[1] + p_eta * x[2] - p_eta * x[3]);
+        let y_d_xi: Dtype = 0.25 * (-n_eta * y[0] + n_eta * y[1] + p_eta * y[2] - p_eta * y[3]);
+        let x_d_eta: Dtype = 0.25 * (-n_xi * x[0] - p_xi * x[1] + p_xi * x[2] + n_xi * x[3]);
+        let y_d_eta: Dtype = 0.25 * (-n_xi * y[0] - p_xi * y[1] + p_xi * y[2] + n_xi * y[3]);
         [[x_d_xi, y_d_xi], [x_d_eta, y_d_eta]]
     }
 
     /// Get nodes' disps vector in quad element
-    pub fn disps(&self) -> [f64; 8] {
+    pub fn disps(&self) -> [Dtype; 8] {
         let mut disps = [0.0; 8];
         for idx in 0..4 {
             disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
@@ -86,7 +86,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get nodes' forces vector in quad element
-    pub fn forces(&self) -> [f64; 8] {
+    pub fn forces(&self) -> [Dtype; 8] {
         let mut forces = [0.0; 8];
         for idx in 0..4 {
             forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
@@ -96,7 +96,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get any point's disps vector in quad element
-    pub fn point_disp(&self, point_coord: [f64; 2]) -> [f64; 2] {
+    pub fn point_disp(&self, point_coord: [Dtype; 2]) -> [Dtype; 2] {
         let x = point_coord[0];
         let y = point_coord[1];
         let n0 = self.shape_mat_i(0usize)(x, y);
@@ -111,13 +111,13 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get shape matrix element N_i
-    fn shape_mat_i(&self, i: usize) -> impl Fn(f64, f64) -> f64 {
+    fn shape_mat_i(&self, i: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         /* The shape mat of quad elem:
          * |N1   0    N2   0    N3   0    N4   0 |
          * |0    N1   0    N2   0    N3   0    N4|  */
         let x_sign = [-1.0, 1.0, 1.0, -1.0];
         let y_sign = [-1.0, -1.0, 1.0, 1.0];
-        move |x: f64, y: f64| {
+        move |x: Dtype, y: Dtype| {
             0.25 * (1.0 + x_sign[i] * x + y_sign[i] * y + x_sign[i] * y_sign[i] * x * y)
         }
     }
@@ -125,8 +125,8 @@ impl<'quad> Quad2D4N<'quad> {
     /// Strain in x-y coord,
     /// epsilon = Du/Dx = Du/D(xi) * D(xi)/Dx = Du/D(xi) * J^(-1)
     /// return conmbination of D(xi)/Dx which is h_mat
-    fn h_mat(&self, jacobian: [[f64; 2]; 2], det_j: f64) -> SMatrix<f64, 3, 4> {
-        SMatrix::<f64, 3, 4>::from([
+    fn h_mat(&self, jacobian: [[Dtype; 2]; 2], det_j: Dtype) -> SMatrix<Dtype, 3, 4> {
+        SMatrix::<Dtype, 3, 4>::from([
             [jacobian[1][1], 0.0, -jacobian[1][0]],
             [-jacobian[0][1], 0.0, jacobian[0][0]],
             [0.0, -jacobian[1][0], jacobian[1][1]],
@@ -137,13 +137,13 @@ impl<'quad> Quad2D4N<'quad> {
     /// Strain in xi-eta coord,
     /// epsilon = Du/D(xi) = D(N*q)/D(xi) = [D(N)/D(xi)]*q
     /// return [D(N)/D(xi)] which is q_mat = diff(N(xi, eta))
-    fn q_mat(&self, xi_eta: [f64; 2]) -> SMatrix<f64, 4, 8> {
-        let p_xi: f64 = 1.0 + xi_eta[0];
-        let n_xi: f64 = 1.0 - xi_eta[0];
-        let p_eta: f64 = 1.0 + xi_eta[1];
-        let n_eta: f64 = 1.0 - xi_eta[1];
+    fn q_mat(&self, xi_eta: [Dtype; 2]) -> SMatrix<Dtype, 4, 8> {
+        let p_xi: Dtype = 1.0 + xi_eta[0];
+        let n_xi: Dtype = 1.0 - xi_eta[0];
+        let p_eta: Dtype = 1.0 + xi_eta[1];
+        let n_eta: Dtype = 1.0 - xi_eta[1];
 
-        SMatrix::<f64, 4, 8>::from([
+        SMatrix::<Dtype, 4, 8>::from([
             [-n_eta, -n_xi, 0.0, 0.0],
             [0.0, 0.0, -n_eta, -n_xi],
             [n_eta, -p_xi, 0.0, 0.0],
@@ -158,35 +158,35 @@ impl<'quad> Quad2D4N<'quad> {
     /// Element's B matrix which is the conmbination of diff(N(x,y))
     fn geometry_mat(
         &self,
-        j_raw: [[f64; 2]; 2],
-        det_j: f64,
-        xi_eta: [f64; 2],
-    ) -> SMatrix<f64, 3, 8> {
+        j_raw: [[Dtype; 2]; 2],
+        det_j: Dtype,
+        xi_eta: [Dtype; 2],
+    ) -> SMatrix<Dtype, 3, 8> {
         self.h_mat(j_raw, det_j) * self.q_mat(xi_eta)
     }
 
     /// Calculate element stiffness matrix K
-    /// return a 8x8 matrix, elements are f64
-    fn calc_k(&self, material_args: (f64, f64)) -> [[f64; 8]; 8] {
+    /// return a 8x8 matrix, elements are Dtype
+    fn calc_k(&self, material_args: (Dtype, Dtype)) -> [[Dtype; 8]; 8] {
         println!(
             "\n>>> Calculating Quad2D4N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
         let (ee, nu) = material_args;
-        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
         // 4 point Gauss integration, area of standard rectangle is 4.0
-        let gauss_pt = 1.0f64 / (3.0f64.sqrt());
+        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
         let int_pts = [
             [[-gauss_pt, -gauss_pt], [gauss_pt, -gauss_pt]],
             [[gauss_pt, gauss_pt], [-gauss_pt, gauss_pt]],
         ];
 
-        let mut k_matrix = SMatrix::<f64, 8, 8>::from([[0.0; 8]; 8]);
+        let mut k_matrix = SMatrix::<Dtype, 8, 8>::from([[0.0; 8]; 8]);
         for row in 0..2 {
             for col in 0..2 {
                 let j_raw = self.jacobian(int_pts[row][col]);
@@ -199,31 +199,31 @@ impl<'quad> Quad2D4N<'quad> {
             }
         }
 
-        let stiffness_matrix: [[f64; 8]; 8] = (self.thick * k_matrix).into();
+        let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
         stiffness_matrix
     }
 
     /// Get element's strain vector
-    pub fn strain(&self, xi_eta: [f64; 2]) -> [f64; 3] {
+    pub fn strain(&self, xi_eta: [Dtype; 2]) -> [Dtype; 3] {
         let j_raw = self.jacobian(xi_eta);
         let det_j = Jacobian2D::from(self.jacobian(xi_eta)).determinant();
         let b_mat = self.geometry_mat(j_raw, det_j, xi_eta);
-        let elem_nodes_disps = SMatrix::<f64, 8, 1>::from(self.disps());
-        let strain_vector: [f64; 3] = (b_mat * elem_nodes_disps).into();
+        let elem_nodes_disps = SMatrix::<Dtype, 8, 1>::from(self.disps());
+        let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
         strain_vector
     }
 
     /// Get element's strss vector
-    pub fn stress(&self, xi_eta: [f64; 2], material_args: (f64, f64)) -> [f64; 3] {
+    pub fn stress(&self, xi_eta: [Dtype; 2], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
-        let elasticity_mat = SMatrix::<f64, 3, 3>::from([
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let strain = SMatrix::<f64, 3, 1>::from(self.strain(xi_eta));
-        let stress: [f64; 3] = (elasticity_mat * strain).into();
+        let strain = SMatrix::<Dtype, 3, 1>::from(self.strain(xi_eta));
+        let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
     }
 
@@ -243,10 +243,10 @@ impl<'quad> Quad2D4N<'quad> {
 
 /// Implement zhm::K trait for quad element
 impl<'quad> K for Quad2D4N<'quad> {
-    type Kmatrix = [[f64; 8]; 8];
+    type Kmatrix = [[Dtype; 8]; 8];
 
     /// Cache stiffness matrix for quad element
-    fn k(&mut self, material: (f64, f64)) -> &Self::Kmatrix
+    fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>,
     {
@@ -258,7 +258,7 @@ impl<'quad> K for Quad2D4N<'quad> {
     }
 
     /// Print quad element's stiffness matrix
-    fn k_printer(&self, n_exp: f64) {
+    fn k_printer(&self, n_exp: Dtype) {
         if self.k_matrix.is_none() {
             panic!(
                 "!!! Quad2D4N#{}'s k mat is empty! call k() to calc it.",
@@ -276,7 +276,7 @@ impl<'quad> K for Quad2D4N<'quad> {
             for col in 0..8 {
                 print!(
                     " {:>-10.6}",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == 7 {
@@ -289,7 +289,7 @@ impl<'quad> K for Quad2D4N<'quad> {
     }
 
     /// Return quad elem's stiffness matrix's format string
-    fn k_string(&self, n_exp: f64) -> String {
+    fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
         for row in 0..8 {
             if row == 0 {
@@ -301,7 +301,7 @@ impl<'quad> K for Quad2D4N<'quad> {
                 write!(
                     k_matrix,
                     " {:>-10.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp))
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("!!! Write tri k_mat failed!");
             }
