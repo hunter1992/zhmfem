@@ -52,9 +52,9 @@ fn main() {
 
     // 2) solve the linear equations of static system using iter method
     let start = Instant::now();
-    eqs.gauss_seidel_iter_solver(0.0001);
+    eqs.gauss_seidel_iter_solver(0.000001);
     let duration = start.elapsed();
-    println!("---> Time consuming: {:?}\n", duration);
+    println!(">>> Time consuming: {:?}\n", duration);
 
     part1.write_result(&eqs);
 
