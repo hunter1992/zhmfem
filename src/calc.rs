@@ -72,34 +72,30 @@ impl<const N: usize> LinearEqs<N> {
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
     pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) {
         // pre-process
-        let force = SVector::from(self.forces);
-        let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
-        let kmat_diag = SMatrix::<Dtype, N, N>::from(triangle_partition(&self.static_kmat, 0));
-        let kmat_up = SMatrix::<Dtype, N, N>::from(triangle_partition(&self.static_kmat, 1));
-        let kmat_low = SMatrix::<Dtype, N, N>::from(triangle_partition(&self.static_kmat, -1));
+        let unknown_disps_idx = nonzero_disps_idx(&self.disps);
 
-        let disps_unknown_idx = nonzero_disps_idx(&self.disps);
-        let size = disps_unknown_idx.len();
+        let force = SVector::from(self.forces);
+        let f_eff = force.select_rows(unknown_disps_idx.iter());
+
+        let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
+        let kmat_eff = kmat
+            .select_columns(unknown_disps_idx.iter())
+            .select_rows(unknown_disps_idx.iter());
 
         // construct Gauss-Seidel iter method
-        let f = force.select_rows(disps_unknown_idx.iter());
-        let d = kmat_diag
-            .select_columns(disps_unknown_idx.iter())
-            .select_rows(disps_unknown_idx.iter());
-        let l = kmat_low
-            .select_columns(disps_unknown_idx.iter())
-            .select_rows(disps_unknown_idx.iter());
-        let u = kmat_up
-            .select_columns(disps_unknown_idx.iter())
-            .select_rows(disps_unknown_idx.iter());
-        let grad = -&((&d + &l).try_inverse().unwrap());
+        let l = kmat_eff.lower_triangle();
+        let d = DMatrix::from_diagonal(&kmat_eff.diagonal());
+        let u = kmat_eff.upper_triangle() - &d;
+        let grad = -l.try_inverse().unwrap();
+
+        let size = unknown_disps_idx.len();
         let mut x = DVector::<Dtype>::zeros(size);
 
+        // Gauss-Seidel iterator loop
         let mut count: usize = 0;
         loop {
-            // x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
-            let tmp = &grad * &u * &x - &grad * &f;
-            // println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
+            let tmp = &grad * &u * &x - &grad * &f_eff;
+            //println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
 
             if (&tmp - &x).abs().max() < calc_error {
                 println!(
@@ -114,7 +110,7 @@ impl<const N: usize> LinearEqs<N> {
         }
 
         // write result
-        let _: Vec<_> = disps_unknown_idx
+        let _: Vec<_> = unknown_disps_idx
             .iter()
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = x[i])

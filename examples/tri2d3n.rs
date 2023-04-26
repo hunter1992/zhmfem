@@ -47,14 +47,21 @@ fn main() {
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
 
-    // 1) solve the linear equations of static system using direct method
-    // eqs.lu_solver();
+    // 1) solve the linear equations of static system
+    //    using direct method, time consuming about 51us.
+    /*
+    let start1 = Instant::now();
+    eqs.lu_direct_solver();
+    let duration1 = start1.elapsed();
+    println!(">>> Time consuming(LU method): {:?}\n", duration1);
+    */
 
-    // 2) solve the linear equations of static system using iter method
-    let start = Instant::now();
-    eqs.gauss_seidel_iter_solver(0.000001);
-    let duration = start.elapsed();
-    println!(">>> Time consuming: {:?}\n", duration);
+    // 2) solve the linear equations of static system
+    //    using iter method, time consuming about 363us.
+    let start2 = Instant::now();
+    eqs.gauss_seidel_iter_solver(0.001);
+    let duration2 = start2.elapsed();
+    println!(">>> Time consuming(G-S iter method): {:?}\n", duration2);
 
     part1.write_result(&eqs);
 
@@ -68,6 +75,8 @@ fn main() {
         "\tE_p: {:-9.6} (potential energy)",
         part1.potential_energy()
     );
+
+    /*
     println!("\n==================== ELEMENT INFO ====================");
 
     for i in tri_vec.iter() {
@@ -89,6 +98,7 @@ fn main() {
     print_1darr("Disp at (0.8, 0.8)", &tri_vec[1].point_disp([0.8, 0.8]));
     print_1darr("Strain at (0.8, 0.8)", &tri_vec[1].strain());
     print_1darr("Stress at (0.8,0.8)", &tri_vec[1].stress(material));
+    */
 
     // Write the result into file
     /*
