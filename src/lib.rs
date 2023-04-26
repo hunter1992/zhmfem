@@ -22,7 +22,7 @@ pub use part::Part2D;
 
 use std::collections::HashMap;
 
-pub type Dtype = f64;
+pub type Dtype = f32;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
 pub trait K {

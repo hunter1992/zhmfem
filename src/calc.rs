@@ -56,6 +56,7 @@ impl<const N: usize> LinearEqs<N> {
 
         // solve the K.q = F by LU decomposition
         let disps_unknown: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
+        println!("\n>>> LU decomposition method down!\n\tresult: err = 0\n");
 
         // write result into fields
         let _: Vec<_> = disps_unknown_idx
@@ -99,7 +100,7 @@ impl<const N: usize> LinearEqs<N> {
 
             if (&tmp - &x).abs().max() < calc_error {
                 println!(
-                    ">>> Gauss-Seidel method down!\n\tresult: iter = {},\n\t\terr  = {:8.6}\n",
+                    "\n>>> Gauss-Seidel iter method down!\n\tresult: iter = {},\n\t\terr  = {:8.6}\n",
                     count,
                     (&tmp - &x).abs().max()
                 );
@@ -129,30 +130,4 @@ fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a Dtype>>(container: T) -> Vec
         .map(|(idx, _)| idx)
         .collect();
     idx
-}
-
-/// 取方阵的偏移上、下三角阵，或仅含对角元素的方阵
-fn triangle_partition<const N: usize>(
-    square_mat: &[[Dtype; N]; N],
-    mode: isize,
-) -> [[Dtype; N]; N] {
-    let mut rlt: [[Dtype; N]; N] = [[0.0; N]; N];
-    if mode > 0 {
-        for i in mode as usize..N {
-            for j in 0..i {
-                rlt[i][j] = square_mat[i][j];
-            }
-        }
-    } else if mode < 0 {
-        for i in (-mode) as usize..N {
-            for j in 0..i {
-                rlt[j][i] = square_mat[j][i];
-            }
-        }
-    } else {
-        for i in 0..N {
-            rlt[i][i] = square_mat[i][i];
-        }
-    }
-    rlt
 }

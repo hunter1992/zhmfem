@@ -13,8 +13,8 @@ fn main() {
     const H: Dtype = 1.0; // height
 
     // number of nodes and freedom
-    const R: usize = 2; // rows of nodes
-    const C: usize = 2; // columns of nodes
+    const R: usize = 6; // rows of nodes
+    const C: usize = 6; // columns of nodes
     const M: usize = 3; // node num in single element
     const F: usize = 2; // freedom num in single node
 
@@ -40,8 +40,8 @@ fn main() {
     // assemble global stiffness matrix
     let mut part1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tri_vec, &cpld);
     println!("");
-    part1.k(material);
-    part1.k_printer(0.0);
+    //part1.k(material);
+    //part1.k_printer(0.0);
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
