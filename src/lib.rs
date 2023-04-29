@@ -18,7 +18,7 @@ pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
-pub use part::Part2D;
+pub use part::{part1d::Part1D, part2d::Part2D};
 
 use std::collections::HashMap;
 

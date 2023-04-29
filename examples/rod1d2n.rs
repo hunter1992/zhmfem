@@ -1,26 +1,47 @@
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
+use std::time::Instant;
+
 use zhmfem::*;
 
-fn main() {
-    let section_area = 1.0f64;
-    let material = (8.0f64, 0.25f64);
+type Dtype = f32;
 
-    let points = vec![vec![0.0], vec![1.0]];
+fn main() {
+    let section_area = 1.0 as Dtype;
+    let material = (8.0 as Dtype, 0.25 as Dtype);
+
+    const R: usize = 1;
+    const C: usize = 2;
+    const M: usize = 2;
+    const F: usize = 1;
+
+    let points: Vec<Vec<Dtype>> = vec![vec![0.0], vec![1.0]];
     let cpld = vec![vec![1, 2]];
     let zero_disp: Vec<usize> = vec![0];
     let force_idx: Vec<usize> = vec![1];
-    let force_vlu: Vec<f64> = vec![1.0];
-    let force_data: HashMap<usize, f64> =
+    let force_vlu: Vec<Dtype> = vec![1.0];
+    let force_data: HashMap<usize, Dtype> =
         force_idx.into_iter().zip(force_vlu.into_iter()).collect();
 
     let nodes: Vec<Node1D> = nodes1d_vec(&points, &zero_disp, &force_data);
 
     let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(section_area, &nodes, &cpld);
+    let mut part1: Part1D<Rod1D2N, { R * C }, F, M> = Part1D::new(1, &nodes, &mut rod_vec, &cpld);
+    part1.k(material);
+    part1.k_printer(0.0);
 
-    rod_vec[0].k(material);
-    rod_vec[0].k_printer(0.0);
-    print_1darr("strain:", &rod_vec[0].strain());
+    let mut eqs: LinearEqs<{ R * C * F }> =
+        LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
+
+    let start1 = Instant::now();
+    eqs.lu_direct_solver();
+    let duration1 = start1.elapsed();
+    println!(">>> Time consuming(LU method): {:?}\n", duration1);
+
+    part1.write_result(&eqs);
+
+    print_1darr("qe", &part1.disps());
+    print_1darr("fe", &part1.forces());
 
     /*
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";
