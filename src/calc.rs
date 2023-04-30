@@ -2,6 +2,7 @@ extern crate nalgebra as na;
 
 use crate::Dtype;
 use na::*;
+use std::time::Instant;
 
 /// Linear equations: A*x = b,
 /// In this case: A for static_kmat, x for disps, b for forces
@@ -54,9 +55,14 @@ impl<const N: usize> LinearEqs<N> {
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
 
+        let time_lu = Instant::now();
         // solve the K.q = F by LU decomposition
         let disps_unknown: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
-        println!("\n>>> LU decomposition method down!\n\tresult: err = 0\n");
+        let duration_lu = time_lu.elapsed();
+        println!(
+            "\n>>> LU decomposition method down!\n\t\ttime consuming = {:?}",
+            duration_lu
+        );
 
         // write result into fields
         let _: Vec<_> = disps_unknown_idx
@@ -94,13 +100,17 @@ impl<const N: usize> LinearEqs<N> {
 
         // Gauss-Seidel iterator loop
         let mut count: usize = 0;
+        let time_gs = Instant::now();
         loop {
             let tmp = &grad * &u * &x - &grad * &f_eff;
             //println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
 
             if (&tmp - &x).abs().max() < calc_error {
+                let duration_gs = time_gs.elapsed();
+                print!("\n>>> Gauss-Seidel iter method down!");
                 println!(
-                    "\n>>> Gauss-Seidel iter method down!\n\tresult: iter = {},\n\t\terr  = {:8.6}\n",
+                    "\n\ttime consuming = {:?}\n\tresult:   iter = {},\n\t\t  err  = {:8.6}",
+                    duration_gs,
                     count,
                     (&tmp - &x).abs().max()
                 );
