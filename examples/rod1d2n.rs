@@ -7,6 +7,8 @@ use zhmfem::*;
 type Dtype = f32;
 
 fn main() {
+    let time_start = Instant::now();
+
     let section_area = 1.0 as Dtype;
     let material = (8.0 as Dtype, 0.25 as Dtype);
 
@@ -33,10 +35,7 @@ fn main() {
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
 
-    let start1 = Instant::now();
     eqs.lu_direct_solver();
-    let duration1 = start1.elapsed();
-    println!(">>> Time consuming(LU method): {:?}\n", duration1);
 
     part1.write_result(&eqs);
 
@@ -49,4 +48,7 @@ fn main() {
     let mut writer = BufWriter::new(file);
     write!(writer, "{}", rod1.info()).expect("Write failed!");
     */
+
+    let total_time = time_start.elapsed();
+    println!(">>> Total time consuming: {:?}", total_time);
 }
