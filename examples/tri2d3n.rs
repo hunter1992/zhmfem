@@ -5,6 +5,9 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
+    // set timing start
+    let time_start = Instant::now();
+
     // set material parameters
     let thick = 1.0 as Dtype;
     let material = (1.0 as Dtype, 0.25 as Dtype); //Young's modulud & Poisson's ratio
@@ -13,8 +16,8 @@ fn main() {
     const H: Dtype = 1.0; // height
 
     // number of nodes and freedom
-    const R: usize = 6; // rows of nodes
-    const C: usize = 6; // columns of nodes
+    const R: usize = 2; // rows of nodes
+    const C: usize = 2; // columns of nodes
     const M: usize = 3; // node num in single element
     const F: usize = 2; // freedom num in single node
 
@@ -49,19 +52,11 @@ fn main() {
 
     // 1) solve the linear equations of static system
     //    using direct method, time consuming about 51us.
-    /*
-    let start1 = Instant::now();
-    eqs.lu_direct_solver();
-    let duration1 = start1.elapsed();
-    println!(">>> Time consuming(LU method): {:?}\n", duration1);
-    */
+    //eqs.lu_direct_solver();
 
     // 2) solve the linear equations of static system
     //    using iter method, time consuming about 363us.
-    let start2 = Instant::now();
     eqs.gauss_seidel_iter_solver(0.001);
-    let duration2 = start2.elapsed();
-    println!(">>> Time consuming(G-S iter method): {:?}\n", duration2);
 
     part1.write_result(&eqs);
 
@@ -122,4 +117,7 @@ fn main() {
     }
     writer.flush().expect("!!! Flush failed!");
     */
+
+    let total_time = time_start.elapsed();
+    println!("\n>>> Total time consuming: {:?}", total_time);
 }
