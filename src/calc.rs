@@ -60,7 +60,7 @@ impl<const N: usize> LinearEqs<N> {
         let disps_unknown: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
         let duration_lu = time_lu.elapsed();
         println!(
-            "\n>>> LU decomposition method down!\n\t\ttime consuming = {:?}",
+            "\n>>> LU decomposition method down!\n\ttime consuming = {:?}",
             duration_lu
         );
 
