@@ -20,6 +20,12 @@ impl<'rod> Rod1D2N<'rod> {
         }
     }
 
+    /// Get id number
+    pub fn get_id(&self) -> usize {
+        let id_num: usize = self.id;
+        id_num
+    }
+
     /// Get the x-coords of nodes in rod element
     pub fn xs(&self) -> [Dtype; 2] {
         let mut x_list = [0.0; 2];
@@ -91,7 +97,7 @@ impl<'rod> Rod1D2N<'rod> {
     }
 
     /// Get element's strain vector, in 1d it's a scale
-    pub fn strain(&self) -> [Dtype; 1] {
+    fn calc_strain(&self) -> [Dtype; 1] {
         let unit: Dtype = 1.0 / self.length();
         let node_disps = self.disps();
         let strain: [Dtype; 1] = [-unit * node_disps[0] + unit * node_disps[1]];
@@ -99,9 +105,9 @@ impl<'rod> Rod1D2N<'rod> {
     }
 
     /// Get element's stress vector, in 1d it's a scale
-    pub fn stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 1] {
+    fn calc_stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 1] {
         let (ee, _nu) = material_args;
-        let stress: [Dtype; 1] = [ee * self.strain()[0]];
+        let stress: [Dtype; 1] = [ee * self.calc_strain()[0]];
         stress
     }
 }
@@ -179,6 +185,16 @@ impl<'rod> K for Rod1D2N<'rod> {
         k_matrix
     }
 
+    /// Get the stress at (x) inside the element
+    fn strain(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
+        self.calc_strain().to_vec()
+    }
+
+    /// Get the stress at (x) inside the element
+    fn stress(&self, _xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype> {
+        self.calc_stress(material).to_vec()
+    }
+
     /// Get element's info string
     fn info(&self) -> String {
         format!(
@@ -190,6 +206,11 @@ Element_1D Info:\n\tId:     {}\n\tArea:   {}\n\tLong:   {}\n\tType:   Rod1D2N\n\
             self.nodes[0],
             self.nodes[1]
         )
+    }
+
+    /// Get element's id number
+    fn id(&self) -> usize {
+        self.id
     }
 }
 

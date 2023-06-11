@@ -7,7 +7,6 @@ extern crate test;
 
 mod calc;
 mod elem;
-mod io;
 mod mesh;
 mod node;
 mod part;
@@ -16,7 +15,6 @@ pub use calc::LinearEqs;
 pub use elem::dim1::rod;
 pub use elem::dim1::rod::Rod1D2N;
 pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
-pub use io::{CalcFile, VtkFile};
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
@@ -27,14 +25,23 @@ use std::collections::HashMap;
 pub type Dtype = f32;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
+/// K trait is the behavior that the elements have.
+/// Svector is used to output the stress/strain vector,
+/// Kmatrix for output element's stiffness matrix.
 pub trait K {
     type Kmatrix;
+
     fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>;
     fn k_printer(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
+
+    fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype>;
+    fn stress(&self, xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype>;
+
     fn info(&self) -> String;
+    fn id(&self) -> usize;
 }
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])

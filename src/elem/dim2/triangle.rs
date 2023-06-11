@@ -169,7 +169,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get element's strain vector
-    pub fn strain(&self) -> [Dtype; 3] {
+    pub fn calc_strain(&self) -> [Dtype; 3] {
         let jecobian_mat = Jacobian2D::from(self.jacobian());
         let b_mat = self.geometry_mat(jecobian_mat.determinant());
         let elem_nodes_disps = SMatrix::<Dtype, 6, 1>::from(self.disps());
@@ -178,7 +178,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get element's strss vector
-    pub fn stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 3] {
+    pub fn calc_stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
@@ -186,23 +186,23 @@ impl<'tri> Tri2D3N<'tri> {
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let strain = SMatrix::<Dtype, 3, 1>::from(self.strain());
+        let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain());
         let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
     }
 
     /// Print element's strain value
-    pub fn print_strain(&self) {
-        let strain = self.strain();
+    fn print_strain(&self) {
+        let strain = self.calc_strain();
         println!(
             "\nelem[{}] strain:\n\tE_xx = {:-9.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
             self.id, strain[0], strain[1], strain[2]
         );
     }
 
-    /// Print element's strss value
-    pub fn print_stress(&self, material_args: (Dtype, Dtype)) {
-        let stress = self.stress(material_args);
+    /// Print element's stress value
+    fn print_stress(&self, material_args: (Dtype, Dtype)) {
+        let stress = self.calc_stress(material_args);
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-9.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
             self.id, stress[0], stress[1], stress[2]
@@ -283,6 +283,18 @@ impl<'tri> K for Tri2D3N<'tri> {
         k_matrix
     }
 
+    /// Get the strain at (x,y) inside the element
+    /// In linear triangle elem, strain is a const
+    fn strain(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
+        self.calc_strain().to_vec()
+    }
+
+    /// Get the stress at (x,y) inside the element
+    /// In linear triangle elem, stress is a const
+    fn stress(&self, _xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype> {
+        self.calc_stress(material).to_vec()
+    }
+
     /// Get element's info string
     fn info(&self) -> String {
         format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Tri2D3N
@@ -293,6 +305,11 @@ impl<'tri> K for Tri2D3N<'tri> {
             self.nodes[1],
             self.nodes[2]
         )
+    }
+
+    /// Get element's id number
+    fn id(&self) -> usize {
+        self.id
     }
 }
 

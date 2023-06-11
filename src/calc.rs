@@ -4,12 +4,14 @@ use crate::Dtype;
 use na::*;
 use std::time::Instant;
 
+/*
 pub struct NonLinearEqs<const N: usize> {
     state: bool,
     pub disps: [Dtype; N],
     pub forces: [Dtype; N],
     pub static_kmat: [[Dtype; N]; N],
 }
+*/
 
 /// Linear equations: A*x = b,
 /// In this case: A for static_kmat, x for disps, b for forces

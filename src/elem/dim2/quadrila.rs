@@ -21,6 +21,12 @@ impl<'quad> Quad2D4N<'quad> {
         }
     }
 
+    /// Get id number
+    pub fn get_id(&self) -> usize {
+        let id_num: usize = self.id;
+        id_num
+    }
+
     /// get the x-coords of nodes in Rec2D4N element
     pub fn xs(&self) -> [Dtype; 4] {
         let mut x_list = [0.0; 4];
@@ -204,7 +210,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get element's strain vector
-    pub fn strain(&self, xi_eta: [Dtype; 2]) -> [Dtype; 3] {
+    fn calc_strain(&self, xi_eta: [Dtype; 2]) -> [Dtype; 3] {
         let j_raw = self.jacobian(xi_eta);
         let det_j = Jacobian2D::from(self.jacobian(xi_eta)).determinant();
         let b_mat = self.geometry_mat(j_raw, det_j, xi_eta);
@@ -214,7 +220,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get element's strss vector
-    pub fn stress(&self, xi_eta: [Dtype; 2], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
+    fn calc_stress(&self, xi_eta: [Dtype; 2], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
@@ -222,7 +228,7 @@ impl<'quad> Quad2D4N<'quad> {
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let strain = SMatrix::<Dtype, 3, 1>::from(self.strain(xi_eta));
+        let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain(xi_eta));
         let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
     }
@@ -277,6 +283,13 @@ impl<'quad> K for Quad2D4N<'quad> {
 
     /// Return quad elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
+        if self.k_matrix.is_none() {
+            panic!(
+                "!!! Quad2D4N#{}'s k mat is empty! call k() to calc it.",
+                self.id
+            )
+        }
+
         let mut k_matrix = String::new();
         for row in 0..8 {
             if row == 0 {
@@ -301,6 +314,16 @@ impl<'quad> K for Quad2D4N<'quad> {
         k_matrix
     }
 
+    /// Get the strain at (xi, eta) inside the element
+    fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype> {
+        self.calc_strain([xyz[0], xyz[1]]).to_vec()
+    }
+
+    /// Get the stress at (xi, eta) inside the element
+    fn stress(&self, xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype> {
+        self.calc_stress([xyz[0], xyz[1]], material).to_vec()
+    }
+
     /// Get element's info string
     fn info(&self) -> String {
         format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Quad2D4N
@@ -312,6 +335,11 @@ impl<'quad> K for Quad2D4N<'quad> {
             self.nodes[2],
             self.nodes[3],
         )
+    }
+
+    /// Get element's id number
+    fn id(&self) -> usize {
+        self.id
     }
 }
 

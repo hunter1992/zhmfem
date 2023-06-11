@@ -94,23 +94,30 @@ where
     }
 
     /// Write calculated results into txt file
-    pub fn write_txt_file(&self, file_path: &str, material: (Dtype, Dtype)) {
+    pub fn write_txt_file(&self, material: (Dtype, Dtype), file_path: &str) {
         let txt_file = std::fs::File::create(file_path).unwrap();
         let mut txt_writer = BufWriter::new(txt_file);
 
         write!(txt_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
 
         for elem in self.elems.iter() {
-            elem.k
             write!(txt_writer, "{}", elem.info()).expect("Write info failed!");
-            write!(txt_writer, "\tStrain: {:-9.6?}\n", elem.strain())
-                .expect("Write strain failed!");
-            write!(txt_writer, "\tStress: {:-9.6?}\n", elem.stress(material))
-                .expect("Write stress failed!");
+            write!(
+                txt_writer,
+                "\tStrain: {:-9.6?}\n",
+                elem.strain([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype])
+            )
+            .expect("Write strain failed!");
+            write!(
+                txt_writer,
+                "\tStress: {:-9.6?}\n",
+                elem.stress([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype], material)
+            )
+            .expect("Write stress failed!");
             write!(
                 txt_writer,
                 "\n\tStiffness matrix k{} = \n{}\n",
-                elem.id,
+                elem.id(),
                 elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
             )
             .expect("!!! Write k matrix failed!");
