@@ -226,19 +226,6 @@ impl<'quad> Quad2D4N<'quad> {
         let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
     }
-
-    /// Get element's info string
-    pub fn info(&self) -> String {
-        format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Quad2D4N
-\tNodes: {}\n\t       {}\n\t       {}\n\t       {}\n\t",
-            self.id,
-            self.area(),
-            self.nodes[0],
-            self.nodes[1],
-            self.nodes[2],
-            self.nodes[3],
-        )
-    }
 }
 
 /// Implement zhm::K trait for quad element
@@ -312,6 +299,19 @@ impl<'quad> K for Quad2D4N<'quad> {
             }
         }
         k_matrix
+    }
+
+    /// Get element's info string
+    fn info(&self) -> String {
+        format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Quad2D4N
+\tNodes: {}\n\t       {}\n\t       {}\n\t       {}\n\t",
+            self.id,
+            self.area(),
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2],
+            self.nodes[3],
+        )
     }
 }
 

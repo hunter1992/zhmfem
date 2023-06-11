@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::io::{BufWriter, Write};
 use std::time::Instant;
 
 use zhmfem::*;
@@ -50,12 +49,10 @@ fn main() {
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
 
-    // 1) solve the linear equations of static system
-    //    using direct method, time consuming about 51us.
+    // 1) solve the linear equations of static system using direct method.
     //eqs.lu_direct_solver();
 
-    // 2) solve the linear equations of static system
-    //    using iter method, time consuming about 363us.
+    // 2) solve the linear equations of static system using iter method.
     eqs.gauss_seidel_iter_solver(0.001);
 
     part1.write_result(&eqs);
@@ -71,52 +68,7 @@ fn main() {
         part1.potential_energy()
     );
 
-    /*
-    println!("\n==================== ELEMENT INFO ====================");
-
-    for i in tri_vec.iter() {
-        println!("{}", i);
-        i.k_printer(0.0);
-        i.print_strain();
-        i.print_stress(material);
-    }
-
-    println!();
-    print_1darr("Disp at (1, 0)", &tri_vec[0].point_disp([1.0, 0.0]));
-    print_1darr("Strain at (1, 0)", &tri_vec[0].strain());
-    print_1darr("Stress at (1, 0)", &tri_vec[0].stress(material));
-
-    print_1darr("Disp at (0.8, 0.8)", &tri_vec[0].point_disp([0.8, 0.8]));
-    print_1darr("Strain at (0.8, 0.8)", &tri_vec[0].strain());
-    print_1darr("Stress at (0.8,0.8)", &tri_vec[0].stress(material));
-
-    print_1darr("Disp at (0.8, 0.8)", &tri_vec[1].point_disp([0.8, 0.8]));
-    print_1darr("Strain at (0.8, 0.8)", &tri_vec[1].strain());
-    print_1darr("Stress at (0.8,0.8)", &tri_vec[1].stress(material));
-    */
-
-    // Write the result into file
-    /*
-    let file_name = "/home/zhm/Desktop/tri2d3n_result.txt";
-    let file = std::fs::File::create(file_name).unwrap();
-    let mut writer = BufWriter::new(file);
-    write!(writer, ">>> ZHMFEM calculating result:").expect("Write error!");
-
-    for elem in tri_vec.iter() {
-        write!(writer, "{}", elem.info()).expect("Write info failed!");
-        write!(writer, "\tStrain: {:-9.6?}\n", elem.strain()).expect("Write strain failed!");
-        write!(writer, "\tStress: {:-9.6?}\n", elem.stress(material))
-            .expect("Write stress failed!");
-        write!(
-            writer,
-            "\n\tStiffness matrix k{} = \n{}\n",
-            elem.id,
-            elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
-        )
-        .expect("!!! Write k matrix failed!");
-    }
-    writer.flush().expect("!!! Flush failed!");
-    */
+    part1.write_txt_file(material, "/home/zhm/Desktop/tri.txt");
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

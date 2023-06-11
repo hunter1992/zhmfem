@@ -7,6 +7,7 @@ extern crate test;
 
 mod calc;
 mod elem;
+mod io;
 mod mesh;
 mod node;
 mod part;
@@ -15,6 +16,7 @@ pub use calc::LinearEqs;
 pub use elem::dim1::rod;
 pub use elem::dim1::rod::Rod1D2N;
 pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
+pub use io::{CalcFile, VtkFile};
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
@@ -32,6 +34,7 @@ pub trait K {
         Self::Kmatrix: std::ops::Index<usize>;
     fn k_printer(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
+    fn info(&self) -> String;
 }
 
 pub fn print_1dvec<T>(name: &str, vec: &[T])

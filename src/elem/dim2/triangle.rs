@@ -208,18 +208,6 @@ impl<'tri> Tri2D3N<'tri> {
             self.id, stress[0], stress[1], stress[2]
         );
     }
-
-    /// Get element's info string
-    pub fn info(&self) -> String {
-        format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Tri2D3N
-\tNodes: {}\n\t       {}\n\t       {}\n",
-            self.id,
-            self.area(),
-            self.nodes[0],
-            self.nodes[1],
-            self.nodes[2]
-        )
-    }
 }
 
 /// Implement zhm::K trait for triangle element
@@ -293,6 +281,18 @@ impl<'tri> K for Tri2D3N<'tri> {
             }
         }
         k_matrix
+    }
+
+    /// Get element's info string
+    fn info(&self) -> String {
+        format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Tri2D3N
+\tNodes: {}\n\t       {}\n\t       {}\n",
+            self.id,
+            self.area(),
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2]
+        )
     }
 }
 

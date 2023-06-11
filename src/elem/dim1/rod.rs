@@ -104,19 +104,6 @@ impl<'rod> Rod1D2N<'rod> {
         let stress: [Dtype; 1] = [ee * self.strain()[0]];
         stress
     }
-
-    /// Get element's info string
-    pub fn info(&self) -> String {
-        format!(
-            "\n--------------------------------------------------------------------
-Element_1D Info:\n\tId:     {}\n\tArea:   {}\n\tLong:   {}\n\tType:   Rod1D2N\n\tNodes: {}\n\t       {}\n",
-            self.id,
-            self.sec_area,
-            self.length(),
-            self.nodes[0],
-            self.nodes[1]
-        )
-    }
 }
 
 /// Implement zhm::K trait for triangle element
@@ -190,6 +177,19 @@ impl<'rod> K for Rod1D2N<'rod> {
             }
         }
         k_matrix
+    }
+
+    /// Get element's info string
+    fn info(&self) -> String {
+        format!(
+            "\n--------------------------------------------------------------------
+Element_1D Info:\n\tId:     {}\n\tArea:   {}\n\tLong:   {}\n\tType:   Rod1D2N\n\tNodes: {}\n\t       {}\n",
+            self.id,
+            self.sec_area,
+            self.length(),
+            self.nodes[0],
+            self.nodes[1]
+        )
     }
 }
 

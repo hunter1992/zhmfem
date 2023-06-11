@@ -2,6 +2,7 @@ extern crate nalgebra as na;
 
 use crate::{calc::LinearEqs, node::Node2D, Dtype, K};
 use na::*;
+use std::io::{BufWriter, Write};
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
 pub struct Part2D<'a, Elem: K, const N: usize, const F: usize, const M: usize>
@@ -92,6 +93,31 @@ where
         }
     }
 
+    /// Write calculated results into txt file
+    pub fn write_txt_file(&self, file_path: &str, material: (Dtype, Dtype)) {
+        let txt_file = std::fs::File::create(file_path).unwrap();
+        let mut txt_writer = BufWriter::new(txt_file);
+
+        write!(txt_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
+
+        for elem in self.elems.iter() {
+            elem.k
+            write!(txt_writer, "{}", elem.info()).expect("Write info failed!");
+            write!(txt_writer, "\tStrain: {:-9.6?}\n", elem.strain())
+                .expect("Write strain failed!");
+            write!(txt_writer, "\tStress: {:-9.6?}\n", elem.stress(material))
+                .expect("Write stress failed!");
+            write!(
+                txt_writer,
+                "\n\tStiffness matrix k{} = \n{}\n",
+                elem.id,
+                elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
+            )
+            .expect("!!! Write k matrix failed!");
+        }
+        txt_writer.flush().expect("!!! Flush txt file failed!")
+    }
+
     /// Assemble the global stiffness mat K
     pub fn k(&mut self, material: (Dtype, Dtype)) -> &[[Dtype; N * F]; N * F]
     where
@@ -113,10 +139,10 @@ where
             // 计算并缓存每个单元的刚度矩阵
             let elem_ks: Vec<_> = self.elems.iter_mut().map(|x| x.k(material)).collect();
 
-            // 获取单个单元内的节点数目n，构造0到n的range
-            // 用于遍历单个单元的局部刚度矩阵k
+            // 获取单个单元内的节点数目n，构造0到n的range，用于遍历单个单元的局部刚度矩阵k
+            // 暂时认为part中只有一种单元类型，所有单元内节点数目相同，用cplds[0].len
             let n_nodes_in_elem: Vec<usize> = (0..self.cplds[0].len()).collect();
-            let loc: Vec<Vec<usize>> = full_combination(&n_nodes_in_elem);
+            let node_loc: Vec<Vec<usize>> = full_combination(&n_nodes_in_elem);
 
             // 构造整体刚度矩阵中需要修改的节点坐标对
             // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
@@ -124,11 +150,11 @@ where
                 self.cplds.iter().map(|x| full_combination(&x)).collect();
 
             for i in 0..loc_g.len() {
-                for j in 0..loc.len() {
+                for j in 0..node_loc.len() {
                     for k in 0..F {
                         for l in 0..F {
                             part_k[(loc_g[i][j][0] - 1) * F + k][(loc_g[i][j][1] - 1) * F + l] +=
-                                elem_ks[i][loc[j][0] * F + k][loc[j][1] * F + l];
+                                elem_ks[i][node_loc[j][0] * F + k][node_loc[j][1] * F + l];
                         }
                     }
                 }

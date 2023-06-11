@@ -4,6 +4,13 @@ use crate::Dtype;
 use na::*;
 use std::time::Instant;
 
+pub struct NonLinearEqs<const N: usize> {
+    state: bool,
+    pub disps: [Dtype; N],
+    pub forces: [Dtype; N],
+    pub static_kmat: [[Dtype; N]; N],
+}
+
 /// Linear equations: A*x = b,
 /// In this case: A for static_kmat, x for disps, b for forces
 pub struct LinearEqs<const N: usize> {
@@ -43,7 +50,8 @@ impl<const N: usize> LinearEqs<N> {
         }
     }
 
-    /// 使用LU分解求解线性方程组(直接法)  A * x = b
+    /// 使用LU分解求解线性方程组(直接法)
+    /// solve "A * x = b" using LU decomposition method
     pub fn lu_direct_solver(&mut self) {
         // pre-process
         let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
@@ -75,7 +83,7 @@ impl<const N: usize> LinearEqs<N> {
     }
 
     /// 使用Guass-Seidel迭代求解线性方程组(数值方法)
-    /// solve 'A*x = F' using Gauss-Seidel iterator:
+    /// solve "A*x = F" using Gauss-Seidel iterator:
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
     pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) {
         // pre-process
