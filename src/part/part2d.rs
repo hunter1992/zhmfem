@@ -101,7 +101,7 @@ where
         write!(txt_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
 
         for elem in self.elems.iter() {
-            write!(txt_writer, "{}", elem.info()).expect("Write info failed!");
+            write!(txt_writer, "{}\n", elem.info()).expect("Write info failed!");
             write!(
                 txt_writer,
                 "\tStrain: {:-9.6?}\n",

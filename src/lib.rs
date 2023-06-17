@@ -48,7 +48,7 @@ pub fn print_1dvec<T>(name: &str, vec: &[T])
 where
     T: std::fmt::Display,
 {
-    println!("{} =", name);
+    println!("\n{} =", name);
     print!("[[");
     for ele in vec.iter() {
         print!(" {:-7.4} ", &ele);
@@ -60,7 +60,7 @@ pub fn print_2dvec<T>(name: &str, mat: &[Vec<T>])
 where
     T: std::fmt::Display,
 {
-    println!("{} =", name);
+    println!("\n{} =", name);
     for row in 0..mat.len() {
         if row == 0 {
             print!("[[");
@@ -82,7 +82,7 @@ pub fn print_1darr<T, const C: usize>(name: &str, arr: &[T; C])
 where
     T: std::fmt::Display,
 {
-    println!("{} =", name);
+    println!("\n{} =", name);
     print!("[[");
     for c in 0..C {
         print!(" {:-7.4} ", arr[c]);
@@ -94,7 +94,7 @@ pub fn print_2darr<T, const R: usize, const C: usize>(name: &str, arr: &[[T; C];
 where
     T: std::fmt::Display,
 {
-    println!("{} =", name);
+    println!("\n{} =", name);
     for r in 0..R {
         if r == 0 {
             print!("[[");

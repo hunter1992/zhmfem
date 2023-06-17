@@ -192,7 +192,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Print element's strain value
-    fn print_strain(&self) {
+    pub fn print_strain(&self) {
         let strain = self.calc_strain();
         println!(
             "\nelem[{}] strain:\n\tE_xx = {:-9.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
@@ -201,7 +201,7 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Print element's stress value
-    fn print_stress(&self, material_args: (Dtype, Dtype)) {
+    pub fn print_stress(&self, material_args: (Dtype, Dtype)) {
         let stress = self.calc_stress(material_args);
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-9.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",

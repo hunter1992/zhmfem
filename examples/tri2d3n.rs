@@ -50,17 +50,22 @@ fn main() {
         LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
 
     // 1) solve the linear equations of static system using direct method.
-    //eqs.lu_direct_solver();
+    eqs.lu_direct_solver();
 
     // 2) solve the linear equations of static system using iter method.
-    eqs.gauss_seidel_iter_solver(0.001);
+    //eqs.gauss_seidel_iter_solver(0.001);
 
     part1.write_result(&eqs);
 
     print_1darr("qe", &part1.disps());
     print_1darr("fe", &part1.forces());
 
-    println!(">>> System energy:");
+    //for tri in part1.elems.iter() {
+    //    tri.print_strain();
+    //    tri.print_stress(material);
+    //}
+
+    println!("\n>>> System energy:");
     println!("\tE_d: {:-9.6} (deform energy)", part1.strain_energy());
     println!("\tW_f: {:-9.6} (exforce works)", part1.force_work());
     println!(
