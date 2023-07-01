@@ -41,7 +41,7 @@ fn main() {
 
     // assemble global stiffness matrix
     let mut part1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tri_vec, &cpld);
-    println!("");
+    //println!("");
     //part1.k(material);
     //part1.k_printer(0.0);
 
@@ -73,6 +73,7 @@ fn main() {
         part1.potential_energy()
     );
 
+    // write clac result into txt file
     part1.write_txt_file(material, "/home/zhm/Desktop/tri.txt");
 
     let total_time = time_start.elapsed();
