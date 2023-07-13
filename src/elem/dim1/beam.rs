@@ -65,4 +65,61 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
         }
         forces
     }
+
+    /// Shape matrix element N_i
+    /// The shape mat of Beam1D2N element: [N1 N2 N3 N4]
+    /// which is a 1x4 mat.    \xi = x/L
+    /// N1 = 1*(1 + 0*\xi - 3*\xi^2 + 2*\xi^3)
+    /// N2 = L*(0 + 1*\xi - 2*\xi^2 + 1*\xi^3)
+    /// N3 = 1*(0 + 0*\xi + 3*\xi^2 - 2*\xi^3)
+    /// N4 = L*(0 + 0*\xi - 1*\xi^2 + 1*\xi^3)
+    fn shape_mat_i(&self, i: usize) -> impl Fn(Dtype) -> Dtype {
+        // 参数i的取值范围：1～4
+        let l = self.length();
+        let l2 = l * l;
+        let l3 = l * l * l;
+        let a: [Dtype; 4] = [1.0, 0.0, 0.0, 0.0];
+        let b: [Dtype; 4] = [0.0, l, 0.0, 0.0];
+        let c: [Dtype; 4] = [-3.0, -2.0 * l, 3.0, -l];
+        let d: [Dtype; 4] = [2.0, l, -2.0, l];
+        move |x: Dtype| a[i] + b[i] * x / l + c[i] * x * x / l2 + d[i] * x * x * x / l3
+    }
+
+    /// Geometry matrix element B_i
+    fn geometry_mat(&self, x: Dtype) -> SMatrix<Dtype, 1, 4> {
+        let l = self.length();
+        let l2 = l * l;
+        let xi = x / l;
+        SMatrix::<Dtype, 1, 4>::from([
+            [(12.0 * xi - 6.0) / l2],
+            [(6.0 * xi - 4.0) / l],
+            [-(12.0 * xi - 6.0) / l2],
+            [(6.0 * xi - 2.0) / l],
+        ])
+    }
+
+    /// Calculate element stiffness matrix K
+    /// arg moi: moment of inertia
+    /// return a 4x4 matrix, elements are Dtype
+    fn calc_k(&self, material_args: (Dtype, Dtype), moi: Dtype) -> [[Dtype; 4]; 4] {
+        println!(
+            "\n>>> Calculating Beam1D2N(#{})'s stiffness matrix k{} ......",
+            self.id, self.id
+        );
+
+        let (ee, nu) = material_args;
+        let l3 = self.length() * self.length() * self.length();
+        let gauss_pt = (3.0 as Dtype).sqrt() / (6.0 as Dtype);
+        let int_pts: [Dtype; 2] = [0.5 - gauss_pt, 0.5 + gauss_pt];
+
+        let mut k_matrix = SMatrix::<Dtype, 4, 4>::from([[0.0; 4]; 4]);
+        for idx in 0..2 {
+            let b_mat = self.geometry_mat(int_pts[idx]);
+            let core = b_mat.transpose() * b_mat;
+            k_matrix += core;
+        }
+
+        let stiffness_matrix: [[Dtype; 4]; 4] = (ee * moi * k_matrix / l3).into();
+        stiffness_matrix
+    }
 }
