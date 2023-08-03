@@ -12,9 +12,8 @@ mod node;
 mod part;
 
 pub use calc::LinearEqs;
-pub use elem::dim1::rod;
-pub use elem::{dim1::beam::Beam1D2N, dim1::rod::Rod1D2N};
-pub use elem::{dim2::quadrila::Quad2D4N, dim2::triangle::Tri2D3N};
+pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
+pub use elem::dim2::{quadrila::Quad2D4N, triangle::Tri2D3N};
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
@@ -22,7 +21,7 @@ pub use part::{part1d::Part1D, part2d::Part2D};
 
 use std::collections::HashMap;
 
-pub type Dtype = f32;
+pub type Dtype = f64;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
 /// K trait is the behavior that the elements have.
@@ -168,17 +167,36 @@ pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
 pub fn rod1d2n_vec<'rod>(
     sec_area: Dtype,
     nodes: &'rod [Node1D],
-    couples: &[Vec<usize>],
+    coupled_nodes: &[Vec<usize>],
 ) -> Vec<Rod1D2N<'rod>> {
     let mut rod1d2n: Vec<Rod1D2N> = Vec::new();
-    for (ele_id, cpld) in couples.iter().enumerate() {
+    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         rod1d2n.push(Rod1D2N::new(
             ele_id + 1,
+            sec_area,
+            [&nodes[nodes_id_pair[0] - 1], &nodes[nodes_id_pair[1] - 1]],
+        ));
+    }
+    rod1d2n
+}
+
+/// Construct vector of beam1d2n elements
+pub fn beam1d2n_vec<'beam>(
+    moi: Dtype,
+    sec_area: Dtype,
+    nodes: &'beam [Node2D],
+    couples: &[Vec<usize>],
+) -> Vec<Beam1D2N<'beam>> {
+    let mut beam1d2n_vec: Vec<Beam1D2N> = Vec::new();
+    for (ele_id, cpld) in couples.iter().enumerate() {
+        beam1d2n_vec.push(Beam1D2N::new(
+            ele_id + 1,
+            moi,
             sec_area,
             [&nodes[cpld[0] - 1], &nodes[cpld[1] - 1]],
         ));
     }
-    rod1d2n
+    beam1d2n_vec
 }
 
 /// Construct vector of tri2d3n elements
