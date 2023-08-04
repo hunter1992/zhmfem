@@ -40,8 +40,8 @@ fn main() {
     eqs.lu_direct_solver();
     beam_part.write_result(&eqs);
 
-    print_1darr("qe", &beam_part.disps());
-    print_1darr("fe", &beam_part.forces());
+    print_1darr("qe", &beam_part.disps(), 0.0);
+    print_1darr("fe", &beam_part.forces(), 0.0);
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

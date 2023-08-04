@@ -42,12 +42,12 @@ fn main() {
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(p1.disps(), p1.forces(), *p1.k(material));
-    eqs.lu_solver();
+    eqs.lu_direct_solver();
 
     p1.write_result(&eqs);
 
-    print_1darr("qe", &p1.disps());
-    print_1darr("fe", &p1.forces());
+    print_1darr("qe", &p1.disps(), 0.0);
+    print_1darr("fe", &p1.forces(), 0.0);
 
     println!(">>> System energy:");
     println!("\tE_d: {:-9.6} (deform energy)", p1.strain_energy());

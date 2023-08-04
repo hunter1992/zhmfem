@@ -4,8 +4,6 @@ use std::time::Instant;
 
 use zhmfem::*;
 
-type Dtype = f32;
-
 fn main() {
     let time_start = Instant::now();
 
@@ -39,8 +37,8 @@ fn main() {
 
     part1.write_result(&eqs);
 
-    print_1darr("qe", &part1.disps());
-    print_1darr("fe", &part1.forces());
+    print_1darr("qe", &part1.disps(), 0.0);
+    print_1darr("fe", &part1.forces(), 0.0);
 
     /*
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";

@@ -57,8 +57,8 @@ fn main() {
 
     part1.write_result(&eqs);
 
-    print_1darr("qe", &part1.disps());
-    print_1darr("fe", &part1.forces());
+    print_1darr("qe", &part1.disps(), 0.0);
+    print_1darr("fe", &part1.forces(), 0.0);
 
     //for tri in part1.elems.iter() {
     //    tri.print_strain();

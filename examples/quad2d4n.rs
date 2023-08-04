@@ -42,7 +42,7 @@ fn main() {
 
     // construct elements by coupled nodes
     let mut quads: Vec<Quad2D4N> = quad2d4n_vec(thick, &nodes, &cpld);
-    print_2darr("J", &quads[0].jacobian([-1., 1.]));
+    print_2darr("J", &quads[0].jacobian([-1., 1.]), 0.0);
 
     // assemble global stiffness matrix
     let mut p1: Part2D<Quad2D4N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut quads, &cpld);
@@ -54,6 +54,6 @@ fn main() {
     eqs.lu_direct_solver();
     p1.write_result(&eqs);
 
-    print_1darr("qe", &p1.disps());
-    print_1darr("fe", &p1.forces());
+    print_1darr("qe", &p1.disps(), 0.0);
+    print_1darr("fe", &p1.forces(), 0.0);
 }

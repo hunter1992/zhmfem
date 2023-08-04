@@ -102,7 +102,7 @@ impl<'quad> Quad2D4N<'quad> {
     }
 
     /// Get any point's disps vector in quad element
-    pub fn point_disp(&self, point_coord: [Dtype; 2]) -> [Dtype; 2] {
+    pub fn point_disp(&self, point_coord: [Dtype; 3]) -> [Dtype; 2] {
         let x = point_coord[0];
         let y = point_coord[1];
         let n0 = self.shape_mat_i(0usize)(x, y);

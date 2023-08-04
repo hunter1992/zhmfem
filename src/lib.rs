@@ -43,22 +43,16 @@ pub trait K {
     fn id(&self) -> usize;
 }
 
-pub fn print_1dvec<T>(name: &str, vec: &[T])
-where
-    T: std::fmt::Display,
-{
+pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("\n{} =", name);
     print!("[[");
-    for ele in vec.iter() {
-        print!(" {:-7.4} ", &ele);
+    for &ele in vec.iter() {
+        print!(" {:-12.6} ", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
     }
     println!("]]\n");
 }
 
-pub fn print_2dvec<T>(name: &str, mat: &[Vec<T>])
-where
-    T: std::fmt::Display,
-{
+pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
     println!("\n{} =", name);
     for row in 0..mat.len() {
         if row == 0 {
@@ -67,7 +61,10 @@ where
             print!(" [");
         }
         for col in 0..mat[0].len() {
-            print!(" {:-7.4} ", mat[row][col]);
+            print!(
+                " {:-12.6} ",
+                mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+            );
         }
         if row == mat.len() - 1 {
             println!("]]\n");
@@ -77,23 +74,24 @@ where
     }
 }
 
-pub fn print_1darr<T, const C: usize>(name: &str, arr: &[T; C])
-where
-    T: std::fmt::Display,
-{
-    println!("\n{} =", name);
+pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
+    println!("\n{} = (* 10^{})", name, n_exp);
     print!("[[");
     for c in 0..C {
-        print!(" {:-7.4} ", arr[c]);
+        print!(
+            " {:-12.6} ",
+            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+        );
     }
     println!("]]\n");
 }
 
-pub fn print_2darr<T, const R: usize, const C: usize>(name: &str, arr: &[[T; C]; R])
-where
-    T: std::fmt::Display,
-{
-    println!("\n{} =", name);
+pub fn print_2darr<const R: usize, const C: usize>(
+    name: &str,
+    arr: &[[Dtype; C]; R],
+    n_exp: Dtype,
+) {
+    println!("\n{} = (* 10^{})", name, n_exp);
     for r in 0..R {
         if r == 0 {
             print!("[[");
@@ -101,7 +99,10 @@ where
             print!(" [");
         }
         for c in 0..C {
-            print!(" {:-13.4} ", arr[r][c]);
+            print!(
+                " {:-12.6} ",
+                arr[r][c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+            );
         }
         if r == arr.len() - 1 {
             println!("]]\n");
@@ -116,7 +117,7 @@ pub fn nodes1d_vec(
     idx_0_disp: &[usize],
     force: &HashMap<usize, Dtype>,
 ) -> Vec<Node1D> {
-    if points[0].len() != 1 {
+    if points[0].len() != 1_usize {
         panic!(">>> Error from nodes1d_vec, the input points aren't 1D!");
     }
 

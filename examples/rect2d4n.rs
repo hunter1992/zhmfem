@@ -50,12 +50,12 @@ fn main() {
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(p1.disps(), p1.forces(), *p1.k(material));
-    eqs.lu_solver();
+    eqs.lu_direct_solver();
 
     p1.write_result(&eqs);
 
-    print_1darr("qe", &p1.disps());
-    print_1darr("fe", &p1.forces());
+    print_1darr("qe", &p1.disps(), 0.0);
+    print_1darr("fe", &p1.forces(), 0.0);
 
     println!(">>> System energy:");
     println!("\tE_d: {:-9.6} (deform energy)", p1.strain_energy());
@@ -68,18 +68,26 @@ fn main() {
     }
 
     println!();
-    let target1 = [1.0, -1.0];
-    print_1darr("Disp at (1, 0)", &rects[0].point_disp(target1));
-    print_1darr("Strain at (1, 0)", &rects[0].strain(target1));
-    print_1darr("Stress at (1, 0)", &rects[0].stress(target1, material));
+    let target1 = [1.0, -1.0, 0.0];
+    print_1darr("Disp at (1, 0)", &rects[0].point_disp(target1), 0.0);
+    print_1dvec("Strain at (1, 0)", &rects[0].strain(target1), 0.0);
+    print_1dvec("Stress at (1, 0)", &rects[0].stress(target1, material), 0.0);
 
-    let target2 = [0.8, 0.8];
-    print_1darr("Disp at (0.8, 0.8)", &rects[0].point_disp(target2));
-    print_1darr("Strain at (0.8, 0.8)", &rects[0].strain(target2));
-    print_1darr("Stress at (0.8,0.8)", &rects[0].stress(target2, material));
+    let target2 = [0.8, 0.8, 0.0];
+    print_1darr("Disp at (0.8, 0.8)", &rects[0].point_disp(target2), 0.0);
+    print_1dvec("Strain at (0.8, 0.8)", &rects[0].strain(target2), 0.0);
+    print_1dvec(
+        "Stress at (0.8,0.8)",
+        &rects[0].stress(target2, material),
+        0.0,
+    );
 
-    let target3 = [0.8, 0.8];
-    print_1darr("Disp at (0.8, 0.8)", &rects[0].point_disp(target3));
-    print_1darr("Strain at (0.8, 0.8)", &rects[0].strain(target3));
-    print_1darr("Stress at (0.8,0.8)", &rects[0].stress(target3, material));
+    let target3 = [0.8, 0.8, 0.0];
+    print_1darr("Disp at (0.8, 0.8)", &rects[0].point_disp(target3), 0.0);
+    print_1dvec("Strain at (0.8, 0.8)", &rects[0].strain(target3), 0.0);
+    print_1dvec(
+        "Stress at (0.8,0.8)",
+        &rects[0].stress(target3, material),
+        0.0,
+    );
 }
