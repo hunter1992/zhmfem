@@ -42,8 +42,8 @@ fn main() {
     // assemble global stiffness matrix
     let mut part1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tri_vec, &cpld);
     //println!("");
-    //part1.k(material);
-    //part1.k_printer(0.0);
+    part1.k(material);
+    part1.k_printer(0.0);
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =

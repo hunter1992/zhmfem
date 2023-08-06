@@ -47,7 +47,7 @@ pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("\n{} =", name);
     print!("[[");
     for &ele in vec.iter() {
-        print!(" {:-12.6} ", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
+        print!(" {:-9.4} ", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
     }
     println!("]]\n");
 }
@@ -62,7 +62,7 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
         }
         for col in 0..mat[0].len() {
             print!(
-                " {:-12.6} ",
+                " {:-9.4} ",
                 mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
             );
         }
@@ -78,10 +78,7 @@ pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
     println!("\n{} = (* 10^{})", name, n_exp);
     print!("[[");
     for c in 0..C {
-        print!(
-            " {:-12.6} ",
-            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
-        );
+        print!(" {:-9.4} ", arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype);
     }
     println!("]]\n");
 }
@@ -100,7 +97,7 @@ pub fn print_2darr<const R: usize, const C: usize>(
         }
         for c in 0..C {
             print!(
-                " {:-12.6} ",
+                " {:-9.4} ",
                 arr[r][c] / (10.0_f64.powf(n_exp as f64)) as Dtype
             );
         }
