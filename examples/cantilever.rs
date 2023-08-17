@@ -24,7 +24,7 @@ fn main() {
 
     // coords, cpld nodes and load force data
     let points: Vec<Vec<Dtype>> = vec![vec![0.0, 0.0], vec![2.0, 0.0]];
-    let cpld = vec![vec![1, 2]];
+    let cpld = vec![vec![0, 1]];
     let zero_disp: Vec<usize> = vec![0, 1];
     let force_index: Vec<usize> = vec![2];
     let force_value: Vec<Dtype> = vec![-62500.0];

@@ -29,7 +29,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
 
     /// Get id number
     pub fn get_id(&self) -> usize {
-        let id_num: usize = self.id;
+        let id_num: usize = self.id.clone();
         id_num
     }
 

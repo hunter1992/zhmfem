@@ -1,3 +1,4 @@
+/// 算例来源：《有限元基础教程》曾攀，4.7.1节例题
 use std::collections::HashMap;
 use zhmfem::*;
 
@@ -16,7 +17,7 @@ fn main() {
 
     // construct the solid and mesh it
     let points = vec![vec![2., 1.], vec![2., 0.], vec![0., 1.], vec![0., 0.]];
-    let cpld = vec![vec![1, 3, 2], vec![4, 2, 3]];
+    let cpld = vec![vec![0, 2, 1], vec![3, 1, 2]];
 
     // set boundary conditions and loads
     let zero_disp: Vec<usize> = vec![4, 5, 6, 7];

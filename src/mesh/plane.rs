@@ -41,25 +41,22 @@ impl Rectangle {
 
         // generate the coupled nodes in single element
         /* the result of the mesh is similar to
-         *    3—————4
+         *    2—————3
          *    |\    |
          *    | \   |
          *    |  \  |
          *    |   \ |
          *    |    \|
-         *    1—————2
+         *    0—————1
          */
         for r in 0..(cols - 1) {
             for c in 0..(rows - 1) {
+                // 当cols=2, rows=2时,r和c都只等于一次0
+                coupls.push(vec![r * cols + c, r * cols + c + 1, (r + 1) * cols + c]);
                 coupls.push(vec![
-                    r * cols + c + 1,
-                    r * cols + c + 2,
-                    (r + 1) * cols + c + 1,
-                ]);
-                coupls.push(vec![
-                    (rows - r) * cols - c,
                     (rows - r) * cols - c - 1,
-                    (rows - r - 1) * cols - c,
+                    (rows - r) * cols - c - 2,
+                    (rows - r - 1) * cols - c - 1,
                 ]);
             }
         }

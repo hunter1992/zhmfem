@@ -73,7 +73,7 @@ impl<'rod> Rod1D2N<'rod> {
     /// Get shape matrix element N_i
     fn shape_mat_i(&self, i: usize) -> impl Fn(Dtype) -> Dtype {
         /* The shape mat of rod elem:
-         * [N1 N2]  which is a 1x2 mat 
+         * [N1 N2]  which is a 1x2 mat
          * N1 = 1 - x/L = 1 - epsilon
          * N2 = x/L     = epsilon      */
         let a: [Dtype; 2] = [1.0, 0.0];

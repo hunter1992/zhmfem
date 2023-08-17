@@ -23,7 +23,7 @@ fn main() {
         vec![1.0, 1.0],
         vec![0.0, 1.0],
     ];
-    let cpld = vec![vec![1, 2, 3, 4]];
+    let cpld = vec![vec![0, 1, 2, 3]];
 
     // set boundary conditions and mesh it
     // The following two lines are set for

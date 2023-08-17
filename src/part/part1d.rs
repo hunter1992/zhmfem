@@ -115,7 +115,7 @@ where
             let loc: Vec<Vec<usize>> = full_combination(&n_nodes_in_elem);
 
             // 构造整体刚度矩阵中需要修改的节点坐标对
-            // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
+            // 注意！这种写法默认传进来的coupled_nodes中节点编号从0起
             let loc_g: Vec<Vec<Vec<usize>>> =
                 self.cplds.iter().map(|x| full_combination(&x)).collect();
 
@@ -123,7 +123,7 @@ where
                 for j in 0..loc.len() {
                     for k in 0..F {
                         for l in 0..F {
-                            part_k[(loc_g[i][j][0] - 1) * F + k][(loc_g[i][j][1] - 1) * F + l] +=
+                            part_k[(loc_g[i][j][0]) * F + k][(loc_g[i][j][1]) * F + l] +=
                                 elem_ks[i][loc[j][0] * F + k][loc[j][1] * F + l];
                         }
                     }

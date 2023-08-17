@@ -160,7 +160,7 @@ where
                 for j in 0..node_loc.len() {
                     for k in 0..F {
                         for l in 0..F {
-                            part_k[(loc_g[i][j][0] - 1) * F + k][(loc_g[i][j][1] - 1) * F + l] +=
+                            part_k[(loc_g[i][j][0]) * F + k][(loc_g[i][j][1]) * F + l] +=
                                 elem_ks[i][node_loc[j][0] * F + k][node_loc[j][1] * F + l];
                         }
                     }

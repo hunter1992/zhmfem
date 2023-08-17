@@ -120,7 +120,7 @@ pub fn nodes1d_vec(
 
     let mut nodes: Vec<Node1D> = Vec::with_capacity(points.len());
     for (idx, coord) in points.iter().enumerate() {
-        nodes.push(Node1D::new(idx + 1, [coord[0]]));
+        nodes.push(Node1D::new(idx, [coord[0]]));
     }
     for idx in idx_0_disp.iter() {
         *nodes[idx / 1].disps[idx % 1].borrow_mut() = 0.0;
@@ -142,7 +142,7 @@ pub fn nodes2d_vec(
 
     let mut nodes: Vec<Node2D> = Vec::with_capacity(points.len());
     for (idx, coord) in points.iter().enumerate() {
-        nodes.push(Node2D::new(idx + 1, [coord[0], coord[1]]));
+        nodes.push(Node2D::new(idx, [coord[0], coord[1]]));
     }
     for idx in idx_0_disp.iter() {
         *nodes[idx / 2].disps[idx % 2].borrow_mut() = 0.0;
@@ -156,7 +156,7 @@ pub fn nodes2d_vec(
 pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
     let mut nodes: Vec<Node3D> = Vec::new();
     for (idx, point) in points.iter().enumerate() {
-        nodes.push(Node3D::new(idx + 1, [point[0], point[1], point[2]]));
+        nodes.push(Node3D::new(idx, [point[0], point[1], point[2]]));
     }
     nodes
 }
@@ -170,9 +170,9 @@ pub fn rod1d2n_vec<'rod>(
     let mut rod1d2n: Vec<Rod1D2N> = Vec::new();
     for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         rod1d2n.push(Rod1D2N::new(
-            ele_id + 1,
+            ele_id,
             sec_area,
-            [&nodes[nodes_id_pair[0] - 1], &nodes[nodes_id_pair[1] - 1]],
+            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
         ));
     }
     rod1d2n
@@ -183,15 +183,15 @@ pub fn beam1d2n_vec<'beam>(
     moi: Dtype,
     sec_area: Dtype,
     nodes: &'beam [Node2D],
-    couples: &[Vec<usize>],
+    coupled_nodes: &[Vec<usize>],
 ) -> Vec<Beam1D2N<'beam>> {
     let mut beam1d2n_vec: Vec<Beam1D2N> = Vec::new();
-    for (ele_id, cpld) in couples.iter().enumerate() {
+    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         beam1d2n_vec.push(Beam1D2N::new(
-            ele_id + 1,
+            ele_id,
             moi,
             sec_area,
-            [&nodes[cpld[0] - 1], &nodes[cpld[1] - 1]],
+            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
         ));
     }
     beam1d2n_vec
@@ -206,13 +206,9 @@ pub fn tri2d3n_vec<'tri>(
     let mut tri2d3n: Vec<Tri2D3N> = Vec::new();
     for (ele_id, cpld) in couples.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
-            ele_id + 1,
+            ele_id,
             thick,
-            [
-                &nodes[cpld[0] - 1],
-                &nodes[cpld[1] - 1],
-                &nodes[cpld[2] - 1],
-            ],
+            [&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]],
         ));
     }
     tri2d3n
@@ -227,13 +223,13 @@ pub fn quad2d4n_vec<'rect>(
     let mut rec2d4n: Vec<Quad2D4N> = Vec::new();
     for (ele_id, cpld) in couples.iter().enumerate() {
         rec2d4n.push(Quad2D4N::new(
-            ele_id + 1,
+            ele_id,
             thick,
             [
-                &nodes[cpld[0] - 1],
-                &nodes[cpld[1] - 1],
-                &nodes[cpld[2] - 1],
-                &nodes[cpld[3] - 1],
+                &nodes[cpld[0]],
+                &nodes[cpld[1]],
+                &nodes[cpld[2]],
+                &nodes[cpld[3]],
             ],
         ))
     }
