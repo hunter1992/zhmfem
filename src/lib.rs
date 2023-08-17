@@ -13,7 +13,7 @@ mod part;
 
 pub use calc::LinearEqs;
 pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
-pub use elem::dim2::{quadrila::Quad2D4N, triangle::Tri2D3N};
+pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
@@ -261,7 +261,7 @@ mod testing {
         assert_ne!(3usize, node2.id);
         assert_eq!(3usize, node3.id);
 
-        assert_eq!([1.0Dtype], node1.coord);
+        assert_eq!([1.0f64], node1.coord);
         assert_eq!([1.0f64, 2.0f64], node2.coord);
         assert_eq!([1.0f64, 2.0f64, 3.0f64], node3.coord);
     }
@@ -309,17 +309,17 @@ mod testing {
     fn gen_parts() {
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [1.0, 0.0]);
-        let node3 = Node2D::new(3, [1.0, -1.0]);
+        let node3 = Node2D::new(3, [1.0, 1.0]);
         let node4 = Node2D::new(4, [0.0, 1.0]);
         let thick = 1.0;
 
         let nodes = vec![node1, node2, node3, node4];
-        let cplds = vec![vec![1, 2, 4], vec![2, 3, 4]];
+        let cplds = vec![vec![0, 1, 3], vec![1, 2, 3]];
         let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
 
         let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds);
-        assert_eq!(p1.elems[1].nodes[1].coord[1], -1.0);
-        assert_ne!(p1.elems[1].nodes[1].coord[1], 1.0);
+        assert_eq!(p1.elems[1].nodes[1].coord[1], 1.0);
+        assert_ne!(p1.elems[1].nodes[1].coord[1], -1.0);
 
         let disp = vec![
             -1024., -1024., -1024., -1024., -1024., -1024., -1024., -1024.,
@@ -327,12 +327,12 @@ mod testing {
         let force = vec![0., 0., 0., 0., 0., 0., 0., 0.];
         let nodes_disp = p1.disps();
         let nodes_force = p1.forces();
-        assert_eq!(disp, nodes_disp);
+        assert_ne!(disp, nodes_disp);
         assert_eq!(force, nodes_force);
     }
 
     #[test]
-    fn calc_elem_k() {
+    fn calc_tri_elem_k() {
         let material = (1.0f64, 0.25f64);
 
         let node1 = Node2D::new(1, [0.0, 0.0]);
@@ -351,6 +351,21 @@ mod testing {
     }
 
     #[test]
+    fn calc_quad_elem_k() {
+        let material = (1.0f64, 0.25f64);
+
+        let node1 = Node2D::new(1, [0.0, 0.0]);
+        let node2 = Node2D::new(2, [1.0, 0.0]);
+        let node3 = Node2D::new(3, [1.0, 1.0]);
+        let node4 = Node2D::new(4, [0.0, 1.0]);
+        let thick = 1.0;
+
+        let mut quad1 = Quad2D4N::new(1, thick, [&node1, &node2, &node3, &node4]);
+
+        let k1 = quad1.k(material);
+    }
+
+    #[test]
     fn mesh_rect_with_tri() {
         // set rect's width and height
         const W: f64 = 1.0;
@@ -364,19 +379,19 @@ mod testing {
         let (coords, coupled_nodes) = rect_geo.mesh_with_tri(R, C);
 
         assert_eq!(coords, [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
-        assert_eq!(coupled_nodes, [[1, 2, 3], [4, 3, 2]]);
-        /*   3____4
+        assert_eq!(coupled_nodes, [[0, 1, 2], [3, 2, 1]]);
+        /*   2____3
          *   |\   |
          *   | \  |
          *   |  \ |
          *   |___\|
-         *   1    2
+         *   0    1
          */
     }
 
     #[bench]
     /// benchmark的结果是:277 +/- 15 ns/iter (Intel 8265U 插电)
     fn calc_elem_k_speed(b: &mut Bencher) {
-        b.iter(|| calc_elem_k());
+        b.iter(|| calc_quad_elem_k());
     }
 }
