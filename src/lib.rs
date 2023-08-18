@@ -21,7 +21,7 @@ pub use part::{part1d::Part1D, part2d::Part2D};
 
 use std::collections::HashMap;
 
-pub type Dtype = f64;
+pub type Dtype = f32;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
 /// K trait is the behavior that the elements have.

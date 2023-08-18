@@ -15,8 +15,7 @@ fn main() {
     const M: usize = 2;
     const F: usize = 1;
 
-    let alpha: Dtype = 0.0;
-    let points: Vec<Vec<Dtype>> = vec![vec![0.0], vec![1.0]];
+    let points: Vec<Vec<Dtype>> = vec![vec![0.0, 0.0], vec![1.0, 1.0]];
     let cpld = vec![vec![0, 1]];
     let zero_disp: Vec<usize> = vec![0];
     let force_idx: Vec<usize> = vec![1];
@@ -26,9 +25,9 @@ fn main() {
 
     let nodes: Vec<Node2D> = nodes2d_vec(&points, &zero_disp, &force_data);
 
-    let mut rod_vec: Vec<Rod2D2N> =
-        vec![Rod2D2N::new(0, alpha, section_area, [&nodes[0], &nodes[1]])];
+    let mut rod_vec: Vec<Rod2D2N> = vec![Rod2D2N::new(0, section_area, [&nodes[0], &nodes[1]])];
     print!("{}", &rod_vec[0]);
+    print_2darr("K", &rod_vec[0].calc_k(material), 0.0);
 
     /*
     let mut part1: Part1D<Rod1D2N, { R * C }, F, M> = Part1D::new(1, &nodes, &mut rod_vec, &cpld);
