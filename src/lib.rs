@@ -163,19 +163,36 @@ pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
 
 /// Construct vector of rod1d2n elements
 pub fn rod1d2n_vec<'rod>(
-    sec_area: Dtype,
+    sec_areas: &'rod [Dtype],
     nodes: &'rod [Node1D],
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Rod1D2N<'rod>> {
-    let mut rod1d2n: Vec<Rod1D2N> = Vec::new();
+    let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(sec_areas.len());
     for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         rod1d2n.push(Rod1D2N::new(
             ele_id,
-            sec_area,
+            sec_areas[ele_id],
             [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
         ));
     }
     rod1d2n
+}
+
+/// Construct vector of rod2d2n elements
+pub fn rod2d2n_vec<'rod>(
+    sec_areas: &'rod [Dtype],
+    nodes: &'rod [Node2D],
+    coupled_nodes: &[Vec<usize>],
+) -> Vec<Rod2D2N<'rod>> {
+    let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(sec_areas.len());
+    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
+        rod2d2n.push(Rod2D2N::new(
+            ele_id,
+            sec_areas[ele_id],
+            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
+        ));
+    }
+    rod2d2n
 }
 
 /// Construct vector of beam1d2n elements

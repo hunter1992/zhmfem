@@ -89,9 +89,11 @@ impl<'rod> Rod2D2N<'rod> {
         );
         let (ee, _nu) = material_args;
         let trans_mat = SMatrix::<Dtype, 2, 4>::from(self.trans_mat());
-        let stiffness_mat: [[Dtype; 4]; 4] =
-            ((ee * self.sec_area / self.length().0) * (trans_mat.transpose() * trans_mat)).into();
-        stiffness_mat
+        let local_stiffness_mat = SMatrix::<Dtype, 2, 2>::from([[1.0, -1.0], [-1.0, 1.0]])
+            * (ee * self.sec_area / self.length().0);
+        let global_stiffness_mat: [[Dtype; 4]; 4] =
+            (trans_mat.transpose() * local_stiffness_mat * trans_mat).into();
+        global_stiffness_mat
     }
 
     /// Get element's strain vector, a scale in rod element

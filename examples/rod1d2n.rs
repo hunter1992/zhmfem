@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{BufWriter, Write};
+//use std::io::{BufWriter, Write};
 use std::time::Instant;
 
 use zhmfem::*;
@@ -7,7 +7,7 @@ use zhmfem::*;
 fn main() {
     let time_start = Instant::now();
 
-    let section_area = 1.0 as Dtype;
+    let section_area: [Dtype; 1] = [1.0; 1];
     let material = (8.0 as Dtype, 0.25 as Dtype);
 
     const R: usize = 1;
@@ -25,7 +25,7 @@ fn main() {
 
     let nodes: Vec<Node1D> = nodes1d_vec(&points, &zero_disp, &force_data);
 
-    let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(section_area, &nodes, &cpld);
+    let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(&section_area, &nodes, &cpld);
     print!("{}", &rod_vec[0]);
 
     let mut part1: Part1D<Rod1D2N, { R * C }, F, M> = Part1D::new(1, &nodes, &mut rod_vec, &cpld);
