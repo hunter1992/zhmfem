@@ -93,6 +93,124 @@ impl<'rod> Rod2D2N<'rod> {
             ((ee * self.sec_area / self.length().0) * (trans_mat.transpose() * trans_mat)).into();
         stiffness_mat
     }
+
+    /// Get element's strain vector, a scale in rod element
+    fn calc_strain(&self) -> [Dtype; 3] {
+        let unit = 1.0 / self.length().0;
+        let b_mat = SMatrix::<Dtype, 1, 2>::from([-unit, unit]);
+        let trans_mat = SMatrix::<Dtype, 2, 4>::from(self.trans_mat());
+        let nodes_disps = SMatrix::<Dtype, 4, 1>::from(self.disps());
+        let strain: [Dtype; 1] = (b_mat * trans_mat * nodes_disps).into();
+        [strain[0], 0.0, 0.0]
+    }
+
+    /// Get element's strain vector, a scale in rod element
+    fn calc_stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 3] {
+        let (ee, _nu) = material_args;
+        let stress: [Dtype; 1] = [ee * self.calc_strain()[0]];
+        [stress[0], 0.0, 0.0]
+    }
+}
+
+impl<'rod> K for Rod2D2N<'rod> {
+    type Kmatrix = [[Dtype; 4]; 4];
+
+    /// Cache stiffness matrix for rod element
+    fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
+    where
+        Self::Kmatrix: std::ops::Index<usize>,
+    {
+        if self.k_matrix.is_none() {
+            self.k_matrix.get_or_insert(self.calc_k(material))
+        } else {
+            self.k_matrix.as_ref().unwrap()
+        }
+    }
+
+    /// Print rod element's stiffness matrix
+    fn k_printer(&self, n_exp: Dtype) {
+        if self.k_matrix.is_none() {
+            panic!(
+                "!!! Rod2D2N#{}'s k mat is empty! call k() to calc it.",
+                self.id
+            );
+        }
+
+        print!("\nRod2D2N k{} =  (* 10^{})\n[", self.id, n_exp);
+        for row in 0..4 {
+            if row == 0 {
+                print!("[");
+            } else {
+                print!(" [");
+            }
+            for col in 0..4 {
+                print!(
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                );
+            }
+            if row == 1 {
+                println!("]]");
+            } else {
+                println!("]");
+            }
+        }
+        print!("\n");
+    }
+
+    /// Return rod elem's stiffness matrix's format string
+    fn k_string(&self, n_exp: Dtype) -> String {
+        let mut k_matrix = String::new();
+        for row in 0..4 {
+            if row == 0 {
+                write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, " [").expect("!!! Write tri k_mat failed!");
+            }
+            for col in 0..4 {
+                write!(
+                    k_matrix,
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                )
+                .expect("!!! Write tri k_mat failed!");
+            }
+            if row == 1 {
+                write!(k_matrix, "]]").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, "]\n").expect("!!! Write tri k_mat failed!");
+            }
+        }
+        k_matrix
+    }
+
+    /// Get the stress at (x) inside the element
+    fn strain(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
+        self.calc_strain().to_vec()
+    }
+
+    /// Get the stress at (x) inside the element
+    fn stress(&self, _xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype> {
+        self.calc_stress(material).to_vec()
+    }
+
+    /// Get element's info string
+    fn info(&self) -> String {
+        format!(
+            "\n--------------------------------------------------------------------
+Element_1D Info:\n\tId:     {}\n\tArea:   {}\n\tLong:   {}\n\tType:   Rod2D2N\n\tNodes: {}\n\t       {}\n",
+            self.id,
+            self.sec_area,
+            self.length().0,
+            self.nodes[0],
+            self.nodes[1]
+        )
+    }
+
+    /// Get element's id number
+    fn id(&self) -> usize {
+        self.id
+    }
 }
 
 impl fmt::Display for Rod2D2N<'_> {
