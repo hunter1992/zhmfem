@@ -46,6 +46,13 @@ fn main() {
     print_1darr("qe", &part1.disps(), 0.0);
     print_1darr("fe", &part1.forces(), 0.0);
 
+    for rod in rod_vec.iter() {
+        print!(
+            "rod's stress:\n{:?}\n",
+            rod.stress([1.0, 2.0, 3.0], material),
+        );
+    }
+
     /*
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";
     let file = std::fs::File::create(filename).unwrap();
