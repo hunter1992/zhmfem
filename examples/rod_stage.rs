@@ -8,9 +8,7 @@ fn main() {
     let time_start = Instant::now();
 
     let l = 0.1 as Dtype;
-    let area1 = 0.02 as Dtype;
-    let area2 = 0.03 as Dtype;
-    let area3 = 0.06 as Dtype;
+    let areas: [Dtype; 3] = [0.02, 0.03, 0.06];
     let material = (2.0 as Dtype * 100000.0 as Dtype, 0.25 as Dtype);
 
     const R: usize = 1;
@@ -29,11 +27,7 @@ fn main() {
     let nodes: Vec<Node1D> = nodes1d_vec(&points, &zero_disp, &force_data);
 
     //let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(section_area, &nodes, &cpld);
-    let mut rod_vec: Vec<Rod1D2N> = vec![
-        Rod1D2N::new(1, area1, [&nodes[0], &nodes[1]]),
-        Rod1D2N::new(2, area2, [&nodes[1], &nodes[2]]),
-        Rod1D2N::new(3, area3, [&nodes[2], &nodes[3]]),
-    ];
+    let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(&areas, &nodes, &cpld);
 
     let mut part1: Part1D<Rod1D2N, { R * C }, F, M> = Part1D::new(1, &nodes, &mut rod_vec, &cpld);
     part1.k(material);
@@ -48,6 +42,15 @@ fn main() {
 
     print_1darr("qe", &part1.disps(), -3.0);
     print_1darr("fe", &part1.forces(), 0.0);
+
+    for i in 0..3 {
+        print!(
+            "bar #{}: \nstrain:{}  stress:{}\n",
+            i,
+            rod_vec[i].strain([1., 2., 3.])[0],
+            rod_vec[i].stress([1., 2., 3.], material)[0],
+        );
+    }
 
     /*
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";
