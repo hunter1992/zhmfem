@@ -1,13 +1,17 @@
 /// 算例来源：《有限元基础教程》曾攀，4.7.1节例题
 use std::collections::HashMap;
 use zhmfem::*;
+use std::time::Instant;
 
 fn main() {
+    // set time start
+    let time_start = Instant::now();
+
     // set material parameters
-    let material = (10000000.0f64, 0.33f64); //Young's modulud & Poisson's ratio
+    let material = (10000000.0 as Dtype, 0.33 as Dtype); //Young's modulud & Poisson's ratio
 
     // rectangular simulation area parameters
-    let thick = 0.1f64;
+    let thick = 0.1 as Dtype;
 
     // number of nodes and freedom
     const R: usize = 2; // rows of nodes
@@ -22,8 +26,8 @@ fn main() {
     // set boundary conditions and loads
     let zero_disp: Vec<usize> = vec![4, 5, 6, 7];
     let force_index: Vec<usize> = vec![1, 3];
-    let force_value: Vec<f64> = vec![-50000.0, -50000.0];
-    let force_data: HashMap<usize, f64> = force_index
+    let force_value: Vec<Dtype> = vec![-50000.0, -50000.0];
+    let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
@@ -63,4 +67,7 @@ fn main() {
         i.print_strain();
         i.print_stress(material);
     }
+
+    let total_time = time_start.elapsed();
+    println!(">>> Total time consuming: {:?}", total_time);
 }

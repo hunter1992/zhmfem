@@ -5,6 +5,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
+    // set time start
     let time_start = Instant::now();
 
     let l = 0.1 as Dtype;

@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 use zhmfem::*;
+use std::time::Instant;
 
 fn main() {
+    // set time start
+    let time_start = Instant::now();
+
     // ------ Part 1: set parameters ------
     // set material parameters
-    let material = (1.0f64, 0.25f64); // Young's modulus and Poisson's ratio
+    let material = (1.0 as Dtype, 0.25 as Dtype); // Young's modulus and Poisson's ratio
 
     // rectangular simulation area parameters
-    let thick = 1.0f64;
+    let thick = 1.0 as Dtype;
 
     // number of nodes and freedom
     const R: usize = 2; // rows of nodes
@@ -30,8 +34,8 @@ fn main() {
     // a specific problem,not general code
     let zero_disp: Vec<usize> = vec![0, 1, 6];
     let force_index: Vec<usize> = vec![2, 4];
-    let force_value: Vec<f64> = vec![-1.0, 1.0];
-    let force_data: HashMap<usize, f64> = force_index
+    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+    let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
@@ -90,4 +94,7 @@ fn main() {
         &rects[0].stress(target3, material),
         0.0,
     );
+
+    let total_time = time_start.elapsed();
+    println!("\n>>> Total time consuming: {:?}", total_time);
 }
