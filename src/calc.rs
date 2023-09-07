@@ -5,7 +5,7 @@ use na::*;
 use std::time::Instant;
 
 /// Linear equations: A*x = b,
-/// In this case: A for static_kmat, x for disps, b for forces
+/// In this case: A for known static_kmat, x for disps, b for forces
 pub struct LinearEqs<const N: usize> {
     state: bool,
     pub disps: [Dtype; N],
