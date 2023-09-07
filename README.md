@@ -1,5 +1,5 @@
 # zhmfem
-A simple FEM (finite element method) crate in Rust
+A finite element calculation crate based on Rust.
 
 ## Introduction
 ***zhmfem*** is in the early stages of programming. The main function of the existing code is to construct linear algebraic equations of finite element model and solve them. 
