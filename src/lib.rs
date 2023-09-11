@@ -278,9 +278,9 @@ mod testing {
         assert_ne!(3usize, node2.id);
         assert_eq!(3usize, node3.id);
 
-        assert_eq!([1.0f64], node1.coord);
-        assert_eq!([1.0f64, 2.0f64], node2.coord);
-        assert_eq!([1.0f64, 2.0f64, 3.0f64], node3.coord);
+        assert_eq!([1.0 as Dtype], node1.coord);
+        assert_eq!([1.0 as Dtype, 2.0 as Dtype], node2.coord);
+        assert_eq!([1.0 as Dtype, 2.0 as Dtype, 3.0 as Dtype], node3.coord);
     }
 
     #[test]
@@ -292,6 +292,9 @@ mod testing {
 
         let rod1 = Rod1D2N::new(1, 1.0, [&node_a, &node_b]);
         let rod2 = Rod1D2N::new(2, 1.0, [&node_b, &node_c]);
+        assert_eq!(1usize, rod1.id);
+        assert_ne!(2usize, rod1.id);
+        assert_eq!(2usize, rod2.id);
 
         // 2D
         let node1 = Node2D::new(1, [0.0, 0.0]);
@@ -309,17 +312,17 @@ mod testing {
         assert_ne!(2usize, tri1.id);
         assert_eq!(3usize, rec1.id);
 
-        assert_ne!([10.0f64, 11.0f64], tri2.nodes[0].coord);
-        assert_eq!([1.0f64, 1.0f64], tri2.nodes[0].coord);
+        assert_ne!([10.0 as Dtype, 11.0 as Dtype], tri2.nodes[0].coord);
+        assert_eq!([1.0 as Dtype, 1.0 as Dtype], tri2.nodes[0].coord);
 
         assert_eq!(vec![0.0, 0.0, 1.0], tri1.xs());
         assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.xs());
         assert_ne!(vec![0.0, 0.0, 1.0], tri1.ys());
         assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.ys());
 
-        assert_eq!(0.5f64, tri1.area());
-        assert_eq!(0.5f64, tri2.area());
-        assert_eq!(1.0f64, rec1.area());
+        assert_eq!(0.5 as Dtype, tri1.area());
+        assert_eq!(0.5 as Dtype, tri2.area());
+        assert_eq!(1.0 as Dtype, rec1.area());
     }
 
     #[test]
@@ -350,7 +353,7 @@ mod testing {
 
     #[test]
     fn calc_tri_elem_k() {
-        let material = (1.0f64, 0.25f64);
+        let material = (1.0 as Dtype, 0.25 as Dtype);
 
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [1.0, 0.0]);
@@ -369,7 +372,7 @@ mod testing {
 
     #[test]
     fn calc_quad_elem_k() {
-        let material = (1.0f64, 0.25f64);
+        let material = (1.0 as Dtype, 0.25 as Dtype);
 
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [1.0, 0.0]);
@@ -380,13 +383,14 @@ mod testing {
         let mut quad1 = Quad2D4N::new(1, thick, [&node1, &node2, &node3, &node4]);
 
         let k1 = quad1.k(material);
+        assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
 
     #[test]
     fn mesh_rect_with_tri() {
         // set rect's width and height
-        const W: f64 = 1.0;
-        const H: f64 = 1.0;
+        const W: Dtype = 1.0;
+        const H: Dtype = 1.0;
 
         // number of nodes and freedom
         const R: usize = 2; //rows of nodes

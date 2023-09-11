@@ -181,7 +181,7 @@ where
             );
         }
 
-        print!("Part #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
+        print!("\nPart #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
         for row in 0..N * F {
             if row == 0 {
                 print!("[");
