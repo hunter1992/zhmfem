@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use zhmfem::*;
 use std::time::Instant;
+use zhmfem::*;
 
 fn main() {
     // set time start
@@ -54,7 +54,8 @@ fn main() {
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(p1.disps(), p1.forces(), *p1.k(material));
-    eqs.lu_direct_solver();
+    //eqs.lu_direct_solver();
+    eqs.gauss_seidel_iter_solver(0.0001);
 
     p1.write_result(&eqs);
 

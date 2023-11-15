@@ -3,6 +3,7 @@ extern crate nalgebra as na;
 use crate::{calc::LinearEqs, node::Node2D, Dtype, K};
 use na::*;
 use std::io::{BufWriter, Write};
+//use std::thread;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
 pub struct Part2D<'a, Elem: K, const N: usize, const F: usize, const M: usize>

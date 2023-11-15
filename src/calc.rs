@@ -110,7 +110,7 @@ impl<const N: usize> LinearEqs<N> {
                 let duration_gs = time_gs.elapsed();
                 print!("\n>>> Gauss-Seidel iter method down!");
                 println!(
-                    "\n\ttime consuming = {:?}\n\tresult:   iter = {},\n\t\t  err  = {:8.6}",
+                    "\n\ttime consuming = {:?}\n\tresult:   iter = {}\n\t\t   err = {:8.6}",
                     duration_gs,
                     count,
                     (&tmp - &x).abs().max()
