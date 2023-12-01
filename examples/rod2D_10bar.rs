@@ -64,11 +64,12 @@ fn main() {
     print_1darr("qe", &part1.disps(), 0.0);
     print_1darr("fe", &part1.forces(), 4.0);
 
+    /*
     for rod in rod_vec.iter() {
         print_1dvec("stress", &rod.stress([1., 1., 1.], material), 4.);
     }
 
-    /*
+
     let filename = "/home/zhm/Desktop/test_rod1d2n.txt";
     let file = std::fs::File::create(filename).unwrap();
     let mut writer = BufWriter::new(file);
