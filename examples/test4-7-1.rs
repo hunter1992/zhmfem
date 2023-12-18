@@ -1,7 +1,7 @@
 /// 算例来源：《有限元基础教程》曾攀，4.7.1节例题
 use std::collections::HashMap;
-use zhmfem::*;
 use std::time::Instant;
+use zhmfem::*;
 
 fn main() {
     // set time start

@@ -14,7 +14,7 @@ impl Node1D {
         Node1D {
             id,
             coord,
-            disps: [RefCell::new(-10.0)],
+            disps: [RefCell::new(0.0)],
             forces: [RefCell::new(0.0)],
         }
     }
@@ -45,7 +45,7 @@ impl Node2D {
         Node2D {
             id,
             coord,
-            disps: [RefCell::new(-1.0), RefCell::new(-1.0)],
+            disps: [RefCell::new(0.0), RefCell::new(0.0)],
             forces: [RefCell::new(0.0), RefCell::new(0.0)],
         }
     }
@@ -70,11 +70,18 @@ impl fmt::Display for Node2D {
 pub struct Node3D {
     pub id: usize,
     pub coord: [Dtype; 3],
+    pub disps: [RefCell<Dtype>; 3],
+    pub forces: [RefCell<Dtype>; 3],
 }
 
 impl Node3D {
     pub fn new(id: usize, coord: [Dtype; 3]) -> Node3D {
-        Node3D { id, coord }
+        Node2D {
+            id,
+            coord,
+            disps: [RefCell::new(0.0), RefCell::new(0.0), RefCell::new(0.0)],
+            forces: [RefCell::new(0.0), RefCell::new(0.0), RefCell::new(0.0)],
+        }
     }
 }
 

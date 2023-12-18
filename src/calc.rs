@@ -4,6 +4,9 @@ use crate::Dtype;
 use na::*;
 use std::time::Instant;
 
+/// Non-Linear equations: A(x) * x = b，这里的A(x)是Kt，也就是切线刚度
+/// 矩阵，是未知的节点位移向量的函数，右侧的b是节点受到的外力，是保守力。
+
 /// Linear equations: A*x = b,
 /// In this case: A for known static_kmat, x for disps, b for forces
 pub struct LinearEqs<const N: usize> {

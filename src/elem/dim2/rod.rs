@@ -2,6 +2,41 @@ use crate::{node::Node2D, Dtype, K};
 use na::*;
 use std::fmt::{self, Write};
 
+pub struct Rod2D2NNL<'rod> {
+    pub id: usize,
+    pub sec_area: Dtype,
+    pub nodes: [&'rod Node2D; 2],
+    pub k_t_matrix: Option<[[Dtype; 4]; 4]>,
+}
+
+impl<'rod> Rod2D2NNL<'rod> {
+    /// Generate a 2D Rod2D2N element
+    pub fn new(id: usize, sec_area: Dtype, nodes: [&Node2D; 2]) -> Rod2D2NNL {
+        Rod2D2NNL {
+            id,
+            sec_area,
+            nodes,
+            k_t_matrix: None,
+        }
+    }
+
+    /// Get strain matrix B of non-linear rod element
+    /// B matrix  =  (1/L0) * [-ax, -ay, ax, ay], which is 1x4 mat
+    /// and   ax  =  (x2 - x1) / L0,
+    ///       ay  =  (y2 - y1) / L0
+    /// (x1, y1), (x2, y2) are current configuration nodes coords
+    ///       x1  =  X1 + Ux1
+    ///       y1  =  Y1 + Uy1
+    pub fn strain_matrix(&self) {
+        todo!();
+    }
+
+    /// Get strain matrix B of non-linear rod element
+    pub fn strain_matrix(&self) {
+        todo!();
+    }
+}
+
 pub struct Rod2D2N<'rod> {
     pub id: usize,
     pub sec_area: Dtype,
