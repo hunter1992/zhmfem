@@ -9,6 +9,7 @@ pub struct Rod2D2NNL<'rod> {
     pub k_t_matrix: Option<[[Dtype; 4]; 4]>,
 }
 
+#[allow(non_snake_case)]
 impl<'rod> Rod2D2NNL<'rod> {
     /// Generate a 2D Rod2D2N element
     pub fn new(id: usize, sec_area: Dtype, nodes: [&Node2D; 2]) -> Rod2D2NNL {
@@ -20,6 +21,22 @@ impl<'rod> Rod2D2NNL<'rod> {
         }
     }
 
+    /// Get id number
+    pub fn get_id(&self) -> usize {
+        let id_num: usize = self.id;
+        id_num
+    }
+
+    /// Get rod element length
+    pub fn length(&self) -> (Dtype, Dtype, Dtype, Dtype, Dtype) {
+        let dX = self.nodes[1].coord[0] - self.nodes[0].coord[0];
+        let dY = self.nodes[1].coord[1] - self.nodes[0].coord[1];
+        let L0: Dtype = (dX * dX + dY * dY).sqrt();
+        let cos: Dtype = ((dX as f64) / (L0 as f64)) as Dtype;
+        let sin: Dtype = ((dY as f64) / (L0 as f64)) as Dtype;
+        (dX, dY, L0, cos, sin)
+    }
+
     /// Get strain matrix B of non-linear rod element
     /// B matrix  =  (1/L0) * [-ax, -ay, ax, ay], which is 1x4 mat
     /// and   ax  =  (x2 - x1) / L0,
@@ -27,13 +44,27 @@ impl<'rod> Rod2D2NNL<'rod> {
     /// (x1, y1), (x2, y2) are current configuration nodes coords
     ///       x1  =  X1 + Ux1
     ///       y1  =  Y1 + Uy1
-    pub fn strain_matrix(&self) {
-        todo!();
+    pub fn strain_matrix(&self, disp_guess: &[Dtype; 4]) -> [Dtype; 4] {
+        let (_, _, L0, cos, sin) = self.length();
+        let dUx = disp_guess[2] - disp_guess[0];
+        let dUy = disp_guess[3] - disp_guess[1];
+        let ax = cos + dUx / L0;
+        let ay = sin + dUy / L0;
+        [-ax, -ay, ax, ay]
     }
 
-    /// Get strain matrix B of non-linear rod element
-    pub fn strain_matrix(&self) {
-        todo!();
+    /// Get material stiffness matrix k_m  of rod element
+    pub fn k_m_matrix(
+        &self,
+        material_args: (Dtype, Dtype),
+        disp_guess: &[Dtype; 4],
+    ) -> [[Dtype; 4]; 4] {
+        let ee = material_args.0;
+        let L0 = self.length().2;
+        let b_mat = SMatrix::<Dtype, 1, 4>::from(self.strain_matrix(disp_guess));
+        let km_mat: [[Dtype; 4]; 4] =
+            (ee * L0 * self.sec_area * (b_mat.transpose() * b_mat)).into();
+        km_mat
     }
 }
 

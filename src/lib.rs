@@ -13,7 +13,7 @@ mod part;
 
 pub use calc::LinearEqs;
 pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
-pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
+pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, rod::Rod2D2NNL, triangle::Tri2D3N};
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
