@@ -78,7 +78,10 @@ pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
     println!("\n{} = (* 10^{})", name, n_exp);
     print!("[[");
     for c in 0..C {
-        print!(" {:-9.4} ", arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype);
+        print!(
+            " {:-10.6} ",
+            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+        );
     }
     println!("]]\n");
 }
@@ -97,7 +100,7 @@ pub fn print_2darr<const R: usize, const C: usize>(
         }
         for c in 0..C {
             print!(
-                " {:-9.4} ",
+                " {:-10.6} ",
                 arr[r][c] / (10.0_f64.powf(n_exp as f64)) as Dtype
             );
         }

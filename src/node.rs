@@ -45,7 +45,7 @@ impl Node2D {
         Node2D {
             id,
             coord,
-            disps: [RefCell::new(-100.0), RefCell::new(-100.0)],
+            disps: [RefCell::new(0.0), RefCell::new(0.0)],
             forces: [RefCell::new(0.0), RefCell::new(0.0)],
         }
     }

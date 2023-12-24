@@ -61,7 +61,7 @@ impl<const N: usize> LinearEqs<N> {
 
         let time_lu = Instant::now();
         // solve the K.q = F by LU decomposition
-        let disps_unknown: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
+        let disps_unknown_rlt: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
         let duration_lu = time_lu.elapsed();
         println!(
             "\n>>> LU decomposition method down!\n\ttime consuming = {:?}",
@@ -72,7 +72,7 @@ impl<const N: usize> LinearEqs<N> {
         let _: Vec<_> = disps_unknown_idx
             .iter()
             .enumerate()
-            .map(|(i, &idx)| self.disps[idx] = disps_unknown[i])
+            .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
             .collect();
         self.forces = (((kmat * SVector::from(self.disps)) - force) + force).into();
         self.state = true;
