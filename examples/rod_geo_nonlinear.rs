@@ -1,32 +1,40 @@
+use std::collections::HashMap;
 use std::time::Instant;
 
 use zhmfem::*;
 
 fn main() {
+    const N: usize = 3;
+    const M: usize = 2;
+    const F: usize = 2;
+
     let time_start = Instant::now();
 
+    let section_area: [Dtype; 2] = [100.0; 2];
     let material = (200000.0 as Dtype, 0.25 as Dtype);
-    let guess_step: [Dtype; 4] = [0.0, 0.0, 0.0, 0.0];
 
-    let node1 = Node2D::new(1, [-200.0, 0.0]);
-    let node2 = Node2D::new(2, [0.0, 150.0]);
-    let rod1: Rod2D2NNL = Rod2D2NNL::new(1, 100.0, [&node1, &node2]);
+    let points: Vec<Vec<Dtype>> = vec![vec![-200.0, 0.0], vec![0.0, 150.0], vec![200.0, 0.0]];
+    let cpld = vec![vec![0, 1], vec![2, 1]];
 
-    let l1 = rod1.length_init();
-    println!("length = {}\n", l1);
+    let zero_disp: Vec<usize> = vec![0, 1, 2, 3, 4, 5];
+    let force_idx: Vec<usize> = vec![2, 3];
+    let force_vlu: Vec<Dtype> = vec![0.0, 1000000.0];
+    let force_data: HashMap<usize, Dtype> =
+        force_idx.into_iter().zip(force_vlu.into_iter()).collect();
 
-    let disp0 = [0.0, 0.0, 0.0, 0.0];
-    let b_mat = rod1.strain_matrix();
-    println!("b_mat = {:?}", b_mat);
+    let nodes: Vec<Node2D> = nodes2d_vec(&points, &force_data, true);
 
-    let km = rod1.k_m_stiffness_mat(material);
-    print_2darr("km", &km, 4.0);
+    let mut rods: Vec<Rod2D2NNL> = rod2d2n_nonlinear_vec(&section_area, &nodes, &cpld);
+    for rod in rods.iter_mut() {
+        rod.write_node_inner_force(material);
+    }
 
-    let eg = rod1.strain_green();
-    println!("strain green = {}", eg);
-
-    let kg = rod1.k_g_stiffness_mat(material);
-    print_2darr("kg", &kg, 0.0);
+    let mut part1: Part2D<Rod2D2NNL, N, F, M> = Part2D::new(1, &nodes, &mut rods, &cpld);
+    let global_kt = part1.k(material);
+    print_2darr("Kt", global_kt, 4.0);
+    print_1darr("inner force", &part1.forces(), 0.0);
+    let ext_force = part1.nodes_external_forces(&force_data);
+    print_1darr("External force", &ext_force, 0.0);
 
     let total_time = time_start.elapsed();
     println!(">>> Total time consuming: {:?}", total_time);

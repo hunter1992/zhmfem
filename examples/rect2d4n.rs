@@ -41,7 +41,7 @@ fn main() {
         .collect();
 
     // tramsform points into nodes
-    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &force_data, false);
 
     // construct elements by coupled nodes
     let mut rects: Vec<Quad2D4N> = quad2d4n_vec(thick, &nodes, &cpld);
@@ -53,9 +53,9 @@ fn main() {
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
-        LinearEqs::new(p1.disps(), p1.forces(), *p1.k(material));
-    //eqs.lu_direct_solver();
-    eqs.gauss_seidel_iter_solver(0.0001);
+        LinearEqs::new(p1.disps(), p1.forces(), zero_disp, *p1.k(material));
+    eqs.lu_direct_solver();
+    //eqs.gauss_seidel_iter_solver(0.0001);
 
     p1.write_result(&eqs);
 

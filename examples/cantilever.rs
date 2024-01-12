@@ -34,7 +34,7 @@ fn main() {
         .collect();
 
     // construct nodes and elements
-    let nodes = nodes2d_vec(&points, &zero_disp, &force_data);
+    let nodes = nodes2d_vec(&points, &force_data, false);
     let mut beam_vec: Vec<Beam1D2N> = beam1d2n_vec(moi, cross_area, &nodes, &cpld);
     print!("{}", &beam_vec[0]);
 
@@ -48,11 +48,13 @@ fn main() {
     let mut eqs: LinearEqs<{ R * C * F }> = LinearEqs::new(
         beam_part.disps(),
         beam_part.forces(),
+        zero_disp,
         *beam_part.k(material),
     );
 
     // solving the problem and write result into elements field
-    eqs.lu_direct_solver();
+    //eqs.lu_direct_solver();
+    eqs.gauss_seidel_iter_solver(0.0001);
     beam_part.write_result(&eqs);
 
     print_1darr("qe", &beam_part.disps(), -4.0);

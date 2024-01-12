@@ -30,7 +30,7 @@ fn main() {
     let force_data: HashMap<usize, Dtype> =
         force_idx.into_iter().zip(force_vlu.into_iter()).collect();
 
-    let nodes: Vec<Node2D> = nodes2d_vec(&points, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&points, &force_data, false);
 
     let mut rod_vec: Vec<Rod2D2N> = rod2d2n_vec(&section_area, &nodes, &cpld);
 
@@ -39,7 +39,7 @@ fn main() {
     part1.k_printer(3.0);
 
     let mut eqs: LinearEqs<{ R * C * F }> =
-        LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
+        LinearEqs::new(part1.disps(), part1.forces(), zero_disp, *part1.k(material));
 
     eqs.lu_direct_solver();
 

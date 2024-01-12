@@ -15,8 +15,8 @@ fn main() {
     const H: Dtype = 1.0; // height
 
     // number of nodes and freedom
-    const R: usize = 2; // rows of nodes
-    const C: usize = 2; // columns of nodes
+    const R: usize = 3; // rows of nodes
+    const C: usize = 3; // columns of nodes
     const M: usize = 3; // node num in single element
     const F: usize = 2; // freedom num in single node
 
@@ -34,7 +34,7 @@ fn main() {
         .collect();
 
     // transform points into nodes
-    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &force_data, false);
 
     // construct elements by coupled nodes
     let mut tri_vec: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
@@ -47,7 +47,7 @@ fn main() {
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
-        LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
+        LinearEqs::new(part1.disps(), part1.forces(), zero_disp, *part1.k(material));
 
     // 1) solve the linear equations of static system using direct method.
     eqs.lu_direct_solver();
@@ -74,7 +74,7 @@ fn main() {
     );
 
     // write clac result into txt file
-    part1.write_txt_file(material, "/home/zhm/Desktop/tri.txt");
+    //part1.write_txt_file(material, "/home/zhm/Desktop/tri.txt");
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

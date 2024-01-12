@@ -33,7 +33,7 @@ fn main() {
         .collect();
 
     // transform points into nodes
-    let nodes: Vec<Node2D> = nodes2d_vec(&points, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&points, &force_data, false);
 
     // construct elements by coupled nodes
     let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
@@ -46,7 +46,7 @@ fn main() {
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
-        LinearEqs::new(p1.disps(), p1.forces(), *p1.k(material));
+        LinearEqs::new(p1.disps(), p1.forces(), zero_disp, *p1.k(material));
     eqs.lu_direct_solver();
 
     p1.write_result(&eqs);

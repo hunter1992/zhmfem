@@ -45,7 +45,7 @@ fn main() {
     let force_data: HashMap<usize, Dtype> =
         force_idx.into_iter().zip(force_vlu.into_iter()).collect();
 
-    let nodes: Vec<Node2D> = nodes2d_vec(&points, &zero_disp, &force_data);
+    let nodes: Vec<Node2D> = nodes2d_vec(&points, &force_data, false);
 
     let mut rod_vec: Vec<Rod2D2N> = rod2d2n_vec(&section_area, &nodes, &cpld);
 
@@ -54,11 +54,11 @@ fn main() {
     part1.k_printer(4.0);
 
     let mut eqs: LinearEqs<{ R * C * F }> =
-        LinearEqs::new(part1.disps(), part1.forces(), *part1.k(material));
+        LinearEqs::new(part1.disps(), part1.forces(), zero_disp, *part1.k(material));
 
-    eqs.lu_direct_solver();
-    //eqs.gauss_seidel_iter_solver(0.001); // 精度为：0.00001时, 耗时:1.889097ms,迭代:143次,误差:0.000009
-    //         0.001  时, 耗时:1.014296ms,迭代: 79次,误差:0.000964
+    //eqs.lu_direct_solver();
+    eqs.gauss_seidel_iter_solver(0.001); // 精度为：0.00001时, 耗时:1.889097ms,迭代:143次,误差:0.000009
+                                         //         0.001  时, 耗时:1.014296ms,迭代: 79次,误差:0.000964
 
     part1.write_result(&eqs);
 

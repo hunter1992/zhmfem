@@ -22,7 +22,7 @@ fn main() {
         .zip(force_value.into_iter())
         .collect();
 
-    let nodes = nodes2d_vec(&points, &zero_disp, &force_data);
+    let nodes = nodes2d_vec(&points, &force_data, false);
     let mut beam_vec: Vec<Beam1D2N> = beam1d2n_vec(moi, cross_area, &nodes, &cpld);
     print!("{}", &beam_vec[0]);
     print!("{}", &beam_vec[1]);
@@ -34,6 +34,7 @@ fn main() {
     let mut eqs: LinearEqs<6> = LinearEqs::new(
         beam_part.disps(),
         beam_part.forces(),
+        zero_disp,
         *beam_part.k(material),
     );
 
