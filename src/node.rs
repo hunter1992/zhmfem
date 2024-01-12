@@ -14,7 +14,7 @@ impl Node1D {
         Node1D {
             id,
             coord,
-            disps: [RefCell::new(-100.0)],
+            disps: [RefCell::new(0.0)],
             forces: [RefCell::new(0.0)],
         }
     }
@@ -79,11 +79,7 @@ impl Node3D {
         Node3D {
             id,
             coord,
-            disps: [
-                RefCell::new(-10.0),
-                RefCell::new(-10.0),
-                RefCell::new(-10.0),
-            ],
+            disps: [RefCell::new(0.0), RefCell::new(0.0), RefCell::new(0.0)],
             forces: [RefCell::new(0.0), RefCell::new(0.0), RefCell::new(0.0)],
         }
     }

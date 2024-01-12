@@ -98,7 +98,9 @@ impl<'tri> Tri2D3N<'tri> {
     fn shape_mat_i(&self, i: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         /* The shape mat of tri elem:
          * |N1  0   N2  0   N3  0 |
-         * |0   N1  0   N2  0   N3| */
+         * |0   N1  0   N2  0   N3| 
+         * 输入参数i用于选择输出哪个Ni
+         */
         let area = self.area();
         let xs = self.xs();
         let ys = self.ys();
@@ -177,7 +179,7 @@ impl<'tri> Tri2D3N<'tri> {
         strain_vector
     }
 
-    /// Get element's strss vector
+    /// Get element's stress vector
     pub fn calc_stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([

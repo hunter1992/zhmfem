@@ -2,6 +2,7 @@ extern crate nalgebra as na;
 
 use crate::{calc::LinearEqs, node::Node2D, Dtype, K};
 use na::*;
+use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 //use std::thread;
 
@@ -59,6 +60,16 @@ where
         data
     }
 
+    /// Get nodes' external force vector
+    pub fn nodes_external_forces(&self, load_force: &HashMap<usize, Dtype>) -> [Dtype; N * F] {
+        let mut ext_force: [Dtype; N * F] = [0.0; N * F];
+
+        for (&idx, &f) in load_force {
+            ext_force[idx] = f;
+        }
+        ext_force
+    }
+
     /// Get the deform energy of the part
     pub fn strain_energy(&self) -> Dtype {
         if self.k_matrix.is_none() {
@@ -99,6 +110,7 @@ where
         let txt_file = std::fs::File::create(file_path).unwrap();
         let mut txt_writer = BufWriter::new(txt_file);
 
+        print!("\n>>> Writing calc results into txt file ......");
         write!(txt_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
 
         for elem in self.elems.iter() {
@@ -123,7 +135,9 @@ where
             )
             .expect("!!! Write k matrix failed!");
         }
-        txt_writer.flush().expect("!!! Flush txt file failed!")
+        txt_writer.flush().expect("!!! Flush txt file failed!");
+
+        println!(" Down!");
     }
 
     /// Assemble the global stiffness mat K

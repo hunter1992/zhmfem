@@ -13,20 +13,21 @@ mod part;
 
 pub use calc::LinearEqs;
 pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
-pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, rod::Rod2D2NNL, triangle::Tri2D3N};
+pub use elem::dim2::linear::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
+pub use elem::dim2::nonlinear::rod::Rod2D2NNL;
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
 pub use part::{part1d::Part1D, part2d::Part2D};
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub type Dtype = f32;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
-/// K trait is the behavior that the elements have.
-/// Svector is used to output the stress/strain vector,
-/// Kmatrix for output element's stiffness matrix.
+/// K trait generate element's stiffness matrix under linear analysis.
+/// Output stress/strain vector at some point in element using Vector,
+/// Kmatrix is the element's stiffness matrix to get.
 pub trait K {
     type Kmatrix;
 
@@ -112,11 +113,7 @@ pub fn print_2darr<const R: usize, const C: usize>(
     }
 }
 
-pub fn nodes1d_vec(
-    points: &[Vec<Dtype>],
-    idx_0_disp: &[usize],
-    force: &HashMap<usize, Dtype>,
-) -> Vec<Node1D> {
+pub fn nodes1d_vec(points: &[Vec<Dtype>], force: &HashMap<usize, Dtype>) -> Vec<Node1D> {
     if points[0].len() != 1_usize {
         panic!(">>> Error from nodes1d_vec, the input points aren't 1D!");
     }
@@ -124,9 +121,6 @@ pub fn nodes1d_vec(
     let mut nodes: Vec<Node1D> = Vec::with_capacity(points.len());
     for (idx, coord) in points.iter().enumerate() {
         nodes.push(Node1D::new(idx, [coord[0]]));
-    }
-    for idx in idx_0_disp.iter() {
-        *nodes[idx / 1].disps[idx % 1].borrow_mut() = 0.0;
     }
     for (idx, &f) in force {
         *nodes[idx / 1].forces[idx % 1].borrow_mut() = f;
@@ -136,8 +130,8 @@ pub fn nodes1d_vec(
 
 pub fn nodes2d_vec(
     points: &[Vec<Dtype>],
-    idx_0_disp: &[usize],
     force: &HashMap<usize, Dtype>,
+    nonlinear_or_not: bool,
 ) -> Vec<Node2D> {
     if points[0].len() != 2 {
         panic!(">>> Error from nodes2d_vec, the input points aren't 2D!");
@@ -147,11 +141,12 @@ pub fn nodes2d_vec(
     for (idx, coord) in points.iter().enumerate() {
         nodes.push(Node2D::new(idx, [coord[0], coord[1]]));
     }
-    for idx in idx_0_disp.iter() {
-        *nodes[idx / 2].disps[idx % 2].borrow_mut() = 0.0;
-    }
-    for (idx, &f) in force {
-        *nodes[idx / 2].forces[idx % 2].borrow_mut() = f;
+
+    if nonlinear_or_not { //如果是线性分析，不区分节点的内力外力；非线性需要区分
+    } else {
+        for (idx, &f) in force {
+            *nodes[idx / 2].forces[idx % 2].borrow_mut() = f;
+        }
     }
     nodes
 }
@@ -196,6 +191,23 @@ pub fn rod2d2n_vec<'rod>(
         ));
     }
     rod2d2n
+}
+
+/// Construct vector of rod2d2n_nonlinear elements
+pub fn rod2d2n_nonlinear_vec<'rod>(
+    sec_areas: &'rod [Dtype],
+    nodes: &'rod [Node2D],
+    coupled_nodes: &[Vec<usize>],
+) -> Vec<Rod2D2NNL<'rod>> {
+    let mut rod2d2nnl: Vec<Rod2D2NNL> = Vec::with_capacity(sec_areas.len());
+    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
+        rod2d2nnl.push(Rod2D2NNL::new(
+            ele_id,
+            sec_areas[ele_id],
+            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
+        ));
+    }
+    rod2d2nnl
 }
 
 /// Construct vector of beam1d2n elements
@@ -254,16 +266,6 @@ pub fn quad2d4n_vec<'rect>(
         ))
     }
     rec2d4n
-}
-
-pub fn nonzero_index<'a, T: IntoIterator<Item = &'a Dtype>>(container: T) -> Vec<usize> {
-    let idx: Vec<usize> = container
-        .into_iter()
-        .enumerate()
-        .filter(|(_, &ele)| ele != 0.0)
-        .map(|(idx, _)| idx)
-        .collect();
-    idx
 }
 
 #[cfg(test)]
@@ -338,9 +340,11 @@ mod testing {
 
         let nodes = vec![node1, node2, node3, node4];
         let cplds = vec![vec![0, 1, 3], vec![1, 2, 3]];
+        let zero_disps_idx = vec![0, 1, 3, 6];
         let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
 
-        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> =
+            Part2D::new(1, &nodes, &mut tris, &cplds, &zero_disps_idx);
         assert_eq!(p1.elems[1].nodes[1].coord[1], 1.0);
         assert_ne!(p1.elems[1].nodes[1].coord[1], -1.0);
 

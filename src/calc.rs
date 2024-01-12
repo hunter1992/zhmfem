@@ -2,6 +2,7 @@ extern crate nalgebra as na;
 
 use crate::Dtype;
 use na::*;
+use std::collections::HashSet;
 use std::time::Instant;
 
 /// Non-Linear equations: A(x) * x = b，这里的A(x)是Kt，也就是切线刚度
@@ -10,26 +11,37 @@ use std::time::Instant;
 /// Linear equations: A*x = b,
 /// In this case: A for known static_kmat, x for disps, b for forces
 pub struct LinearEqs<const N: usize> {
-    state: bool,
     pub disps: [Dtype; N],
     pub forces: [Dtype; N],
+    pub disps_0_idx: Vec<usize>,
     pub static_kmat: [[Dtype; N]; N],
+    state: bool, // solved or not flag
 }
 
 impl<const N: usize> LinearEqs<N> {
-    pub fn new(disps: [Dtype; N], forces: [Dtype; N], static_kmat: [[Dtype; N]; N]) -> Self {
+    pub fn new(
+        disps: [Dtype; N],
+        forces: [Dtype; N],
+        disps_0_idx: Vec<usize>,
+        static_kmat: [[Dtype; N]; N],
+    ) -> Self {
         LinearEqs {
             disps,
             forces,
-            state: false,
+            disps_0_idx,
             static_kmat,
+            state: false,
         }
     }
 
     /// get disp on every single node
-    pub fn disps_rlt(&mut self) -> &[Dtype; N] {
+    pub fn disps_rlt(&mut self, solve_method: usize, calc_error: Dtype) -> &[Dtype; N] {
         if self.state == false {
-            self.lu_direct_solver();
+            if solve_method == 0 {
+                self.lu_direct_solver();
+            } else if solve_method == 1 {
+                self.gauss_seidel_iter_solver(calc_error);
+            }
             &self.disps
         } else {
             &self.disps
@@ -37,9 +49,13 @@ impl<const N: usize> LinearEqs<N> {
     }
 
     /// get force on every single node
-    pub fn forces_rlt(&mut self) -> &[Dtype; N] {
+    pub fn forces_rlt(&mut self, solve_method: usize, calc_error: Dtype) -> &[Dtype; N] {
         if self.state == false {
-            self.lu_direct_solver();
+            if solve_method == 0 {
+                self.lu_direct_solver();
+            } else if solve_method == 1 {
+                self.gauss_seidel_iter_solver(calc_error);
+            }
             &self.forces
         } else {
             &self.forces
@@ -53,7 +69,8 @@ impl<const N: usize> LinearEqs<N> {
         let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
         let force = SVector::from(self.forces);
 
-        let disps_unknown_idx = nonzero_disps_idx(&self.disps);
+        let disps_unknown_idx = nonzero_disps_idx(&self.disps); //旧算法停用
+        let disps_unknown_idx = idx_subtract::<N>(self.disps_0_idx.clone());
         let force_known = force.select_rows(disps_unknown_idx.iter());
         let kmat_eff = kmat
             .select_columns(disps_unknown_idx.iter())
@@ -83,15 +100,16 @@ impl<const N: usize> LinearEqs<N> {
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
     pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) {
         // pre-process
-        let unknown_disps_idx = nonzero_disps_idx(&self.disps);
+        //let disps_unknown_idx = nonzero_disps_idx(&self.disps); //旧算法停用
+        let disps_unknown_idx = idx_subtract::<N>(self.disps_0_idx.clone());
 
         let force = SVector::from(self.forces);
-        let f_eff = force.select_rows(unknown_disps_idx.iter());
+        let f_eff = force.select_rows(disps_unknown_idx.iter());
 
         let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
         let kmat_eff = kmat
-            .select_columns(unknown_disps_idx.iter())
-            .select_rows(unknown_disps_idx.iter());
+            .select_columns(disps_unknown_idx.iter())
+            .select_rows(disps_unknown_idx.iter());
 
         // construct Gauss-Seidel iter method
         let l = kmat_eff.lower_triangle();
@@ -99,7 +117,7 @@ impl<const N: usize> LinearEqs<N> {
         let u = kmat_eff.upper_triangle() - &d;
         let grad = -l.try_inverse().unwrap();
 
-        let size = unknown_disps_idx.len();
+        let size = disps_unknown_idx.len();
         let mut x = DVector::<Dtype>::zeros(size);
 
         // Gauss-Seidel iterator loop
@@ -125,7 +143,7 @@ impl<const N: usize> LinearEqs<N> {
         }
 
         // write result
-        let _: Vec<_> = unknown_disps_idx
+        let _: Vec<_> = disps_unknown_idx
             .iter()
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = x[i])
@@ -144,4 +162,11 @@ fn nonzero_disps_idx<'a, T: IntoIterator<Item = &'a Dtype>>(container: T) -> Vec
         .map(|(idx, _)| idx)
         .collect();
     idx
+}
+/// 求出Part中所有节点位移向量中，非零位移的索引
+fn idx_subtract<const N: usize>(zero_disps_idx: Vec<usize>) -> Vec<usize> {
+    let all_idx: [usize; N] = std::array::from_fn(|x| x);
+    let whole: HashSet<usize> = HashSet::from(all_idx);
+    let zeros: HashSet<usize> = zero_disps_idx.into_iter().collect();
+    (&whole - &zeros).iter().cloned().collect()
 }
