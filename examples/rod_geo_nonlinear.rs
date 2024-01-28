@@ -29,7 +29,7 @@ fn main() {
         rod.write_node_inner_force(material);
     }
 
-    let mut part1: Part2D<Rod2D2NNL, N, F, M> = Part2D::new(1, &nodes, &mut rods, &cpld);
+    let mut part1: Part2D<Rod2D2NNL, N, F, M> = Part2D::new(1, &nodes, &mut rods, &cpld, &material);
     let global_kt = part1.k(material);
     print_2darr("Kt", global_kt, 4.0);
     print_1darr("inner force", &part1.forces(), 0.0);

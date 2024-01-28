@@ -44,6 +44,11 @@ pub trait K {
     fn id(&self) -> usize;
 }
 
+pub trait Export {
+    fn txt_writer(&self, target_file: &str) -> std::io::Result<bool>;
+    fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool>;
+}
+
 pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("\n{} =", name);
     print!("[[");

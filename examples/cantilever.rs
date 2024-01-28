@@ -40,7 +40,7 @@ fn main() {
 
     // construct part
     let mut beam_part: Part2D<Beam1D2N, { R * C }, F, M> =
-        Part2D::new(1, &nodes, &mut beam_vec, &cpld);
+        Part2D::new(1, &nodes, &mut beam_vec, &cpld, &material);
     beam_part.k(material);
     beam_part.k_printer(0.0);
 

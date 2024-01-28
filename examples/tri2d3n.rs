@@ -9,7 +9,7 @@ fn main() {
 
     // set material parameters
     let thick = 1.0 as Dtype;
-    let material = (1.0 as Dtype, 0.25 as Dtype); //Young's modulud & Poisson's ratio
+    let material = (100.0 as Dtype, 0.25 as Dtype); //Young's modulud & Poisson's ratio
 
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
@@ -40,10 +40,11 @@ fn main() {
     let mut tri_vec: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
 
     // assemble global stiffness matrix
-    let mut part1: Part2D<Tri2D3N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut tri_vec, &cpld);
+    let mut part1: Part2D<Tri2D3N, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut tri_vec, &cpld, &material);
     //println!("");
     part1.k(material);
-    part1.k_printer(0.0);
+    //part1.k_printer(0.0);
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
@@ -60,10 +61,10 @@ fn main() {
     print_1darr("qe", &part1.disps(), 0.0);
     print_1darr("fe", &part1.forces(), 0.0);
 
-    //for tri in part1.elems.iter() {
-    //    tri.print_strain();
-    //    tri.print_stress(material);
-    //}
+    for tri in part1.elems.iter() {
+        tri.print_strain();
+        tri.print_stress(material);
+    }
 
     println!("\n>>> System energy:");
     println!("\tE_d: {:-9.6} (deform energy)", part1.strain_energy());
@@ -75,6 +76,7 @@ fn main() {
 
     // write clac result into txt file
     //part1.write_txt_file(material, "/home/zhm/Desktop/tri.txt");
+    part1.txt_writer("/home/zhm/Desktop/tri.txt");
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

@@ -29,7 +29,8 @@ fn main() {
     let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(&section_area, &nodes, &cpld);
     print!("{}", &rod_vec[0]);
 
-    let mut part1: Part1D<Rod1D2N, { R * C }, F, M> = Part1D::new(1, &nodes, &mut rod_vec, &cpld);
+    let mut part1: Part1D<Rod1D2N, { R * C }, F, M> =
+        Part1D::new(1, &nodes, &mut rod_vec, &cpld, &material);
     part1.k(material);
     part1.k_printer(0.0);
 

@@ -47,7 +47,8 @@ fn main() {
     let mut rects: Vec<Quad2D4N> = quad2d4n_vec(thick, &nodes, &cpld);
 
     // assemble global stiffness matrix
-    let mut p1: Part2D<Quad2D4N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut rects, &cpld);
+    let mut p1: Part2D<Quad2D4N, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut rects, &cpld, &material);
     p1.k(material);
     p1.k_printer(0.0);
 

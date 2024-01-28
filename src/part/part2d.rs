@@ -1,6 +1,6 @@
 extern crate nalgebra as na;
 
-use crate::{calc::LinearEqs, node::Node2D, Dtype, K};
+use crate::{calc::LinearEqs, node::Node2D, Dtype, Export, K};
 use na::*;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
@@ -15,6 +15,7 @@ where
     pub nodes: &'a [Node2D],
     pub elems: &'a mut [Elem],
     pub cplds: &'a [Vec<usize>],
+    pub material: &'a (Dtype, Dtype),
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
 }
 
@@ -27,6 +28,7 @@ where
         nodes: &'a [Node2D],
         elems: &'a mut [Elem],
         cplds: &'a [Vec<usize>],
+        material: &'a (Dtype, Dtype),
     ) -> Self
     where
         [[Dtype; N * F]; N * F]: Sized,
@@ -36,6 +38,7 @@ where
             nodes,
             elems,
             cplds,
+            material,
             k_matrix: None,
         }
     }
@@ -103,41 +106,6 @@ where
             *node.forces[0].borrow_mut() = force[idx * 2];
             *node.forces[1].borrow_mut() = force[idx * 2 + 1];
         }
-    }
-
-    /// Write calculated results into txt file
-    pub fn write_txt_file(&self, material: (Dtype, Dtype), file_path: &str) {
-        let txt_file = std::fs::File::create(file_path).unwrap();
-        let mut txt_writer = BufWriter::new(txt_file);
-
-        print!("\n>>> Writing calc results into txt file ......");
-        write!(txt_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
-
-        for elem in self.elems.iter() {
-            write!(txt_writer, "{}\n", elem.info()).expect("Write info failed!");
-            write!(
-                txt_writer,
-                "\tStrain: {:-9.6?}\n",
-                elem.strain([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype])
-            )
-            .expect("Write strain failed!");
-            write!(
-                txt_writer,
-                "\tStress: {:-9.6?}\n",
-                elem.stress([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype], material)
-            )
-            .expect("Write stress failed!");
-            write!(
-                txt_writer,
-                "\n\tStiffness matrix k{} = \n{}\n",
-                elem.id(),
-                elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
-            )
-            .expect("!!! Write k matrix failed!");
-        }
-        txt_writer.flush().expect("!!! Flush txt file failed!");
-
-        println!(" Down!");
     }
 
     /// Assemble the global stiffness mat K
@@ -216,6 +184,50 @@ where
             }
         }
         println!("");
+    }
+}
+
+impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Export
+    for Part2D<'a, Elem, N, F, M>
+where
+    [[Dtype; N * F]; N * F]: Sized,
+{
+    fn txt_writer(&self, target_file: &str) -> std::io::Result<bool> {
+        let txt_file = std::fs::File::create(target_file).unwrap();
+        let mut text_writer = BufWriter::new(txt_file);
+
+        print!("\n>>> Writing calc results into txt file ......");
+        write!(text_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
+
+        for elem in self.elems.iter() {
+            write!(text_writer, "{}\n", elem.info()).expect("Write info failed!");
+            write!(
+                text_writer,
+                "\tStrain: {:-9.6?}\n",
+                elem.strain([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype])
+            )
+            .expect("Write strain failed!");
+            write!(
+                text_writer,
+                "\tStress: {:-9.6?}\n",
+                elem.stress([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype], *self.material)
+            )
+            .expect("Write stress failed!");
+            write!(
+                text_writer,
+                "\n\tStiffness matrix k{} = \n{}\n",
+                elem.id(),
+                elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
+            )
+            .expect("!!! Write k matrix failed!");
+        }
+        text_writer.flush().expect("!!! Flush txt file failed!");
+        println!(" Down!");
+        Ok(true)
+    }
+
+    fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool> {
+        Ok(true)
     }
 }
 

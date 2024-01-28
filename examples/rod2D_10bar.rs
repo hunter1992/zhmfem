@@ -49,7 +49,8 @@ fn main() {
 
     let mut rod_vec: Vec<Rod2D2N> = rod2d2n_vec(&section_area, &nodes, &cpld);
 
-    let mut part1: Part2D<Rod2D2N, { R * C }, F, M> = Part2D::new(1, &nodes, &mut rod_vec, &cpld);
+    let mut part1: Part2D<Rod2D2N, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut rod_vec, &cpld, &material);
     part1.k(material);
     part1.k_printer(4.0);
 
@@ -57,8 +58,10 @@ fn main() {
         LinearEqs::new(part1.disps(), part1.forces(), zero_disp, *part1.k(material));
 
     //eqs.lu_direct_solver();
-    eqs.gauss_seidel_iter_solver(0.001); // 精度为：0.00001时, 耗时:1.889097ms,迭代:143次,误差:0.000009
-                                         //         0.001  时, 耗时:1.014296ms,迭代: 79次,误差:0.000964
+    //
+    // 精度为：0.00001时, 耗时:1.889097ms,迭代:143次,误差:0.000009
+    //         0.001  时, 耗时:1.014296ms,迭代: 79次,误差:0.000964
+    eqs.gauss_seidel_iter_solver(0.00005);
 
     part1.write_result(&eqs);
 

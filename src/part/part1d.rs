@@ -12,6 +12,7 @@ where
     pub nodes: &'a [Node1D],
     pub elems: &'a mut [Elem],
     pub cplds: &'a [Vec<usize>],
+    pub material: &'a (Dtype, Dtype),
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
 }
 
@@ -24,6 +25,7 @@ where
         nodes: &'a [Node1D],
         elems: &'a mut [Elem],
         cplds: &'a [Vec<usize>],
+        material: &'a (Dtype, Dtype),
     ) -> Self
     where
         [[Dtype; N * F]; N * F]: Sized,
@@ -33,6 +35,7 @@ where
             nodes,
             elems,
             cplds,
+            material,
             k_matrix: None,
         }
     }
