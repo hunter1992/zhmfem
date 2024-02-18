@@ -96,15 +96,15 @@ impl Rectangle {
             }
         }
 
-        for r in 0..(cols - 1) {
-            for c in 0..(rows - 1) {
+        for r in 0..(rows - 1) {
+            for c in 0..(cols - 1) {
                 coupls.push(vec![
+                    r * cols + c,
                     r * cols + c + 1,
-                    r * cols + c + 2,
-                    (r + 1) * cols + c + 2,
                     (r + 1) * cols + c + 1,
+                    (r + 1) * cols + c,
                 ]);
-                if rows < 3 || cols < 3 {
+                if rows < 2 || cols < 2 {
                     break;
                 }
             }

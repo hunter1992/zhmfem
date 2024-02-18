@@ -13,14 +13,18 @@ mod part;
 
 pub use calc::LinearEqs;
 pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
-pub use elem::dim2::linear::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
+pub use elem::dim2::linear::{
+    quadrila::Quad2D4N,
+    rod::Rod2D2N,
+    triangle::{Tri2D3N, Tri2D6N},
+};
 pub use elem::dim2::nonlinear::rod::Rod2D2NNL;
 pub use mesh::plane;
 pub use na::*;
 pub use node::*;
 pub use part::{part1d::Part1D, part2d::Part2D};
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub type Dtype = f32;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;

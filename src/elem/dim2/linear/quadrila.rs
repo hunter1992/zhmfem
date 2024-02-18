@@ -193,6 +193,7 @@ impl<'quad> Quad2D4N<'quad> {
         ];
 
         let mut k_matrix = SMatrix::<Dtype, 8, 8>::from([[0.0; 8]; 8]);
+        // 2x2的4点Gauss积分，4个点权重都是1
         for row in 0..2 {
             for col in 0..2 {
                 let j_raw = self.jacobian(int_pts[row][col]);
@@ -231,6 +232,24 @@ impl<'quad> Quad2D4N<'quad> {
         let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain(xi_eta));
         let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
+    }
+
+    /// Print element's strain value
+    pub fn print_strain(&self, xi_eta: [Dtype; 2]) {
+        let strain = self.calc_strain(xi_eta);
+        println!(
+            "\nelem[{}] strain:\n\tE_xx = {:-9.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
+            self.id, strain[0], strain[1], strain[2]
+        );
+    }
+
+    /// Print element's stress value
+    pub fn print_stress(&self, xi_eta: [Dtype; 2], material_args: (Dtype, Dtype)) {
+        let stress = self.calc_stress(xi_eta, material_args);
+        println!(
+            "\nelem[{}] stress:\n\tS_xx = {:-9.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
+            self.id, stress[0], stress[1], stress[2]
+        );
     }
 }
 

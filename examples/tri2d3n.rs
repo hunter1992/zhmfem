@@ -9,14 +9,14 @@ fn main() {
 
     // set material parameters
     let thick = 1.0 as Dtype;
-    let material = (100.0 as Dtype, 0.25 as Dtype); //Young's modulud & Poisson's ratio
+    let material = (1.0 as Dtype, 0.25 as Dtype); //Young's modulud & Poisson's ratio
 
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
 
     // number of nodes and freedom
-    const R: usize = 3; // rows of nodes
-    const C: usize = 3; // columns of nodes
+    const R: usize = 2; // rows of nodes
+    const C: usize = 2; // columns of nodes
     const M: usize = 3; // node num in single element
     const F: usize = 2; // freedom num in single node
 

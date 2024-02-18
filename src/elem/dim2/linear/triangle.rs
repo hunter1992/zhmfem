@@ -95,10 +95,10 @@ impl<'tri> Tri2D3N<'tri> {
     }
 
     /// Get shape matrix element N_i
-    fn shape_mat_i(&self, i: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
+    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         /* The shape mat of tri elem:
          * |N1  0   N2  0   N3  0 |
-         * |0   N1  0   N2  0   N3| 
+         * |0   N1  0   N2  0   N3|
          * 输入参数i用于选择输出哪个Ni
          */
         let area = self.area();
@@ -120,7 +120,7 @@ impl<'tri> Tri2D3N<'tri> {
             xs[idx(1 + 2)] - xs[idx(1 + 1)],
             xs[idx(2 + 2)] - xs[idx(2 + 1)],
         ];
-        move |x: Dtype, y: Dtype| 0.5 * (a[i] + x * b[i] + y * c[i]) / area
+        move |x: Dtype, y: Dtype| 0.5 * (a[ith] + x * b[ith] + y * c[ith]) / area
     }
 
     /// Element's B matrix, B mat is the combination of diff(N)
@@ -327,5 +327,181 @@ impl fmt::Display for Tri2D3N<'_> {
             self.nodes[1],
             self.nodes[2]
         )
+    }
+}
+
+pub struct Tri2D6N<'tri> {
+    pub id: usize,
+    pub thick: Dtype,
+    pub nodes: [&'tri Node2D; 3],
+    pub k_matrix: Option<[[Dtype; 12]; 12]>,
+}
+
+impl<'tri> Tri2D6N<'tri> {
+    /// Generate a 2D Tri2D6N element
+    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 3]) -> Tri2D6N {
+        Tri2D6N {
+            id,
+            thick,
+            nodes,
+            k_matrix: None,
+        }
+    }
+
+    /// Get the x-coords of nodes in Tri2D6N element
+    pub fn xs(&self) -> [Dtype; 3] {
+        let mut x_list = [0.0; 3];
+        for i in 0..3 {
+            x_list[i] = self.nodes[i].coord[0];
+        }
+        x_list
+    }
+
+    /// Get the y-coords of nodes in Tri2D6N element
+    pub fn ys(&self) -> [Dtype; 3] {
+        let mut y_list = [0.0; 3];
+        for i in 0..3 {
+            y_list[i] = self.nodes[i].coord[1];
+        }
+        y_list
+    }
+
+    /// Get Tri2D6N element area value
+    pub fn area(&self) -> Dtype {
+        let x = self.xs();
+        let y = self.ys();
+        let dx_21 = x[1] - x[0];
+        let dx_31 = x[2] - x[0];
+        let dy_21 = y[1] - y[0];
+        let dy_31 = y[2] - y[0];
+        0.5 * (dx_21 * dy_31 - dx_31 * dy_21).abs()
+    }
+
+    /// Get the 1st row's every single element's cofactor of Determinant A
+    ///     | 1  x1  y1 |
+    /// A = | 1  x2  y2 |
+    ///     | 1  x3  y3 |
+    fn a(&self, ith: usize) -> Dtype {
+        let xs = self.xs();
+        let ys = self.ys();
+        let idx = |x: usize| (x % 3) as usize;
+        let a = [
+            xs[idx(0 + 1)] * ys[idx(0 + 2)] - xs[idx(0 + 2)] * ys[idx(0 + 1)],
+            xs[idx(1 + 1)] * ys[idx(1 + 2)] - xs[idx(1 + 2)] * ys[idx(1 + 1)],
+            xs[idx(2 + 1)] * ys[idx(2 + 2)] - xs[idx(2 + 2)] * ys[idx(2 + 1)],
+        ];
+        a[ith]
+    }
+
+    /// Get the 2nd row's every single element's cofactor of Determinant A
+    ///     | 1  x1  y1 |
+    /// A = | 1  x2  y2 |
+    ///     | 1  x3  y3 |
+    fn b(&self, ith: usize) -> Dtype {
+        let ys = self.ys();
+        let idx = |x: usize| (x % 3) as usize;
+        let b = [
+            ys[idx(0 + 1)] - ys[idx(0 + 2)],
+            ys[idx(1 + 1)] - ys[idx(1 + 2)],
+            ys[idx(2 + 1)] - ys[idx(2 + 2)],
+        ];
+        b[ith]
+    }
+
+    /// Get the 3rd row's every single element's cofactor of Determinant A
+    ///     | 1  x1  y1 |
+    /// A = | 1  x2  y2 |
+    ///     | 1  x3  y3 |
+    fn c(&self, ith: usize) -> Dtype {
+        let xs = self.xs();
+        let idx = |x: usize| (x % 3) as usize;
+        let c = [
+            xs[idx(0 + 2)] - xs[idx(0 + 1)],
+            xs[idx(1 + 2)] - xs[idx(1 + 1)],
+            xs[idx(2 + 2)] - xs[idx(2 + 1)],
+        ];
+        c[ith]
+    }
+
+    /// Get area coords Li's value
+    /// 自然坐标与面积坐标之间的关系
+    /// | L1 |              |a1  b1  c1| | 1 |
+    /// | L2 | =  1/(2*A) * |a1  b1  c1|.| x |
+    /// | L3 |              |a1  b1  c1| | y |
+    fn area_coords(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
+        let a = self.a(ith);
+        let b = self.b(ith);
+        let c = self.c(ith);
+        let area: Dtype = self.area();
+        move |x: Dtype, y: Dtype| (a + b * x + c * y) / (2.0 * area)
+    }
+
+    /// Get shape matrix element N_i
+    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
+        /* 形函数矩阵
+         * | N1 0  N2 0  N3 0  N4 0  N5 0  N6 0  |
+         * | 0  N1 0  N2 0  N3 0  N4 0  N5 0  N6 |
+         *
+         * N1 = (2L1 - 1) * L1
+         * N2 = (2L2 - 1) * L2
+         * N3 = (2L3 - 1) * L3
+         * N4 = 4 * L1 * L2
+         * N5 = 4 * L2 * L3
+         * N6 = 4 * L3 * L1
+         *
+         * 自然坐标与面积坐标之间的关系
+         * | L1 |    |a1  b1  c1| | 1  |
+         * | L2 | =  |a2  b2  c2|.| x  | * 1/(2*A)
+         * | L3 |    |a3  b3  c3| | y  |
+         *
+         * | 1  |    |1   1   1 | | L1 |
+         * | x  | =  |x1  x2  x3|.| L2 |
+         * | y  |    |y1  y2  y3| | L2 |
+         */
+        let n1 = |l1: Dtype, _l4: Dtype| (2.0 * l1 - 1.0) * l1;
+        let n2 = |l2: Dtype, _l4: Dtype| (2.0 * l2 - 1.0) * l2;
+        let n3 = |l3: Dtype, _l4: Dtype| (2.0 * l3 - 1.0) * l3;
+        let n4 = |l1: Dtype, l2: Dtype| 4.0 * l1 * l2;
+        let n5 = |l2: Dtype, l3: Dtype| 4.0 * l2 * l3;
+        let n6 = |l3: Dtype, l1: Dtype| 4.0 * l3 * l1;
+
+        let shape_mat = [n1, n2, n3, n4, n5, n6];
+        shape_mat[ith]
+    }
+
+    /// Get B matrix element B_i
+    /// | dN/dx    0    |
+    /// | 0        dN/dy| =  B
+    /// | dN/dy    dN/dx|
+    pub fn geometry_mat_i(&self, ith: usize, x_y: (Dtype, Dtype)) -> [[Dtype; 2]; 3] {
+        if ith > 5 {
+            panic!("!!! Error from Tri2D6N elem func(geometry_mat_i), wrong ith arg.");
+        }
+        if ith < 3 {
+            let l: Dtype = self.area_coords(ith)(x_y.0, x_y.1);
+            let arg: Dtype = 0.5 * (4.0 * l - 1.0) / self.area();
+
+            [
+                [arg * self.b(ith), 0.0],
+                [0.0, arg * self.c(ith)],
+                [arg * self.c(ith), arg * self.b(ith)],
+            ]
+        } else {
+            let ith1: usize = ith - 3;
+            let ith2: usize = (ith - 2) % 3;
+            let l1: Dtype = self.area_coords(ith1)(x_y.0, x_y.1);
+            let l2: Dtype = self.area_coords(ith2)(x_y.0, x_y.1);
+            let arg1: Dtype = 2.0 * l1 / self.area();
+            let arg2: Dtype = 2.0 * l2 / self.area();
+
+            [
+                [arg1 * self.b(ith2) + arg2 * self.b(ith1), 0.0],
+                [0.0, arg1 * self.c(ith2) + arg2 * self.c(ith1)],
+                [
+                    arg1 * self.c(ith2) + arg2 * self.c(ith1),
+                    arg1 * self.b(ith2) + arg2 * self.b(ith1),
+                ],
+            ]
+        }
     }
 }

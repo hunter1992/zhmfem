@@ -69,7 +69,7 @@ impl<const N: usize> LinearEqs<N> {
         let kmat = SMatrix::<Dtype, N, N>::from(self.static_kmat).transpose();
         let force = SVector::from(self.forces);
 
-        let disps_unknown_idx = nonzero_disps_idx(&self.disps); //旧算法停用
+        //let disps_unknown_idx = nonzero_disps_idx(&self.disps); //旧算法停用
         let disps_unknown_idx = idx_subtract::<N>(self.disps_0_idx.clone());
         let force_known = force.select_rows(disps_unknown_idx.iter());
         let kmat_eff = kmat

@@ -226,7 +226,7 @@ where
         Ok(true)
     }
 
-    fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool> {
+    fn vtk_writer(&self, _target_file: &str) -> std::io::Result<bool> {
         Ok(true)
     }
 }
