@@ -105,17 +105,17 @@ impl<'tri> Tri2D3N<'tri> {
         let xs = self.xs();
         let ys = self.ys();
         let idx = |x: usize| (x % 3) as usize;
-        let a = [
+        let a: [Dtype; 3] = [
             xs[idx(0 + 1)] * ys[idx(0 + 2)] - xs[idx(0 + 2)] * ys[idx(0 + 1)],
             xs[idx(1 + 1)] * ys[idx(1 + 2)] - xs[idx(1 + 2)] * ys[idx(1 + 1)],
             xs[idx(2 + 1)] * ys[idx(2 + 2)] - xs[idx(2 + 2)] * ys[idx(2 + 1)],
         ];
-        let b = [
+        let b: [Dtype; 3] = [
             ys[idx(0 + 1)] - ys[idx(0 + 2)],
             ys[idx(1 + 1)] - ys[idx(1 + 2)],
             ys[idx(2 + 1)] - ys[idx(2 + 2)],
         ];
-        let c = [
+        let c: [Dtype; 3]  = [
             xs[idx(0 + 2)] - xs[idx(0 + 1)],
             xs[idx(1 + 2)] - xs[idx(1 + 1)],
             xs[idx(2 + 2)] - xs[idx(2 + 1)],
@@ -170,7 +170,7 @@ impl<'tri> Tri2D3N<'tri> {
         stiffness_matrix
     }
 
-    /// Get element's strain vector
+    /// Get element's strain vector, the strain in CST elem is a const
     pub fn calc_strain(&self) -> [Dtype; 3] {
         let jecobian_mat = Jacobian2D::from(self.jacobian());
         let b_mat = self.geometry_mat(jecobian_mat.determinant());
@@ -179,7 +179,7 @@ impl<'tri> Tri2D3N<'tri> {
         strain_vector
     }
 
-    /// Get element's stress vector
+    /// Get element's stress vector, the stress in CST elem is a const
     pub fn calc_stress(&self, material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
@@ -382,6 +382,7 @@ impl<'tri> Tri2D6N<'tri> {
     /// A = | 1  x2  y2 |
     ///     | 1  x3  y3 |
     fn a(&self, ith: usize) -> Dtype {
+        // ith in [0, 1, 2]
         let xs = self.xs();
         let ys = self.ys();
         let idx = |x: usize| (x % 3) as usize;
@@ -424,10 +425,14 @@ impl<'tri> Tri2D6N<'tri> {
     }
 
     /// Get area coords Li's value
-    /// 自然坐标与面积坐标之间的关系
-    /// | L1 |              |a1  b1  c1| | 1 |
-    /// | L2 | =  1/(2*A) * |a1  b1  c1|.| x |
-    /// | L3 |              |a1  b1  c1| | y |
+    /// 自然坐标与面积坐标之间的关系：
+    /// | L1 |    |a1  b1  c1| | 1 |
+    /// | L2 | =  |a2  b2  c2|.| x | *  1/(2*A)
+    /// | L3 |    |a3  b3  c3| | y |
+    ///
+    /// | 1  |    |1   1   1 | | L1 |
+    /// | x  | =  |x1  x2  x3|.| L2 |
+    /// | y  |    |y1  y2  y3| | L2 |
     fn area_coords(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         let a = self.a(ith);
         let b = self.b(ith);
@@ -437,30 +442,21 @@ impl<'tri> Tri2D6N<'tri> {
     }
 
     /// Get shape matrix element N_i
+    /// shape matrix:
+    /// | N1 0  N2 0  N3 0  N4 0  N5 0  N6 0  |
+    /// | 0  N1 0  N2 0  N3 0  N4 0  N5 0  N6 |
+    ///
+    /// N1 = (2L1 - 1) * L1
+    /// N2 = (2L2 - 1) * L2
+    /// N3 = (2L3 - 1) * L3
+    /// N4 = 4 * L1 * L2
+    /// N5 = 4 * L2 * L3
+    /// N6 = 4 * L3 * L1
+    /// for every Li in [0, 1]
     fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
-        /* 形函数矩阵
-         * | N1 0  N2 0  N3 0  N4 0  N5 0  N6 0  |
-         * | 0  N1 0  N2 0  N3 0  N4 0  N5 0  N6 |
-         *
-         * N1 = (2L1 - 1) * L1
-         * N2 = (2L2 - 1) * L2
-         * N3 = (2L3 - 1) * L3
-         * N4 = 4 * L1 * L2
-         * N5 = 4 * L2 * L3
-         * N6 = 4 * L3 * L1
-         *
-         * 自然坐标与面积坐标之间的关系
-         * | L1 |    |a1  b1  c1| | 1  |
-         * | L2 | =  |a2  b2  c2|.| x  | * 1/(2*A)
-         * | L3 |    |a3  b3  c3| | y  |
-         *
-         * | 1  |    |1   1   1 | | L1 |
-         * | x  | =  |x1  x2  x3|.| L2 |
-         * | y  |    |y1  y2  y3| | L2 |
-         */
-        let n1 = |l1: Dtype, _l4: Dtype| (2.0 * l1 - 1.0) * l1;
-        let n2 = |l2: Dtype, _l4: Dtype| (2.0 * l2 - 1.0) * l2;
-        let n3 = |l3: Dtype, _l4: Dtype| (2.0 * l3 - 1.0) * l3;
+        let n1 = |l1: Dtype, _l: Dtype| (2.0 * l1 - 1.0) * l1;
+        let n2 = |l2: Dtype, _l: Dtype| (2.0 * l2 - 1.0) * l2;
+        let n3 = |l3: Dtype, _l: Dtype| (2.0 * l3 - 1.0) * l3;
         let n4 = |l1: Dtype, l2: Dtype| 4.0 * l1 * l2;
         let n5 = |l2: Dtype, l3: Dtype| 4.0 * l2 * l3;
         let n6 = |l3: Dtype, l1: Dtype| 4.0 * l3 * l1;
@@ -503,5 +499,54 @@ impl<'tri> Tri2D6N<'tri> {
                 ],
             ]
         }
+    }
+
+    /// Calculate element stiffness matrix K
+    /// Return a 12x12 matrix, elements are Dtype
+    pub fn calc_k(&self, material_args: (Dtype, Dtype)) {
+        println!(
+            "\n>>> Calculating Tri2D3N(#{})'s stiffness matrix k{} ......",
+            self.id, self.id
+        );
+        let (ee, nu) = material_args;
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, 0.5 * (1.0 - nu)],
+        ]) * (ee / (1.0 - nu * nu));
+
+        let t = self.thick;
+        let s = self.area();
+
+        let coeff = t * ee / (s * s * (1.0 - nu * nu));
+        let stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
+
+        // i in [0, 1, 2] and j in [0, 1, 2]
+        let kij = |arg: Dtype, i: usize, j: usize| {
+            let k: [[Dtype; 2]; 2] = (coeff
+                * Matrix2::new(
+                    self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
+                    self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
+                    self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
+                    self.c(i) * self.c(j) * 1. + 0.5 * self.b(i) * self.b(j) * (1.0 - nu),
+                )
+                / arg)
+                .into();
+            k
+        };
+
+        // i in [3, 4, 5] and j in [3, 4, 5]
+        let kmn = |arg: Dtype, m: usize, n: usize| {
+            let k: [[Dtype; 2]; 2] = (coeff
+                * Matrix2::new(
+                    self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
+                    self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
+                    self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
+                    self.c(i) * self.c(j) * 1. + 0.5 * self.b(i) * self.b(j) * (1.0 - nu),
+                )
+                / arg)
+                .into();
+            k
+        };
     }
 }
