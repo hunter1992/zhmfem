@@ -115,7 +115,7 @@ impl<'tri> Tri2D3N<'tri> {
             ys[idx(1 + 1)] - ys[idx(1 + 2)],
             ys[idx(2 + 1)] - ys[idx(2 + 2)],
         ];
-        let c: [Dtype; 3]  = [
+        let c: [Dtype; 3] = [
             xs[idx(0 + 2)] - xs[idx(0 + 1)],
             xs[idx(1 + 2)] - xs[idx(1 + 1)],
             xs[idx(2 + 2)] - xs[idx(2 + 1)],
@@ -521,32 +521,20 @@ impl<'tri> Tri2D6N<'tri> {
         let coeff = t * ee / (s * s * (1.0 - nu * nu));
         let stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
 
-        // i in [0, 1, 2] and j in [0, 1, 2]
-        let kij = |arg: Dtype, i: usize, j: usize| {
-            let k: [[Dtype; 2]; 2] = (coeff
-                * Matrix2::new(
-                    self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
-                    self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
-                    self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
-                    self.c(i) * self.c(j) * 1. + 0.5 * self.b(i) * self.b(j) * (1.0 - nu),
-                )
-                / arg)
-                .into();
-            k
-        };
+        // arg matrix
+        //let arg_mat = matrix6::new();
 
-        // i in [3, 4, 5] and j in [3, 4, 5]
-        let kmn = |arg: Dtype, m: usize, n: usize| {
-            let k: [[Dtype; 2]; 2] = (coeff
-                * Matrix2::new(
-                    self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
-                    self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
-                    self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
-                    self.c(i) * self.c(j) * 1. + 0.5 * self.b(i) * self.b(j) * (1.0 - nu),
-                )
-                / arg)
-                .into();
-            k
+        // shape of bc_mat_ij: (i in [0, 1, 2] and j in [0, 1, 2])
+        // | Bi*Bj + Ci*Cj*(1-nu)/2       Bi*Cj*nu + Ci*Bj*(1-nu)/2 |
+        // | Ci*Bj*nu + Bi*Cj*(1-nu)/2       Ci*Cj + Bi*Bj*(1-nu)/2 |
+        let bc_mat = |i: usize, j: usize| {
+            let mat: Matrix2 = Matrix2::new(
+                self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
+                self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
+                self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
+                self.c(i) * self.c(j) * 1. + 0.5 * self.b(i) * self.b(j) * (1.0 - nu),
+            );
+            mat
         };
     }
 }
