@@ -1,3 +1,4 @@
+use crate::{matrix_block_fill, print_2darr};
 use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
@@ -378,9 +379,9 @@ impl<'tri> Tri2D6N<'tri> {
     }
 
     /// Get the 1st row's every single element's cofactor of Determinant A
-    ///     | 1  x1  y1 |
-    /// A = | 1  x2  y2 |
-    ///     | 1  x3  y3 |
+    ///     | 1  x0  y0 |
+    /// A = | 1  x1  y1 |
+    ///     | 1  x2  y2 |
     fn a(&self, ith: usize) -> Dtype {
         // ith in [0, 1, 2]
         let xs = self.xs();
@@ -395,9 +396,9 @@ impl<'tri> Tri2D6N<'tri> {
     }
 
     /// Get the 2nd row's every single element's cofactor of Determinant A
-    ///     | 1  x1  y1 |
-    /// A = | 1  x2  y2 |
-    ///     | 1  x3  y3 |
+    ///     | 1  x0  y0 |
+    /// A = | 1  x1  y1 |
+    ///     | 1  x2  y2 |
     fn b(&self, ith: usize) -> Dtype {
         let ys = self.ys();
         let idx = |x: usize| (x % 3) as usize;
@@ -410,9 +411,9 @@ impl<'tri> Tri2D6N<'tri> {
     }
 
     /// Get the 3rd row's every single element's cofactor of Determinant A
-    ///     | 1  x1  y1 |
-    /// A = | 1  x2  y2 |
-    ///     | 1  x3  y3 |
+    ///     | 1  x0  y0 |
+    /// A = | 1  x1  y1 |
+    ///     | 1  x2  y2 |
     fn c(&self, ith: usize) -> Dtype {
         let xs = self.xs();
         let idx = |x: usize| (x % 3) as usize;
@@ -515,20 +516,18 @@ impl<'tri> Tri2D6N<'tri> {
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let t = self.thick;
-        let s = self.area();
+        let thick = self.thick;
+        let area = self.area();
 
-        let coeff = t * ee / (s * s * (1.0 - nu * nu));
-        let stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
-
-        // arg matrix
-        //let arg_mat = matrix6::new();
+        let coeff = thick * ee / (area * (1.0 - nu * nu));
+        let mut stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
+        print_2darr("K", &stiffness_matrix, 0.0);
 
         // shape of bc_mat_ij: (i in [0, 1, 2] and j in [0, 1, 2])
         // | Bi*Bj + Ci*Cj*(1-nu)/2       Bi*Cj*nu + Ci*Bj*(1-nu)/2 |
         // | Ci*Bj*nu + Bi*Cj*(1-nu)/2       Ci*Cj + Bi*Bj*(1-nu)/2 |
         let bc_mat = |i: usize, j: usize| {
-            let mat: Matrix2 = Matrix2::new(
+            let mat: na::Matrix2<Dtype> = Matrix2::new(
                 self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
                 self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
                 self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
@@ -536,5 +535,37 @@ impl<'tri> Tri2D6N<'tri> {
             );
             mat
         };
+
+        let arg_a = Matrix3::<Dtype>::new(
+            0.25,
+            -0.08333333,
+            -0.08333333,
+            -0.08333333,
+            0.25,
+            -0.08333333,
+            -0.08333333,
+            -0.08333333,
+            0.25,
+        );
+        let arg_b = Matrix3::<Dtype>::new(
+            0.33333333, 0.0, 0.33333333, 0.33333333, 0.33333333, 0.0, 0.0, 0.33333333, 0.33333333,
+        );
+        let arg_c1 = Matrix3::<Dtype>::from([[0.33333333; 3]; 3]);
+        let arg_c2 = Matrix3::<Dtype>::from([[0.66666667; 3]; 3]);
+        for i in 0..3 {
+            for j in 0..3 {
+                let tmp = (arg_a[(i, j)] * bc_mat(i, j)).into();
+                matrix_block_fill(&mut stiffness_matrix, &tmp, (i * 2, j * 2));
+            }
+        }
+        print_2darr("K", &stiffness_matrix, 0.0);
+        //print!("bc_1_2:\n{}", bc_mat(0, 1));
+        //print!("bc_1_3:\n{}", bc_mat(0, 2));
+        //print!("bc_2_1:\n{}", bc_mat(1, 0));
+        //print!("bc_2_2:\n{}", bc_mat(1, 1));
+        //print!("bc_2_3:\n{}", bc_mat(1, 2));
+        //print!("bc_3_1:\n{}", bc_mat(2, 0));
+        //print!("bc_3_2:\n{}", bc_mat(2, 1));
+        //print!("bc_3_3:\n{}", bc_mat(2, 2));
     }
 }

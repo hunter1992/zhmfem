@@ -53,6 +53,32 @@ pub trait Export {
     fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool>;
 }
 
+/// 用slave矩阵填充master矩阵中的一部分，填充起始位置由sp决定
+pub fn matrix_block_fill<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
+    master: &mut [[Dtype; C1]; R1],
+    slave: &[[Dtype; C2]; R2],
+    sp: (usize, usize),
+) {
+    for row in 0..slave.len() {
+        for col in 0..slave[0].len() {
+            master[sp.0 + row][sp.1 + col] = slave[row][col];
+        }
+    }
+}
+
+/// 用slave矩阵追加master矩阵中的一部分，追加起始位置由sp决定
+pub fn matrix_block_append<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
+    master: &mut [[Dtype; C1]; R1],
+    slave: &[[Dtype; C2]; R2],
+    sp: (usize, usize),
+) {
+    for row in 0..slave.len() {
+        for col in 0..slave[0].len() {
+            master[sp.0 + row][sp.1 + col] += slave[row][col];
+        }
+    }
+}
+
 pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("\n{} =", name);
     print!("[[");
