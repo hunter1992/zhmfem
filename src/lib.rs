@@ -54,6 +54,7 @@ pub trait Export {
 }
 
 /// 用slave矩阵填充master矩阵中的一部分，填充起始位置由sp决定
+#[inline]
 pub fn matrix_block_fill<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
     master: &mut [[Dtype; C1]; R1],
     slave: &[[Dtype; C2]; R2],
@@ -67,6 +68,7 @@ pub fn matrix_block_fill<const R1: usize, const C1: usize, const R2: usize, cons
 }
 
 /// 用slave矩阵追加master矩阵中的一部分，追加起始位置由sp决定
+#[inline]
 pub fn matrix_block_append<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
     master: &mut [[Dtype; C1]; R1],
     slave: &[[Dtype; C2]; R2],
@@ -79,6 +81,7 @@ pub fn matrix_block_append<const R1: usize, const C1: usize, const R2: usize, co
     }
 }
 
+#[inline]
 pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("\n{} =", name);
     print!("[[");
@@ -88,6 +91,7 @@ pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("]]\n");
 }
 
+#[inline]
 pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
     println!("\n{} =", name);
     for row in 0..mat.len() {
@@ -110,18 +114,8 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
     }
 }
 
-pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
-    println!("\n{} = (* 10^{})", name, n_exp);
-    print!("[[");
-    for c in 0..C {
-        print!(
-            " {:-10.6} ",
-            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
-        );
-    }
-    println!("]]\n");
-}
-
+/// formatted print 2d array with scientific form
+#[inline]
 pub fn print_2darr<const R: usize, const C: usize>(
     name: &str,
     arr: &[[Dtype; C]; R],

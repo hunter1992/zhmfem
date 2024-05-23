@@ -504,24 +504,15 @@ impl<'tri> Tri2D6N<'tri> {
 
     /// Calculate element stiffness matrix K
     /// Return a 12x12 matrix, elements are Dtype
-    pub fn calc_k(&self, material_args: (Dtype, Dtype)) {
+    pub fn calc_k(&self, material_args: (Dtype, Dtype)) -> [[Dtype; 12]; 12] {
         println!(
             "\n>>> Calculating Tri2D3N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
-        let (ee, nu) = material_args;
-        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
-            [1.0, nu, 0.0],
-            [nu, 1.0, 0.0],
-            [0.0, 0.0, 0.5 * (1.0 - nu)],
-        ]) * (ee / (1.0 - nu * nu));
-
         let thick = self.thick;
         let area = self.area();
-
+        let (ee, nu) = material_args;
         let coeff = thick * ee / (area * (1.0 - nu * nu));
-        let mut stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
-        print_2darr("K", &stiffness_matrix, 0.0);
 
         // shape of bc_mat_ij: (i in [0, 1, 2] and j in [0, 1, 2])
         // | Bi*Bj + Ci*Cj*(1-nu)/2       Bi*Cj*nu + Ci*Bj*(1-nu)/2 |
@@ -535,6 +526,8 @@ impl<'tri> Tri2D6N<'tri> {
             );
             mat
         };
+        let mut stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
+        print_2darr("K", &stiffness_matrix, 0.0);
 
         let arg_a = Matrix3::<Dtype>::new(
             0.25,
@@ -547,25 +540,85 @@ impl<'tri> Tri2D6N<'tri> {
             -0.08333333,
             0.25,
         );
-        let arg_b = Matrix3::<Dtype>::new(
-            0.33333333, 0.0, 0.33333333, 0.33333333, 0.33333333, 0.0, 0.0, 0.33333333, 0.33333333,
-        );
-        let arg_c1 = Matrix3::<Dtype>::from([[0.33333333; 3]; 3]);
-        let arg_c2 = Matrix3::<Dtype>::from([[0.66666667; 3]; 3]);
         for i in 0..3 {
             for j in 0..3 {
                 let tmp = (arg_a[(i, j)] * bc_mat(i, j)).into();
                 matrix_block_fill(&mut stiffness_matrix, &tmp, (i * 2, j * 2));
             }
         }
-        print_2darr("K", &stiffness_matrix, 0.0);
-        //print!("bc_1_2:\n{}", bc_mat(0, 1));
-        //print!("bc_1_3:\n{}", bc_mat(0, 2));
-        //print!("bc_2_1:\n{}", bc_mat(1, 0));
-        //print!("bc_2_2:\n{}", bc_mat(1, 1));
-        //print!("bc_2_3:\n{}", bc_mat(1, 2));
-        //print!("bc_3_1:\n{}", bc_mat(2, 0));
-        //print!("bc_3_2:\n{}", bc_mat(2, 1));
-        //print!("bc_3_3:\n{}", bc_mat(2, 2));
+
+        let arg_b_right: [[Dtype; 3]; 3] = [
+            [0.33333333, 0.0, 0.33333333],
+            [0.33333333, 0.33333333, 0.0],
+            [0.0, 0.33333333, 0.33333333],
+        ];
+        let arg_b_left: [[Dtype; 3]; 3] = [
+            [0.33333333, 0.33333333, 0.0],
+            [0.0, 0.33333333, 0.33333333],
+            [0.33333333, 0.0, 0.33333333],
+        ];
+        let idxj_right: [[usize; 3]; 3] = [[1, 64, 2], [0, 2, 64], [64, 1, 0]];
+        let idxj_left: [[usize; 3]; 3] = [[1, 0, 64], [64, 2, 1], [2, 64, 0]];
+        for i in 0..3 {
+            for j in 0..3 {
+                let tmp_right = if idxj_right[i][j] == 64 {
+                    [[0., 0.], [0., 0.]]
+                } else {
+                    (arg_b_right[i][j] * bc_mat(i, idxj_right[i][j])).into()
+                };
+                let tmp_left = if idxj_left[i][j] == 64 {
+                    [[0., 0.], [0., 0.]]
+                } else {
+                    (arg_b_left[i][j] * bc_mat(idxj_left[i][j], j)).into()
+                };
+                matrix_block_fill(&mut stiffness_matrix, &tmp_right, (i * 2, j * 2 + 6));
+                matrix_block_fill(&mut stiffness_matrix, &tmp_left, (i * 2 + 6, j * 2));
+            }
+        }
+
+        let mat_c11: [[Dtype; 2]; 2] = (0.66666667 * (bc_mat(0, 0) + bc_mat(1, 1))
+            + 0.33333333 * (bc_mat(0, 1) + bc_mat(1, 0)))
+        .into();
+        let mat_c22: [[Dtype; 2]; 2] = (0.66666667 * (bc_mat(2, 2) + bc_mat(1, 1))
+            + 0.33333333 * (bc_mat(2, 1) + bc_mat(1, 2)))
+        .into();
+        let mat_c33: [[Dtype; 2]; 2] = (0.66666667 * (bc_mat(1, 1) + bc_mat(2, 2))
+            + 0.33333333 * (bc_mat(0, 2) + bc_mat(2, 0)))
+        .into();
+        let mat_c12: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(0, 2)
+            + 0.33333333 * (bc_mat(0, 1) + bc_mat(1, 1) + bc_mat(1, 2)))
+        .into();
+        let mat_c13: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(1, 2)
+            + 0.33333333 * (bc_mat(0, 2) + bc_mat(1, 2) + bc_mat(1, 0)))
+        .into();
+        let mat_c23: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(1, 0)
+            + 0.33333333 * (bc_mat(2, 2) + bc_mat(1, 2) + bc_mat(2, 0)))
+        .into();
+        let mat_c21: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(2, 0)
+            + 0.33333333 * (bc_mat(1, 0) + bc_mat(1, 1) + bc_mat(2, 1)))
+        .into();
+        let mat_c31: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(2, 1)
+            + 0.33333333 * (bc_mat(2, 0) + bc_mat(2, 1) + bc_mat(0, 1)))
+        .into();
+        let mat_c32: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(0, 1)
+            + 0.33333333 * (bc_mat(2, 1) + bc_mat(2, 2) + bc_mat(0, 2)))
+        .into();
+        let mat_c_ref = [
+            [&mat_c11, &mat_c12, &mat_c13],
+            [&mat_c21, &mat_c22, &mat_c23],
+            [&mat_c31, &mat_c32, &mat_c33],
+        ];
+        for i in 0..3 {
+            for j in 0..3 {
+                matrix_block_fill(
+                    &mut stiffness_matrix,
+                    mat_c_ref[i][j],
+                    (i * 2 + 6, j * 2 + 6),
+                );
+            }
+        }
+        let stiffness_matrix: [[Dtype; 12]; 12] =
+            (coeff * SMatrix::<Dtype, 12, 12>::from(stiffness_matrix)).into();
+        stiffness_matrix
     }
 }
