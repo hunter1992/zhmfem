@@ -1,4 +1,4 @@
-use crate::{matrix_block_fill, print_2darr};
+use crate::matrix_block_fill;
 use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
@@ -334,13 +334,13 @@ impl fmt::Display for Tri2D3N<'_> {
 pub struct Tri2D6N<'tri> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'tri Node2D; 3],
+    pub nodes: [&'tri Node2D; 6],
     pub k_matrix: Option<[[Dtype; 12]; 12]>,
 }
 
 impl<'tri> Tri2D6N<'tri> {
     /// Generate a 2D Tri2D6N element
-    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 3]) -> Tri2D6N {
+    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 6]) -> Tri2D6N {
         Tri2D6N {
             id,
             thick,
@@ -350,18 +350,18 @@ impl<'tri> Tri2D6N<'tri> {
     }
 
     /// Get the x-coords of nodes in Tri2D6N element
-    pub fn xs(&self) -> [Dtype; 3] {
-        let mut x_list = [0.0; 3];
-        for i in 0..3 {
+    pub fn xs(&self) -> [Dtype; 6] {
+        let mut x_list = [0.0; 6];
+        for i in 0..6 {
             x_list[i] = self.nodes[i].coord[0];
         }
         x_list
     }
 
     /// Get the y-coords of nodes in Tri2D6N element
-    pub fn ys(&self) -> [Dtype; 3] {
-        let mut y_list = [0.0; 3];
-        for i in 0..3 {
+    pub fn ys(&self) -> [Dtype; 6] {
+        let mut y_list = [0.0; 6];
+        for i in 0..6 {
             y_list[i] = self.nodes[i].coord[1];
         }
         y_list
@@ -527,7 +527,6 @@ impl<'tri> Tri2D6N<'tri> {
             mat
         };
         let mut stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
-        print_2darr("K", &stiffness_matrix, 0.0);
 
         let arg_a = Matrix3::<Dtype>::new(
             0.25,

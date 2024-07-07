@@ -22,7 +22,7 @@ fn main() {
 
     // construct the solid and mesh it
     let solid1 = plane::Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
-    let (coords, cpld) = solid1.mesh_with_tri(R, C);
+    let (coords, cpld) = solid1.mesh_with_tri2d3n(R, C);
 
     // set boundary conditions and loads
     let zero_disp: Vec<usize> = vec![0, 1, (R - 1) * C * 2];
@@ -42,7 +42,6 @@ fn main() {
     // assemble global stiffness matrix
     let mut part1: Part2D<Tri2D3N, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut tri_vec, &cpld, &material);
-    //println!("");
     part1.k(material);
     //part1.k_printer(0.0);
 

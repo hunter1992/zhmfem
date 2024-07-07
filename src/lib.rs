@@ -114,6 +114,21 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
     }
 }
 
+/// formatted print 1d array with scientific form
+#[inline]
+pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
+    println!("\n{} = (* 10^{})", name, n_exp);
+    print!("[[");
+    for c in 0..C {
+        if c == 0 {}
+        print!(
+            " {:-10.6} ",
+            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+        );
+    }
+    println!("]]\n");
+}
+
 /// formatted print 2d array with scientific form
 #[inline]
 pub fn print_2darr<const R: usize, const C: usize>(
@@ -361,6 +376,7 @@ mod testing {
 
     #[test]
     fn gen_parts() {
+        let material = (1.0 as Dtype, 0.25 as Dtype);
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [1.0, 0.0]);
         let node3 = Node2D::new(3, [1.0, 1.0]);
@@ -372,8 +388,7 @@ mod testing {
         let zero_disps_idx = vec![0, 1, 3, 6];
         let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
 
-        let p1: Part2D<Tri2D3N, 4, 2, 3> =
-            Part2D::new(1, &nodes, &mut tris, &cplds, &zero_disps_idx);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds, &material);
         assert_eq!(p1.elems[1].nodes[1].coord[1], 1.0);
         assert_ne!(p1.elems[1].nodes[1].coord[1], -1.0);
 
