@@ -196,7 +196,7 @@ pub fn nodes2d_vec(
 }
 
 pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
-    let mut nodes: Vec<Node3D> = Vec::new();
+    let mut nodes: Vec<Node3D> = Vec::with_capacity(points.len());
     for (idx, point) in points.iter().enumerate() {
         nodes.push(Node3D::new(idx, [point[0], point[1], point[2]]));
     }
@@ -209,7 +209,7 @@ pub fn rod1d2n_vec<'rod>(
     nodes: &'rod [Node1D],
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Rod1D2N<'rod>> {
-    let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(sec_areas.len());
+    let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         rod1d2n.push(Rod1D2N::new(
             ele_id,
@@ -226,7 +226,7 @@ pub fn rod2d2n_vec<'rod>(
     nodes: &'rod [Node2D],
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Rod2D2N<'rod>> {
-    let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(sec_areas.len());
+    let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         rod2d2n.push(Rod2D2N::new(
             ele_id,
@@ -243,7 +243,7 @@ pub fn rod2d2n_nonlinear_vec<'rod>(
     nodes: &'rod [Node2D],
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Rod2D2NNL<'rod>> {
-    let mut rod2d2nnl: Vec<Rod2D2NNL> = Vec::with_capacity(sec_areas.len());
+    let mut rod2d2nnl: Vec<Rod2D2NNL> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         rod2d2nnl.push(Rod2D2NNL::new(
             ele_id,
@@ -261,7 +261,7 @@ pub fn beam1d2n_vec<'beam>(
     nodes: &'beam [Node2D],
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Beam1D2N<'beam>> {
-    let mut beam1d2n_vec: Vec<Beam1D2N> = Vec::new();
+    let mut beam1d2n_vec: Vec<Beam1D2N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
         beam1d2n_vec.push(Beam1D2N::new(
             ele_id,
@@ -277,10 +277,10 @@ pub fn beam1d2n_vec<'beam>(
 pub fn tri2d3n_vec<'tri>(
     thick: Dtype,
     nodes: &'tri [Node2D],
-    couples: &[Vec<usize>],
+    coupled_nodes: &[Vec<usize>],
 ) -> Vec<Tri2D3N<'tri>> {
-    let mut tri2d3n: Vec<Tri2D3N> = Vec::new();
-    for (ele_id, cpld) in couples.iter().enumerate() {
+    let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes.len());
+    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
             ele_id,
             thick,
@@ -288,6 +288,30 @@ pub fn tri2d3n_vec<'tri>(
         ));
     }
     tri2d3n
+}
+
+/// Construct vector of tri2d6n elements
+pub fn tri2d6n_vec<'tri>(
+    thick: Dtype,
+    nodes: &'tri [Node2D],
+    coupled_nodes: &[Vec<usize>],
+) -> Vec<Tri2D6N<'tri>> {
+    let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
+    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
+        tri2d6n.push(Tri2D6N::new(
+            ele_id,
+            thick,
+            [
+                &nodes[cpld[0]],
+                &nodes[cpld[1]],
+                &nodes[cpld[2]],
+                &nodes[cpld[3]],
+                &nodes[cpld[4]],
+                &nodes[cpld[5]],
+            ],
+        ));
+    }
+    tri2d6n
 }
 
 /// Construct vector of quad2d4n elements

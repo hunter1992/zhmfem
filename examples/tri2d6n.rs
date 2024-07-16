@@ -23,6 +23,10 @@ fn main() {
     // construct the solid and mesh it
     let solid1 = plane::Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
     let (coords, cpld) = solid1.mesh_with_tri2d6n(R, C);
+    print_2dvec("coords", &coords, 0.0);
+    print!("cpld=\n{:?}", cpld);
+
+    //    let mut tri2d6n_vec:Vec<Tri2D6N> = tri2d6n_vec(thick, )
 
     /*
     let node1 = Node2D::new(1, [0.0, 0.0]);
