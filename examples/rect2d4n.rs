@@ -17,8 +17,8 @@ fn main() {
     const H: Dtype = 1.0;
 
     // number of nodes and freedom
-    const R: usize = 3; // rows of nodes
-    const C: usize = 3; // columns of nodes
+    const R: usize = 2; // rows of nodes
+    const C: usize = 2; // columns of nodes
     const M: usize = 4; // node num in single element
     const F: usize = 2; // freedom num in single node
 
@@ -26,12 +26,14 @@ fn main() {
     // construct the solid and mesh it
     let solid1 = plane::Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
     let (coords, cpld) = solid1.mesh_with_rect(R, C);
+    print_2dvec("coords", &coords, 0.);
+    print!("cpld{:?}", &cpld);
 
     // set boundary conditions and mesh it
     // The following two lines are set for
     // a specific problem,not general code
-    let zero_disp: Vec<usize> = vec![0, 1, 6];
-    let force_index: Vec<usize> = vec![2, 4];
+    let zero_disp: Vec<usize> = vec![0, 1, 4];
+    let force_index: Vec<usize> = vec![2, 6];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
@@ -48,7 +50,7 @@ fn main() {
     let mut part1: Part2D<Quad2D4N, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut rects, &cpld, &material);
     part1.k(material);
-    //p1.k_printer(0.0);
+    part1.k_printer(0.0);
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
@@ -61,10 +63,11 @@ fn main() {
     print_1darr("qe", &part1.disps(), 0.0);
     print_1darr("fe", &part1.forces(), 0.0);
 
-    let stress_point: [[Dtype; 2]; 4] = [[1.0, -1.0], [-1.0, -1.0], [1.0, -1.0], [-1.0, -1.0]];
-    for (idx, rect) in part1.elems.iter().enumerate() {
-        rect.print_strain(stress_point[idx]);
-        rect.print_stress(stress_point[idx], material);
+    let stress_point: [[Dtype; 2]; 4] = [[-1.0, -1.0], [1.0, -1.0], [-1.0, 1.0], [1.0, 1.0]];
+    for pt in stress_point.iter() {
+        print!("\npt[{}, {}]:", pt[0], pt[1]);
+        part1.elems[0].print_strain(*pt);
+        part1.elems[0].print_stress(*pt, material);
     }
 
     println!("\n>>> System energy:");

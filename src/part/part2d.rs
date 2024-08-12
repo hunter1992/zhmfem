@@ -19,7 +19,8 @@ where
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
 }
 
-impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Part2D<'a, Elem, N, F, M>
+impl<'a, Elem: K + 'static, const N: usize, const F: usize, const M: usize>
+    Part2D<'a, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
 {

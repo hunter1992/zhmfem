@@ -53,6 +53,42 @@ pub trait Export {
     fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool>;
 }
 
+/// 行数相同的矩阵进行水平拼接
+#[inline]
+pub fn matrix_hstack<const R: usize, const C1: usize, const C2: usize>(
+    m_left: &[[Dtype; C1]; R],
+    m_right: &[[Dtype; C2]; R],
+) -> [[Dtype; C1 + C2]; R] {
+    let mut rlt_mat: [[Dtype; C1 + C2]; R] = [[0.0; C1 + C2]; R];
+    for r in 0..R {
+        for c1 in 0..C1 {
+            rlt_mat[r][c1] = m_left[r][c1];
+        }
+        for c2 in C1..C1 + C2 {
+            rlt_mat[r][c2] = m_right[r][c2 - C1];
+        }
+    }
+    rlt_mat
+}
+
+/// 列数相同的矩阵进行竖直拼接
+#[inline]
+pub fn matrix_vstack<const C: usize, const R1: usize, const R2: usize>(
+    m_up: &[[Dtype; C]; R1],
+    m_down: &[[Dtype; C]; R2],
+) -> [[Dtype; C]; R1 + R2] {
+    let mut rlt_mat: [[Dtype; C]; R1 + R2] = [[0.0; C]; R1 + R2];
+    for c in 0..C {
+        for r1 in 0..R1 {
+            rlt_mat[r1][c] = m_up[r1][c];
+        }
+        for r2 in R1..R1 + R2 {
+            rlt_mat[r2][c] = m_down[r2 - R1][c];
+        }
+    }
+    rlt_mat
+}
+
 /// 用slave矩阵填充master矩阵中的一部分，填充起始位置由sp决定
 #[inline]
 pub fn matrix_block_fill<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
@@ -83,7 +119,7 @@ pub fn matrix_block_append<const R1: usize, const C1: usize, const R2: usize, co
 
 #[inline]
 pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
-    println!("\n{} =", name);
+    println!("\n{} = (10^{} *)", name, n_exp);
     print!("[[");
     for &ele in vec.iter() {
         print!(" {:-9.4} ", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
@@ -93,7 +129,7 @@ pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
 
 #[inline]
 pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
-    println!("\n{} =", name);
+    println!("\n{} = (10^{} *)", name, n_exp);
     for row in 0..mat.len() {
         if row == 0 {
             print!("[[");
@@ -117,7 +153,7 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
 /// formatted print 1d array with scientific form
 #[inline]
 pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
-    println!("\n{} = (* 10^{})", name, n_exp);
+    println!("\n{} = (10^{} *)", name, n_exp);
     print!("[[");
     for c in 0..C {
         if c == 0 {}
@@ -136,7 +172,7 @@ pub fn print_2darr<const R: usize, const C: usize>(
     arr: &[[Dtype; C]; R],
     n_exp: Dtype,
 ) {
-    println!("\n{} = (* 10^{})", name, n_exp);
+    println!("\n{} = (10^{} *)", name, n_exp);
     for r in 0..R {
         if r == 0 {
             print!("[[");
@@ -157,6 +193,8 @@ pub fn print_2darr<const R: usize, const C: usize>(
     }
 }
 
+/// return a vector include 1D nodes with location and force information
+#[inline]
 pub fn nodes1d_vec(points: &[Vec<Dtype>], force: &HashMap<usize, Dtype>) -> Vec<Node1D> {
     if points[0].len() != 1_usize {
         panic!(">>> Error from nodes1d_vec, the input points aren't 1D!");
@@ -172,6 +210,8 @@ pub fn nodes1d_vec(points: &[Vec<Dtype>], force: &HashMap<usize, Dtype>) -> Vec<
     nodes
 }
 
+/// return a vector include 2D nodes with location and force information
+#[inline]
 pub fn nodes2d_vec(
     points: &[Vec<Dtype>],
     force: &HashMap<usize, Dtype>,
@@ -290,12 +330,35 @@ pub fn tri2d3n_vec<'tri>(
     tri2d3n
 }
 
+//pub fn tri2d6n_vec<'tri>(
+//    thick: Dtype,
+//    nodes: &'tri [Node2D],
+//    coupled_nodes: &[Vec<usize>],
+//) -> Vec<Tri2D6N<'tri>> {
+//    let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
+//    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
+//        tri2d6n.push(Tri2D6N::new(
+//            ele_id,
+//            thick,
+//            [
+//                &nodes[cpld[0]],
+//                &nodes[cpld[1]],
+//                &nodes[cpld[2]],
+//                &nodes[cpld[3]],
+//                &nodes[cpld[4]],
+//                &nodes[cpld[5]],
+//            ],
+//        ));
+//    }
+//    tri2d6n
+//}
+
 /// Construct vector of tri2d6n elements
-pub fn tri2d6n_vec<'tri>(
+pub fn tri2d6n_vec<'tri2d6n>(
     thick: Dtype,
-    nodes: &'tri [Node2D],
+    nodes: &'tri2d6n [Node2D],
     coupled_nodes: &[Vec<usize>],
-) -> Vec<Tri2D6N<'tri>> {
+) -> Vec<Tri2D6N<'tri2d6n>> {
     let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
         tri2d6n.push(Tri2D6N::new(

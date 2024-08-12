@@ -1,4 +1,4 @@
-use crate::matrix_block_fill;
+use crate::{matrix_block_fill, matrix_hstack};
 use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
@@ -331,14 +331,14 @@ impl fmt::Display for Tri2D3N<'_> {
     }
 }
 
-pub struct Tri2D6N<'tri> {
+pub struct Tri2D6N<'tri2d6n> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'tri Node2D; 6],
+    pub nodes: [&'tri2d6n Node2D; 6],
     pub k_matrix: Option<[[Dtype; 12]; 12]>,
 }
 
-impl<'tri> Tri2D6N<'tri> {
+impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     /// Generate a 2D Tri2D6N element
     pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 6]) -> Tri2D6N {
         Tri2D6N {
@@ -376,6 +376,26 @@ impl<'tri> Tri2D6N<'tri> {
         let dy_21 = y[1] - y[0];
         let dy_31 = y[2] - y[0];
         0.5 * (dx_21 * dy_31 - dx_31 * dy_21).abs()
+    }
+
+    /// Get nodes' disps vector in tri2d6n element
+    pub fn disps(&self) -> [Dtype; 12] {
+        let mut disps = [0.0; 12];
+        for idx in 0..6 {
+            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
+            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+        }
+        disps
+    }
+
+    /// Get nodes' force vector in tri2d6n element
+    pub fn forces(&self) -> [Dtype; 12] {
+        let mut forces = [0.0; 12];
+        for idx in 0..6 {
+            forces[2 * idx] = *self.nodes[idx].disps[0].borrow();
+            forces[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+        }
+        forces
     }
 
     /// Get the 1st row's every single element's cofactor of Determinant A
@@ -427,9 +447,9 @@ impl<'tri> Tri2D6N<'tri> {
 
     /// Get area coords Li's value
     /// 自然坐标与面积坐标之间的关系：
-    /// | L1 |    |a1  b1  c1| | 1 |
-    /// | L2 | =  |a2  b2  c2|.| x | *  1/(2*A)
-    /// | L3 |    |a3  b3  c3| | y |
+    /// | L1 |    |a1  b1  c1| | 1  |
+    /// | L2 | =  |a2  b2  c2|.| x  | *  1/(2*A)
+    /// | L3 |    |a3  b3  c3| | y  |
     ///
     /// | 1  |    |1   1   1 | | L1 |
     /// | x  | =  |x1  x2  x3|.| L2 |
@@ -444,8 +464,8 @@ impl<'tri> Tri2D6N<'tri> {
 
     /// Get shape matrix element N_i
     /// shape matrix:
-    /// | N1 0  N2 0  N3 0  N4 0  N5 0  N6 0  |
-    /// | 0  N1 0  N2 0  N3 0  N4 0  N5 0  N6 |
+    /// | N1  0   N2  0   N3  0   N4  0   N5  0   N6  0  |
+    /// | 0   N1  0   N2  0   N3  0   N4  0   N5  0   N6 |
     ///
     /// N1 = (2L1 - 1) * L1
     /// N2 = (2L2 - 1) * L2
@@ -500,6 +520,20 @@ impl<'tri> Tri2D6N<'tri> {
                 ],
             ]
         }
+    }
+
+    /// Return B mat of Tri2D6N element
+    pub fn geometry_mat(&self, x_y: (Dtype, Dtype)) -> [[Dtype; 12]; 3] {
+        let m02 = matrix_hstack(
+            &matrix_hstack(&self.geometry_mat_i(0, x_y), &self.geometry_mat_i(1, x_y)),
+            &self.geometry_mat_i(2, x_y),
+        );
+        let m35 = matrix_hstack(
+            &matrix_hstack(&self.geometry_mat_i(3, x_y), &self.geometry_mat_i(4, x_y)),
+            &self.geometry_mat_i(5, x_y),
+        );
+        let m05 = matrix_hstack(&m02, &m35);
+        m05
     }
 
     /// Calculate element stiffness matrix K
@@ -619,5 +653,170 @@ impl<'tri> Tri2D6N<'tri> {
         let stiffness_matrix: [[Dtype; 12]; 12] =
             (coeff * SMatrix::<Dtype, 12, 12>::from(stiffness_matrix)).into();
         stiffness_matrix
+    }
+
+    /// Get element's strain vector, the strain in CST elem is a const
+    pub fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
+        let x_y = (xyz[0], xyz[1]);
+        let b_mat = SMatrix::<Dtype, 12, 3>::from(self.geometry_mat(x_y)).transpose();
+        let elem_nodes_disps = SMatrix::<Dtype, 12, 1>::from(self.disps());
+        let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
+        strain_vector
+    }
+
+    /// Get element's stress vector, the stress in CST elem is a const
+    pub fn calc_stress(&self, xyz: [Dtype; 3], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
+        let (ee, nu) = material_args;
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, 0.5 * (1.0 - nu)],
+        ]) * (ee / (1.0 - nu * nu));
+
+        let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain(xyz));
+        let stress: [Dtype; 3] = (elasticity_mat * strain).into();
+        stress
+    }
+
+    /// Print element's strain value
+    pub fn print_strain(&self, xyz: [Dtype; 3]) {
+        let strain = self.calc_strain(xyz);
+        println!(
+            "\nelem[{}], strain @ ({:-6.3}, {:-6.3}):\n\tE_xx = {:-9.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
+            self.id, &xyz[0], &xyz[1], strain[0], strain[1], strain[2]
+        );
+    }
+
+    /// Print element's stress value
+    pub fn print_stress(&self, xyz: [Dtype; 3], material_args: (Dtype, Dtype)) {
+        let stress = self.calc_stress(xyz, material_args);
+        println!(
+            "\nelem[{}], stress @ ({:-6.3}, {:-6.3}):\n\tS_xx = {:-9.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
+            self.id, &xyz[0], &xyz[1], stress[0], stress[1], stress[2]
+        );
+    }
+}
+
+/// Implement zhm::K trait for 2D 6nodes triangle
+impl<'tri> K for Tri2D6N<'tri> {
+    type Kmatrix = [[Dtype; 12]; 12];
+
+    /// Cache stiffness matrix for triangle element
+    fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
+    where
+        Self::Kmatrix: std::ops::Index<usize>,
+    {
+        if self.k_matrix.is_none() {
+            self.k_matrix.get_or_insert(self.calc_k(material))
+        } else {
+            self.k_matrix.as_ref().unwrap()
+        }
+    }
+
+    /// Print triangle element's stiffness matrix
+    fn k_printer(&self, n_exp: Dtype) {
+        if self.k_matrix.is_none() {
+            panic!(
+                "!!! Tri2D3N#{}'s k mat is empty! call k() to calc it.",
+                self.id
+            );
+        }
+
+        print!("\nTri2D3N k{} =  (* 10^{})\n[", self.id, n_exp as u8);
+        for row in 0..12 {
+            if row == 0 {
+                print!("[");
+            } else {
+                print!(" [");
+            }
+            for col in 0..12 {
+                print!(
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                );
+            }
+            if row == 11 {
+                println!("]]");
+            } else {
+                println!("]");
+            }
+        }
+        print!("\n");
+    }
+
+    /// Return triangle elem's stiffness matrix's format string
+    fn k_string(&self, n_exp: Dtype) -> String {
+        let mut k_matrix = String::new();
+        for row in 0..12 {
+            if row == 0 {
+                write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, " [").expect("!!! Write tri k_mat failed!");
+            }
+            for col in 0..12 {
+                write!(
+                    k_matrix,
+                    " {:>-10.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                )
+                .expect("!!! Write tri k_mat failed!");
+            }
+            if row == 11 {
+                write!(k_matrix, "]]").expect("!!! Write tri k_mat failed!");
+            } else {
+                write!(k_matrix, "]\n").expect("!!! Write tri k_mat failed!");
+            }
+        }
+        k_matrix
+    }
+
+    /// Get the strain at (x,y) inside the element
+    /// In linear triangle elem, strain is a const
+    fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype> {
+        self.calc_strain(xyz).to_vec()
+    }
+
+    /// Get the stress at (x,y) inside the element
+    /// In linear triangle elem, stress is a const
+    fn stress(&self, xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype> {
+        self.calc_stress(xyz, material).to_vec()
+    }
+
+    /// Get element's info string
+    fn info(&self) -> String {
+        format!("\n--------------------------------------------------------------------\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Tri2D6N
+\tNodes: {}\n\t       {}\n\t       {}\n\t       {}\n\t       {}\n\t       {}\n\t",
+            self.id,
+            self.area(),
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2],
+            self.nodes[3],
+            self.nodes[4],
+            self.nodes[5]
+        )
+    }
+
+    /// Get element's id number
+    fn id(&self) -> usize {
+        self.id
+    }
+}
+
+impl fmt::Display for Tri2D6N<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "\nElement_2D Info:\n\tId:     {}\n\tArea:   {}\n\tType:   Tri2D3N
+\tNodes: {}\n\t       {}\n\t       {}\n\t       {}\n\t       {}\n\t       {}\n\t",
+            self.id,
+            self.area(),
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2],
+            self.nodes[3],
+            self.nodes[4],
+            self.nodes[5]
+        )
     }
 }
