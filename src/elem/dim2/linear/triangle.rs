@@ -1,16 +1,16 @@
-use crate::{matrix_block_fill, matrix_hstack};
+//use crate::{matrix_block_fill, matrix_hstack, print_2darr};
 use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
 
-pub struct Tri2D3N<'tri> {
+pub struct Tri2D3N<'tri2d3n> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'tri Node2D; 3],
+    pub nodes: [&'tri2d3n Node2D; 3],
     pub k_matrix: Option<[[Dtype; 6]; 6]>,
 }
 
-impl<'tri> Tri2D3N<'tri> {
+impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// Generate a 2D Tri2D3N element
     pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 3]) -> Tri2D3N {
         Tri2D3N {
@@ -50,7 +50,7 @@ impl<'tri> Tri2D3N<'tri> {
         0.5 * (dx_21 * dy_31 - dx_31 * dy_21).abs()
     }
 
-    /// Calculate the Jacobian matrix of triangle element
+    /// Calculate the Jacobian matrix of tri2d3n element
     pub fn jacobian(&self) -> [[Dtype; 2]; 2] {
         let x: [Dtype; 3] = self.xs();
         let y: [Dtype; 3] = self.ys();
@@ -155,13 +155,15 @@ impl<'tri> Tri2D3N<'tri> {
             self.id, self.id
         );
         let (ee, nu) = material_args;
-        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
-            [1.0, nu, 0.0],
-            [nu, 1.0, 0.0],
-            [0.0, 0.0, 0.5 * (1.0 - nu)],
-        ]) * (ee / (1.0 - nu * nu));
+        let elasticity_mat = (ee / (1.0 - nu * nu))
+            * (SMatrix::<Dtype, 3, 3>::from([
+                [1.0, nu, 0.0],
+                [nu, 1.0, 0.0],
+                [0.0, 0.0, 0.5 * (1.0 - nu)],
+            ])
+            .transpose());
 
-        let jacobian = Jacobian2D::from(self.jacobian());
+        let jacobian = Jacobian2D::from(self.jacobian()).transpose();
         let det_j = jacobian.determinant();
 
         let b_mat = self.geometry_mat(det_j);
@@ -173,7 +175,7 @@ impl<'tri> Tri2D3N<'tri> {
 
     /// Get element's strain vector, the strain in CST elem is a const
     pub fn calc_strain(&self) -> [Dtype; 3] {
-        let jecobian_mat = Jacobian2D::from(self.jacobian());
+        let jecobian_mat = Jacobian2D::from(self.jacobian()).transpose();
         let b_mat = self.geometry_mat(jecobian_mat.determinant());
         let elem_nodes_disps = SMatrix::<Dtype, 6, 1>::from(self.disps());
         let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
@@ -214,7 +216,7 @@ impl<'tri> Tri2D3N<'tri> {
 }
 
 /// Implement zhm::K trait for triangle element
-impl<'tri> K for Tri2D3N<'tri> {
+impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     type Kmatrix = [[Dtype; 6]; 6];
 
     /// Cache stiffness matrix for triangle element
@@ -367,17 +369,6 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
         y_list
     }
 
-    /// Get Tri2D6N element area value
-    pub fn area(&self) -> Dtype {
-        let x = self.xs();
-        let y = self.ys();
-        let dx_21 = x[1] - x[0];
-        let dx_31 = x[2] - x[0];
-        let dy_21 = y[1] - y[0];
-        let dy_31 = y[2] - y[0];
-        0.5 * (dx_21 * dy_31 - dx_31 * dy_21).abs()
-    }
-
     /// Get nodes' disps vector in tri2d6n element
     pub fn disps(&self) -> [Dtype; 12] {
         let mut disps = [0.0; 12];
@@ -398,142 +389,180 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
         forces
     }
 
-    /// Get the 1st row's every single element's cofactor of Determinant A
-    ///     | 1  x0  y0 |
-    /// A = | 1  x1  y1 |
-    ///     | 1  x2  y2 |
-    fn a(&self, ith: usize) -> Dtype {
-        // ith in [0, 1, 2]
-        let xs = self.xs();
-        let ys = self.ys();
-        let idx = |x: usize| (x % 3) as usize;
-        let a = [
-            xs[idx(0 + 1)] * ys[idx(0 + 2)] - xs[idx(0 + 2)] * ys[idx(0 + 1)],
-            xs[idx(1 + 1)] * ys[idx(1 + 2)] - xs[idx(1 + 2)] * ys[idx(1 + 1)],
-            xs[idx(2 + 1)] * ys[idx(2 + 2)] - xs[idx(2 + 2)] * ys[idx(2 + 1)],
-        ];
-        a[ith]
+    /// Get Tri2D6N element area value
+    pub fn area(&self) -> Dtype {
+        let x = self.xs();
+        let y = self.ys();
+        let dx_21 = x[1] - x[0];
+        let dx_31 = x[2] - x[0];
+        let dy_21 = y[1] - y[0];
+        let dy_31 = y[2] - y[0];
+        0.5 * (dx_21 * dy_31 - dx_31 * dy_21).abs()
     }
 
-    /// Get the 2nd row's every single element's cofactor of Determinant A
-    ///     | 1  x0  y0 |
-    /// A = | 1  x1  y1 |
-    ///     | 1  x2  y2 |
-    fn b(&self, ith: usize) -> Dtype {
-        let ys = self.ys();
-        let idx = |x: usize| (x % 3) as usize;
-        let b = [
-            ys[idx(0 + 1)] - ys[idx(0 + 2)],
-            ys[idx(1 + 1)] - ys[idx(1 + 2)],
-            ys[idx(2 + 1)] - ys[idx(2 + 2)],
-        ];
-        b[ith]
-    }
-
-    /// Get the 3rd row's every single element's cofactor of Determinant A
-    ///     | 1  x0  y0 |
-    /// A = | 1  x1  y1 |
-    ///     | 1  x2  y2 |
-    fn c(&self, ith: usize) -> Dtype {
-        let xs = self.xs();
-        let idx = |x: usize| (x % 3) as usize;
-        let c = [
-            xs[idx(0 + 2)] - xs[idx(0 + 1)],
-            xs[idx(1 + 2)] - xs[idx(1 + 1)],
-            xs[idx(2 + 2)] - xs[idx(2 + 1)],
-        ];
-        c[ith]
-    }
-
-    /// Get area coords Li's value
-    /// 自然坐标与面积坐标之间的关系：
-    /// | L1 |    |a1  b1  c1| | 1  |
-    /// | L2 | =  |a2  b2  c2|.| x  | *  1/(2*A)
-    /// | L3 |    |a3  b3  c3| | y  |
-    ///
-    /// | 1  |    |1   1   1 | | L1 |
-    /// | x  | =  |x1  x2  x3|.| L2 |
-    /// | y  |    |y1  y2  y3| | L2 |
-    fn area_coords(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
-        let a = self.a(ith);
-        let b = self.b(ith);
-        let c = self.c(ith);
-        let area: Dtype = self.area();
-        move |x: Dtype, y: Dtype| (a + b * x + c * y) / (2.0 * area)
-    }
-
-    /// Get shape matrix element N_i
+    /// Get shape matrix element N_i(s, t)
     /// shape matrix:
     /// | N1  0   N2  0   N3  0   N4  0   N5  0   N6  0  |
     /// | 0   N1  0   N2  0   N3  0   N4  0   N5  0   N6 |
     ///
-    /// N1 = (2L1 - 1) * L1
-    /// N2 = (2L2 - 1) * L2
-    /// N3 = (2L3 - 1) * L3
-    /// N4 = 4 * L1 * L2
-    /// N5 = 4 * L2 * L3
-    /// N6 = 4 * L3 * L1
-    /// for every Li in [0, 1]
-    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
-        let n1 = |l1: Dtype, _l: Dtype| (2.0 * l1 - 1.0) * l1;
-        let n2 = |l2: Dtype, _l: Dtype| (2.0 * l2 - 1.0) * l2;
-        let n3 = |l3: Dtype, _l: Dtype| (2.0 * l3 - 1.0) * l3;
-        let n4 = |l1: Dtype, l2: Dtype| 4.0 * l1 * l2;
-        let n5 = |l2: Dtype, l3: Dtype| 4.0 * l2 * l3;
-        let n6 = |l3: Dtype, l1: Dtype| 4.0 * l3 * l1;
-
-        let shape_mat = [n1, n2, n3, n4, n5, n6];
-        shape_mat[ith]
-    }
-
-    /// Get B matrix element B_i
-    /// | dN/dx    0    |
-    /// | 0        dN/dy| =  B
-    /// | dN/dy    dN/dx|
-    pub fn geometry_mat_i(&self, ith: usize, x_y: (Dtype, Dtype)) -> [[Dtype; 2]; 3] {
-        if ith > 5 {
-            panic!("!!! Error from Tri2D6N elem func(geometry_mat_i), wrong ith arg.");
-        }
-        if ith < 3 {
-            let l: Dtype = self.area_coords(ith)(x_y.0, x_y.1);
-            let arg: Dtype = 0.5 * (4.0 * l - 1.0) / self.area();
-
+    /// N1 = (1 - s - t) * (1 - 2s - 2t)
+    /// N2 = s * (2s - 1)
+    /// N3 = t * (2t - 1)
+    /// N4 = 4 * s * (1 - s - t)
+    /// N5 = 4 * s * t
+    /// N6 = 4 * t * (1 - s - t)
+    /// for every s and t in [0, 1]
+    #[inline]
+    pub fn shape_mat(&self, s: Dtype, t: Dtype) -> [[Dtype; 12]; 2] {
+        let n_mat: [[Dtype; 12]; 2] = [
             [
-                [arg * self.b(ith), 0.0],
-                [0.0, arg * self.c(ith)],
-                [arg * self.c(ith), arg * self.b(ith)],
-            ]
-        } else {
-            let ith1: usize = ith - 3;
-            let ith2: usize = (ith - 2) % 3;
-            let l1: Dtype = self.area_coords(ith1)(x_y.0, x_y.1);
-            let l2: Dtype = self.area_coords(ith2)(x_y.0, x_y.1);
-            let arg1: Dtype = 2.0 * l1 / self.area();
-            let arg2: Dtype = 2.0 * l2 / self.area();
-
+                (1.0 - s - t) * (1.0 - 2.0 * s - 2.0 * t),
+                0.0,
+                s * (2.0 * s - 1.0),
+                0.0,
+                t * (2.0 * t - 1.0),
+                0.0,
+                4.0 * s * (1.0 - s - t),
+                0.0,
+                4.0 * s * t,
+                0.0,
+                4.0 * t * (1.0 - s - t),
+                0.0,
+            ],
             [
-                [arg1 * self.b(ith2) + arg2 * self.b(ith1), 0.0],
-                [0.0, arg1 * self.c(ith2) + arg2 * self.c(ith1)],
-                [
-                    arg1 * self.c(ith2) + arg2 * self.c(ith1),
-                    arg1 * self.b(ith2) + arg2 * self.b(ith1),
-                ],
-            ]
-        }
+                0.0,
+                (1.0 - s - t) * (1.0 - 2.0 * s - 2.0 * t),
+                0.0,
+                s * (2.0 * s - 1.0),
+                0.0,
+                t * (2.0 * t - 1.0),
+                0.0,
+                4.0 * s * (1.0 - s - t),
+                0.0,
+                4.0 * s * t,
+                0.0,
+                4.0 * t * (1.0 - s - t),
+            ],
+        ];
+        n_mat
     }
 
     /// Return B mat of Tri2D6N element
-    pub fn geometry_mat(&self, x_y: (Dtype, Dtype)) -> [[Dtype; 12]; 3] {
-        let m02 = matrix_hstack(
-            &matrix_hstack(&self.geometry_mat_i(0, x_y), &self.geometry_mat_i(1, x_y)),
-            &self.geometry_mat_i(2, x_y),
-        );
-        let m35 = matrix_hstack(
-            &matrix_hstack(&self.geometry_mat_i(3, x_y), &self.geometry_mat_i(4, x_y)),
-            &self.geometry_mat_i(5, x_y),
-        );
-        let m05 = matrix_hstack(&m02, &m35);
-        m05
+    pub fn geometry_mat_xy(&self, s_t: &[Dtype]) -> [[Dtype; 12]; 3] {
+        let s = s_t[0];
+        let t = s_t[1];
+        let j = self.jacobian(s_t);
+        let j_det = j[1][1] * j[0][0] - j[0][1] * j[1][0];
+        let j_inv = Matrix2::from([[j[1][1], -j[0][1]], [j[1][0], j[0][0]]]).transpose();
+
+        let dn1_ds: Dtype = 4.0 * (s + t) - 3.0;
+        let dn2_ds: Dtype = 4.0 * s - 1.0;
+        let dn3_ds: Dtype = 0.0;
+        let dn4_ds: Dtype = 4.0 * (1.0 - t) - 8.0 * s;
+        let dn5_ds: Dtype = 4.0 * t;
+        let dn6_ds: Dtype = -4.0 * t;
+
+        let dn1_dt: Dtype = 4.0 * (s + t) - 3.0;
+        let dn2_dt: Dtype = 0.0;
+        let dn3_dt: Dtype = 4.0 * t - 1.0;
+        let dn4_dt: Dtype = 4.0 * (s + t) - 3.0;
+        let dn5_dt: Dtype = 4.0 * (s + t) - 3.0;
+        let dn6_dt: Dtype = 4.0 * (s + t) - 3.0;
+
+        let dn_ds = (SMatrix::<Dtype, 6, 2>::from([
+            [dn1_ds, dn2_ds, dn3_ds, dn4_ds, dn5_ds, dn6_ds],
+            [dn1_dt, dn2_dt, dn3_dt, dn4_dt, dn5_dt, dn6_dt],
+        ])
+        .transpose())
+            / j_det;
+        let dn_dx: [[Dtype; 6]; 2] = ((j_inv * dn_ds) / j_det).transpose().into();
+        let b_mat: [[Dtype; 12]; 3] = [
+            [
+                dn_dx[0][0],
+                0.0,
+                dn_dx[0][1],
+                0.0,
+                dn_dx[0][2],
+                0.0,
+                dn_dx[0][3],
+                0.0,
+                dn_dx[0][4],
+                0.0,
+                dn_dx[0][5],
+                0.0,
+            ],
+            [
+                dn_dx[1][0],
+                0.0,
+                dn_dx[1][1],
+                0.0,
+                dn_dx[1][2],
+                0.0,
+                dn_dx[1][3],
+                0.0,
+                dn_dx[1][4],
+                0.0,
+                dn_dx[1][5],
+                0.0,
+            ],
+            [
+                dn_dx[1][0],
+                dn_dx[0][0],
+                dn_dx[1][1],
+                dn_dx[0][1],
+                dn_dx[1][2],
+                dn_dx[0][2],
+                dn_dx[1][3],
+                dn_dx[0][3],
+                dn_dx[1][4],
+                dn_dx[0][4],
+                dn_dx[1][5],
+                dn_dx[0][5],
+            ],
+        ];
+        b_mat
+    }
+
+    /// Calculate the Jacobian matrix of tri2d6n element
+    fn jacobian(&self, s_t: &[Dtype]) -> [[Dtype; 2]; 2] {
+        let s = s_t[0];
+        let t = s_t[1];
+        let x: [Dtype; 6] = self.xs();
+        let y: [Dtype; 6] = self.ys();
+
+        let dn1_ds = |s: Dtype, t: Dtype| 4.0 * (s + t) - 3.0;
+        let dn2_ds = |s: Dtype, _t: Dtype| 4.0 * s - 1.0;
+        let dn3_ds = |_s: Dtype, _t: Dtype| 0.0;
+        let dn4_ds = |s: Dtype, t: Dtype| 4.0 * (1.0 - t) - 8.0 * s;
+        let dn5_ds = |_s: Dtype, t: Dtype| 4.0 * t;
+        let dn6_ds = |_s: Dtype, t: Dtype| -4.0 * t;
+        let dn_ds = [dn1_ds, dn2_ds, dn3_ds, dn4_ds, dn5_ds, dn6_ds];
+
+        let dn1_dt = |s: Dtype, t: Dtype| 4.0 * (s + t) - 3.0;
+        let dn2_dt = |_s: Dtype, _t: Dtype| 0.0;
+        let dn3_dt = |_s: Dtype, t: Dtype| 4.0 * t - 1.0;
+        let dn4_dt = |s: Dtype, t: Dtype| 4.0 * (s + t) - 3.0;
+        let dn5_dt = |s: Dtype, t: Dtype| 4.0 * (s + t) - 3.0;
+        let dn6_dt = |s: Dtype, t: Dtype| 4.0 * (s + t) - 3.0;
+        let dn_dt = [dn1_dt, dn2_dt, dn3_dt, dn4_dt, dn5_dt, dn6_dt];
+
+        let mut dx_ds: Dtype = 0.0;
+        let mut dx_dt: Dtype = 0.0;
+        let mut dy_ds: Dtype = 0.0;
+        let mut dy_dt: Dtype = 0.0;
+        for i in 0..6 {
+            dx_ds += x[i] * dn_ds[i](s, t);
+            dx_dt += x[i] * dn_dt[i](s, t);
+            dy_ds += y[i] * dn_ds[i](s, t);
+            dy_dt += y[i] * dn_dt[i](s, t);
+        }
+        let j_mat = [[dx_ds, dx_dt], [dy_ds, dy_dt]];
+
+        if (dx_ds * dy_dt - dx_dt * dy_ds) < 0.0 {
+            panic!(">>> !!! The determinant of Jacobian matrix is negative !!! \n>>>     from src/elem/dim2/linear/fn geometry_mat_xy");
+        } else {
+            j_mat
+        }
     }
 
     /// Calculate element stiffness matrix K
@@ -544,128 +573,6 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
             self.id, self.id
         );
         let thick = self.thick;
-        let area = self.area();
-        let (ee, nu) = material_args;
-        let coeff = thick * ee / (area * (1.0 - nu * nu));
-
-        // shape of bc_mat_ij: (i in [0, 1, 2] and j in [0, 1, 2])
-        // | Bi*Bj + Ci*Cj*(1-nu)/2       Bi*Cj*nu + Ci*Bj*(1-nu)/2 |
-        // | Ci*Bj*nu + Bi*Cj*(1-nu)/2       Ci*Cj + Bi*Bj*(1-nu)/2 |
-        let bc_mat = |i: usize, j: usize| {
-            let mat: na::Matrix2<Dtype> = Matrix2::new(
-                self.b(i) * self.b(j) * 1. + 0.5 * self.c(i) * self.c(j) * (1.0 - nu),
-                self.b(i) * self.c(j) * nu + 0.5 * self.c(i) * self.b(j) * (1.0 - nu),
-                self.c(i) * self.b(j) * nu + 0.5 * self.b(i) * self.c(j) * (1.0 - nu),
-                self.c(i) * self.c(j) * 1. + 0.5 * self.b(i) * self.b(j) * (1.0 - nu),
-            );
-            mat
-        };
-        let mut stiffness_matrix: [[Dtype; 12]; 12] = [[0.0; 12]; 12];
-
-        let arg_a = Matrix3::<Dtype>::new(
-            0.25,
-            -0.08333333,
-            -0.08333333,
-            -0.08333333,
-            0.25,
-            -0.08333333,
-            -0.08333333,
-            -0.08333333,
-            0.25,
-        );
-        for i in 0..3 {
-            for j in 0..3 {
-                let tmp = (arg_a[(i, j)] * bc_mat(i, j)).into();
-                matrix_block_fill(&mut stiffness_matrix, &tmp, (i * 2, j * 2));
-            }
-        }
-
-        let arg_b_right: [[Dtype; 3]; 3] = [
-            [0.33333333, 0.0, 0.33333333],
-            [0.33333333, 0.33333333, 0.0],
-            [0.0, 0.33333333, 0.33333333],
-        ];
-        let arg_b_left: [[Dtype; 3]; 3] = [
-            [0.33333333, 0.33333333, 0.0],
-            [0.0, 0.33333333, 0.33333333],
-            [0.33333333, 0.0, 0.33333333],
-        ];
-        let idxj_right: [[usize; 3]; 3] = [[1, 64, 2], [0, 2, 64], [64, 1, 0]];
-        let idxj_left: [[usize; 3]; 3] = [[1, 0, 64], [64, 2, 1], [2, 64, 0]];
-        for i in 0..3 {
-            for j in 0..3 {
-                let tmp_right = if idxj_right[i][j] == 64 {
-                    [[0., 0.], [0., 0.]]
-                } else {
-                    (arg_b_right[i][j] * bc_mat(i, idxj_right[i][j])).into()
-                };
-                let tmp_left = if idxj_left[i][j] == 64 {
-                    [[0., 0.], [0., 0.]]
-                } else {
-                    (arg_b_left[i][j] * bc_mat(idxj_left[i][j], j)).into()
-                };
-                matrix_block_fill(&mut stiffness_matrix, &tmp_right, (i * 2, j * 2 + 6));
-                matrix_block_fill(&mut stiffness_matrix, &tmp_left, (i * 2 + 6, j * 2));
-            }
-        }
-
-        let mat_c11: [[Dtype; 2]; 2] = (0.66666667 * (bc_mat(0, 0) + bc_mat(1, 1))
-            + 0.33333333 * (bc_mat(0, 1) + bc_mat(1, 0)))
-        .into();
-        let mat_c22: [[Dtype; 2]; 2] = (0.66666667 * (bc_mat(2, 2) + bc_mat(1, 1))
-            + 0.33333333 * (bc_mat(2, 1) + bc_mat(1, 2)))
-        .into();
-        let mat_c33: [[Dtype; 2]; 2] = (0.66666667 * (bc_mat(1, 1) + bc_mat(2, 2))
-            + 0.33333333 * (bc_mat(0, 2) + bc_mat(2, 0)))
-        .into();
-        let mat_c12: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(0, 2)
-            + 0.33333333 * (bc_mat(0, 1) + bc_mat(1, 1) + bc_mat(1, 2)))
-        .into();
-        let mat_c13: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(1, 2)
-            + 0.33333333 * (bc_mat(0, 2) + bc_mat(1, 2) + bc_mat(1, 0)))
-        .into();
-        let mat_c23: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(1, 0)
-            + 0.33333333 * (bc_mat(2, 2) + bc_mat(1, 2) + bc_mat(2, 0)))
-        .into();
-        let mat_c21: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(2, 0)
-            + 0.33333333 * (bc_mat(1, 0) + bc_mat(1, 1) + bc_mat(2, 1)))
-        .into();
-        let mat_c31: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(2, 1)
-            + 0.33333333 * (bc_mat(2, 0) + bc_mat(2, 1) + bc_mat(0, 1)))
-        .into();
-        let mat_c32: [[Dtype; 2]; 2] = (0.66666667 * bc_mat(0, 1)
-            + 0.33333333 * (bc_mat(2, 1) + bc_mat(2, 2) + bc_mat(0, 2)))
-        .into();
-        let mat_c_ref = [
-            [&mat_c11, &mat_c12, &mat_c13],
-            [&mat_c21, &mat_c22, &mat_c23],
-            [&mat_c31, &mat_c32, &mat_c33],
-        ];
-        for i in 0..3 {
-            for j in 0..3 {
-                matrix_block_fill(
-                    &mut stiffness_matrix,
-                    mat_c_ref[i][j],
-                    (i * 2 + 6, j * 2 + 6),
-                );
-            }
-        }
-        let stiffness_matrix: [[Dtype; 12]; 12] =
-            (coeff * SMatrix::<Dtype, 12, 12>::from(stiffness_matrix)).into();
-        stiffness_matrix
-    }
-
-    /// Get element's strain vector, the strain in CST elem is a const
-    pub fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
-        let x_y = (xyz[0], xyz[1]);
-        let b_mat = SMatrix::<Dtype, 12, 3>::from(self.geometry_mat(x_y)).transpose();
-        let elem_nodes_disps = SMatrix::<Dtype, 12, 1>::from(self.disps());
-        let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
-        strain_vector
-    }
-
-    /// Get element's stress vector, the stress in CST elem is a const
-    pub fn calc_stress(&self, xyz: [Dtype; 3], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         let (ee, nu) = material_args;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
@@ -673,9 +580,44 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain(xyz));
-        let stress: [Dtype; 3] = (elasticity_mat * strain).into();
-        stress
+        let det_j = |s_t: &[Dtype]| {
+            Jacobian2D::from(self.jacobian(s_t))
+                .transpose()
+                .determinant()
+        };
+        let int_point_2 = [
+            [0.6666666667, 0.1666666667],
+            [0.1666666667, 0.6666666667],
+            [0.1666666667, 0.1666666667],
+        ];
+        let weight = [0.3333333333, 0.3333333333, 0.3333333333];
+
+        let b_mat_1 =
+            SMatrix::<Dtype, 12, 3>::from(self.geometry_mat_xy(&int_point_2[0])).transpose();
+        let b_mat_2 =
+            SMatrix::<Dtype, 12, 3>::from(self.geometry_mat_xy(&int_point_2[1])).transpose();
+        let b_mat_3 =
+            SMatrix::<Dtype, 12, 3>::from(self.geometry_mat_xy(&int_point_2[2])).transpose();
+        let core = b_mat_1.transpose()
+            * elasticity_mat
+            * b_mat_1
+            * det_j(&int_point_2[0])
+            * weight[0]
+            + b_mat_2.transpose() * elasticity_mat * b_mat_2 * det_j(&int_point_2[1]) * weight[1]
+            + b_mat_3.transpose() * elasticity_mat * b_mat_3 * det_j(&int_point_2[2]) * weight[2];
+
+        let stiffness_matrix: [[Dtype; 12]; 12] = (0.5 * thick * core).into();
+        stiffness_matrix
+    }
+
+    /// Get element's strain vector, the strain in CST elem is a const
+    pub fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
+        todo!()
+    }
+
+    /// Get element's stress vector, the stress in CST elem is a const
+    pub fn calc_stress(&self, xyz: [Dtype; 3], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
+        todo!()
     }
 
     /// Print element's strain value
@@ -698,7 +640,7 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
 }
 
 /// Implement zhm::K trait for 2D 6nodes triangle
-impl<'tri> K for Tri2D6N<'tri> {
+impl<'tri2d6n> K for Tri2D6N<'tri2d6n> {
     type Kmatrix = [[Dtype; 12]; 12];
 
     /// Cache stiffness matrix for triangle element

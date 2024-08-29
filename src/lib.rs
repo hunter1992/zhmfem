@@ -314,11 +314,11 @@ pub fn beam1d2n_vec<'beam>(
 }
 
 /// Construct vector of tri2d3n elements
-pub fn tri2d3n_vec<'tri>(
+pub fn tri2d3n_vec<'tri2d3n>(
     thick: Dtype,
-    nodes: &'tri [Node2D],
+    nodes: &'tri2d3n [Node2D],
     coupled_nodes: &[Vec<usize>],
-) -> Vec<Tri2D3N<'tri>> {
+) -> Vec<Tri2D3N<'tri2d3n>> {
     let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
@@ -330,23 +330,24 @@ pub fn tri2d3n_vec<'tri>(
     tri2d3n
 }
 
-//pub fn tri2d6n_vec<'tri>(
+/// Construct vector of tri2d6n elements
+//pub fn tri2d6n_vec<'tri2d6n>(
 //    thick: Dtype,
-//    nodes: &'tri [Node2D],
+//    nodes: &'tri2d6n [&'static Node2D],
 //    coupled_nodes: &[Vec<usize>],
-//) -> Vec<Tri2D6N<'tri>> {
+//) -> Vec<Tri2D6N<'tri2d6n>> {
 //    let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
 //    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
 //        tri2d6n.push(Tri2D6N::new(
 //            ele_id,
 //            thick,
 //            [
-//                &nodes[cpld[0]],
-//                &nodes[cpld[1]],
-//                &nodes[cpld[2]],
-//                &nodes[cpld[3]],
-//                &nodes[cpld[4]],
-//                &nodes[cpld[5]],
+//                nodes[cpld[0]],
+//                nodes[cpld[1]],
+//                nodes[cpld[2]],
+//                nodes[cpld[3]],
+//                nodes[cpld[4]],
+//                nodes[cpld[5]],
 //            ],
 //        ));
 //    }
@@ -356,7 +357,7 @@ pub fn tri2d3n_vec<'tri>(
 /// Construct vector of tri2d6n elements
 pub fn tri2d6n_vec<'tri2d6n>(
     thick: Dtype,
-    nodes: &'tri2d6n [Node2D],
+    nodes: Vec<Node2D>,
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Tri2D6N<'tri2d6n>> {
     let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
@@ -365,12 +366,12 @@ pub fn tri2d6n_vec<'tri2d6n>(
             ele_id,
             thick,
             [
-                &nodes[cpld[0]],
-                &nodes[cpld[1]],
-                &nodes[cpld[2]],
-                &nodes[cpld[3]],
-                &nodes[cpld[4]],
-                &nodes[cpld[5]],
+                nodes[cpld[0]],
+                nodes[cpld[1]],
+                nodes[cpld[2]],
+                nodes[cpld[3]],
+                nodes[cpld[4]],
+                nodes[cpld[5]],
             ],
         ));
     }
@@ -378,11 +379,11 @@ pub fn tri2d6n_vec<'tri2d6n>(
 }
 
 /// Construct vector of quad2d4n elements
-pub fn quad2d4n_vec<'rect>(
+pub fn quad2d4n_vec<'quad2d4n>(
     thick: Dtype,
-    nodes: &'rect [Node2D],
+    nodes: &'quad2d4n [Node2D],
     couples: &[Vec<usize>],
-) -> Vec<Quad2D4N<'rect>> {
+) -> Vec<Quad2D4N<'quad2d4n>> {
     let mut rec2d4n: Vec<Quad2D4N> = Vec::new();
     for (ele_id, cpld) in couples.iter().enumerate() {
         rec2d4n.push(Quad2D4N::new(

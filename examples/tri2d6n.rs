@@ -44,6 +44,7 @@ fn main() {
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
+
     let nodes: Vec<Node2D> = nodes2d_vec(&coords, &force_data, false);
 
     let mut tri2d6n_vec: Vec<Tri2D6N> = tri2d6n_vec(thick, &nodes, &cpld);
@@ -54,6 +55,8 @@ fn main() {
     let mut eqs: LinearEqs<{ R * C * F }> =
         LinearEqs::new(part1.disps(), part1.forces(), zero_disp, *part1.k(material));
 
+    part1.elems[0].k_printer(0.);
+    part1.elems[1].k_printer(0.);
     part1.k_printer(0.);
     eqs.lu_direct_solver();
     part1.write_result(&eqs);

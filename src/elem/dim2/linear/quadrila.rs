@@ -3,14 +3,14 @@ use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
 
-pub struct Quad2D4N<'quad> {
+pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'quad Node2D; 4],
+    pub nodes: [&'quad2d4n Node2D; 4],
     pub k_matrix: Option<[[Dtype; 8]; 8]>,
 }
 
-impl<'quad> Quad2D4N<'quad> {
+impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     /// generate a new Rec2D4N element
     pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 4]) -> Quad2D4N {
         Quad2D4N {
@@ -50,13 +50,13 @@ impl<'quad> Quad2D4N<'quad> {
         let tri1: Tri2D3N = Tri2D3N {
             id: 0,
             thick: self.thick,
-            nodes: [self.nodes[0], self.nodes[1], self.nodes[2]],
+            nodes: [&self.nodes[0], &self.nodes[1], &self.nodes[2]],
             k_matrix: None,
         };
         let tri2: Tri2D3N = Tri2D3N {
             id: 0,
             thick: self.thick,
-            nodes: [self.nodes[3], self.nodes[1], self.nodes[2]],
+            nodes: [&self.nodes[3], &self.nodes[1], &self.nodes[2]],
             k_matrix: None,
         };
         tri1.area() + tri2.area()
@@ -254,7 +254,7 @@ impl<'quad> Quad2D4N<'quad> {
 }
 
 /// Implement zhm::K trait for quad element
-impl<'quad> K for Quad2D4N<'quad> {
+impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     type Kmatrix = [[Dtype; 8]; 8];
 
     /// Cache stiffness matrix for quad element
