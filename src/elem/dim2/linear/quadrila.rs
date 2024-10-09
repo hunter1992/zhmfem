@@ -31,7 +31,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn xs(&self) -> [Dtype; 4] {
         let mut x_list = [0.0; 4];
         for i in 0..4 {
-            x_list[i] = self.nodes[i].coord[0];
+            x_list[i] = self.nodes[i].coords[0];
         }
         x_list
     }
@@ -40,7 +40,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn ys(&self) -> [Dtype; 4] {
         let mut y_list = [0.0; 4];
         for i in 0..4 {
-            y_list[i] = self.nodes[i].coord[1];
+            y_list[i] = self.nodes[i].coords[1];
         }
         y_list
     }
@@ -50,13 +50,13 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         let tri1: Tri2D3N = Tri2D3N {
             id: 0,
             thick: self.thick,
-            nodes: [&self.nodes[0], &self.nodes[1], &self.nodes[2]],
+            nodes: [*self.nodes[0], *self.nodes[1], *self.nodes[2]],
             k_matrix: None,
         };
         let tri2: Tri2D3N = Tri2D3N {
             id: 0,
             thick: self.thick,
-            nodes: [&self.nodes[3], &self.nodes[1], &self.nodes[2]],
+            nodes: [*self.nodes[3], *self.nodes[1], *self.nodes[2]],
             k_matrix: None,
         };
         tri1.area() + tri2.area()
@@ -85,8 +85,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn disps(&self) -> [Dtype; 8] {
         let mut disps = [0.0; 8];
         for idx in 0..4 {
-            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
-            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+            disps[2 * idx] = self.nodes[idx].displs[0];
+            disps[2 * idx + 1] = self.nodes[idx].displs[1];
         }
         disps
     }
@@ -95,8 +95,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn forces(&self) -> [Dtype; 8] {
         let mut forces = [0.0; 8];
         for idx in 0..4 {
-            forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
-            forces[2 * idx + 1] = *self.nodes[idx].forces[1].borrow();
+            forces[2 * idx] = self.nodes[idx].forces[0];
+            forces[2 * idx + 1] = self.nodes[idx].forces[1];
         }
         forces
     }

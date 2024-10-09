@@ -1,6 +1,6 @@
 use crate::{node::Node2D, Dtype, K};
 use na::*;
-use std::fmt::{self, Write};
+use std::fmt::Write;
 
 pub struct Rod2D2NNL<'rod> {
     pub id: usize,
@@ -23,13 +23,13 @@ impl<'rod> Rod2D2NNL<'rod> {
 
     /// Get Node1's X coordinate under initial configuration
     pub fn X1(&self) -> Dtype {
-        let X1: Dtype = self.nodes[0].coord[0];
+        let X1: Dtype = self.nodes[0].coords[0];
         X1
     }
 
     /// Get Node1's x-coord displacement
     pub fn disp1_x(&self) -> Dtype {
-        let disp1_x = *self.nodes[0].disps[0].borrow();
+        let disp1_x = self.nodes[0].displs[0];
         disp1_x
     }
 
@@ -41,13 +41,13 @@ impl<'rod> Rod2D2NNL<'rod> {
 
     /// Get Node1's Y coordinate under initial configuration
     pub fn Y1(&self) -> Dtype {
-        let Y1: Dtype = self.nodes[0].coord[1];
+        let Y1: Dtype = self.nodes[0].coords[1];
         Y1
     }
 
     /// Get Node1's y-coord displacement
     pub fn disp1_y(&self) -> Dtype {
-        let disp1_y = *self.nodes[0].disps[1].borrow();
+        let disp1_y = self.nodes[0].displs[1];
         disp1_y
     }
 
@@ -59,13 +59,13 @@ impl<'rod> Rod2D2NNL<'rod> {
 
     /// Get Node2's X coordinate under initial configuration
     pub fn X2(&self) -> Dtype {
-        let X2: Dtype = self.nodes[1].coord[0];
+        let X2: Dtype = self.nodes[1].coords[0];
         X2
     }
 
     /// Get Node2's x-coord displacement
     pub fn disp2_x(&self) -> Dtype {
-        let disp2_x = *self.nodes[1].disps[0].borrow();
+        let disp2_x = self.nodes[1].displs[0];
         disp2_x
     }
 
@@ -77,13 +77,13 @@ impl<'rod> Rod2D2NNL<'rod> {
 
     /// Get Node2's Y coordinate under initial configuration
     pub fn Y2(&self) -> Dtype {
-        let Y2: Dtype = self.nodes[1].coord[1];
+        let Y2: Dtype = self.nodes[1].coords[1];
         Y2
     }
 
     /// Get Node2's y-coord displacement
     pub fn disp2_y(&self) -> Dtype {
-        let disp2_y = *self.nodes[1].disps[1].borrow();
+        let disp2_y = self.nodes[1].displs[1];
         disp2_y
     }
 
@@ -224,6 +224,7 @@ impl<'rod> Rod2D2NNL<'rod> {
         geometric_kmat
     }
 
+    /*
     /// node's inner force writer
     /// inner_force = sec_area * PKII * (B_mat).transpose
     pub fn write_node_inner_force(&self, material_args: (Dtype, Dtype)) {
@@ -239,10 +240,11 @@ impl<'rod> Rod2D2NNL<'rod> {
         println!("inner_f: {:?}", &node_inner_force);
         for i in 0..2 {
             for j in 0..2 {
-                *self.nodes[i].forces[j].borrow_mut() = node_inner_force[i * 2 as usize + j];
+                self.nodes[i].forces[j] = node_inner_force[i * 2 as usize + j];
             }
         }
     }
+    */
 }
 
 impl<'rod> K for Rod2D2NNL<'rod> {

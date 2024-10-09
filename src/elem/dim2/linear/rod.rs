@@ -31,7 +31,7 @@ impl<'rod> Rod2D2N<'rod> {
     pub fn xs(&self) -> [Dtype; 2] {
         let mut x_list = [0.0; 2];
         for i in 0..2 {
-            x_list[i] = self.nodes[i].coord[0];
+            x_list[i] = self.nodes[i].coords[0];
         }
         x_list
     }
@@ -40,7 +40,7 @@ impl<'rod> Rod2D2N<'rod> {
     pub fn ys(&self) -> [Dtype; 2] {
         let mut y_list = [0.0; 2];
         for i in 0..2 {
-            y_list[i] = self.nodes[i].coord[1];
+            y_list[i] = self.nodes[i].coords[1];
         }
         y_list
     }
@@ -59,8 +59,8 @@ impl<'rod> Rod2D2N<'rod> {
     pub fn disps(&self) -> [Dtype; 4] {
         let mut disps = [0.0; 4];
         for idx in 0..2 {
-            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
-            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+            disps[2 * idx] = self.nodes[idx].displs[0];
+            disps[2 * idx + 1] = self.nodes[idx].displs[1];
         }
         disps
     }
@@ -69,8 +69,8 @@ impl<'rod> Rod2D2N<'rod> {
     pub fn forces(&self) -> [Dtype; 4] {
         let mut forces = [0.0; 4];
         for idx in 0..2 {
-            forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
-            forces[2 * idx + 1] = *self.nodes[idx].forces[1].borrow();
+            forces[2 * idx] = self.nodes[idx].forces[0];
+            forces[2 * idx + 1] = self.nodes[idx].forces[1];
         }
         forces
     }

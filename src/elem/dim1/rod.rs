@@ -30,7 +30,7 @@ impl<'rod> Rod1D2N<'rod> {
     pub fn xs(&self) -> [Dtype; 2] {
         let mut x_list = [0.0; 2];
         for i in 0..2 {
-            x_list[i] = self.nodes[i].coord[0];
+            x_list[i] = self.nodes[i].coords[0];
         }
         x_list
     }
@@ -45,7 +45,7 @@ impl<'rod> Rod1D2N<'rod> {
     pub fn disps(&self) -> [Dtype; 2] {
         let mut disps = [0.0; 2];
         for idx in 0..2 {
-            disps[idx] = *self.nodes[idx].disps[0].borrow();
+            disps[idx] = self.nodes[idx].displs[0];
         }
         disps
     }
@@ -54,7 +54,7 @@ impl<'rod> Rod1D2N<'rod> {
     pub fn forces(&self) -> [Dtype; 2] {
         let mut forces = [0.0; 2];
         for idx in 0..2 {
-            forces[idx] = *self.nodes[idx].forces[0].borrow();
+            forces[idx] = self.nodes[idx].forces[0];
         }
         forces
     }

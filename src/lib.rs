@@ -12,16 +12,17 @@ mod node;
 mod part;
 
 pub use calc::LinearEqs;
-pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
+//pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
 pub use elem::dim2::linear::{
-    quadrila::Quad2D4N,
-    rod::Rod2D2N,
-    triangle::{Tri2D3N, Tri2D6N},
+    //quadrila::Quad2D4N,
+    //rod::Rod2D2N,
+    triangle::Tri2D3N,
+    //triangle::{Tri2D3N, Tri2D6N},
 };
-pub use elem::dim2::nonlinear::rod::Rod2D2NNL;
+//pub use elem::dim2::nonlinear::rod::Rod2D2NNL;
 pub use mesh::plane;
 pub use na::*;
-pub use node::*;
+pub use node::Node2D;
 pub use part::{part1d::Part1D, part2d::Part2D};
 
 use std::collections::HashMap;
@@ -193,6 +194,7 @@ pub fn print_2darr<const R: usize, const C: usize>(
     }
 }
 
+/*
 /// return a vector include 1D nodes with location and force information
 #[inline]
 pub fn nodes1d_vec(points: &[Vec<Dtype>], force: &HashMap<usize, Dtype>) -> Vec<Node1D> {
@@ -205,10 +207,11 @@ pub fn nodes1d_vec(points: &[Vec<Dtype>], force: &HashMap<usize, Dtype>) -> Vec<
         nodes.push(Node1D::new(idx, [coord[0]]));
     }
     for (idx, &f) in force {
-        *nodes[idx / 1].forces[idx % 1].borrow_mut() = f;
+        nodes[idx / 1].forces[idx % 1] = f;
     }
     nodes
 }
+*/
 
 /// return a vector include 2D nodes with location and force information
 #[inline]
@@ -229,12 +232,13 @@ pub fn nodes2d_vec(
     if nonlinear_or_not { //如果是线性分析，不区分节点的内力外力；非线性需要区分
     } else {
         for (idx, &f) in force {
-            *nodes[idx / 2].forces[idx % 2].borrow_mut() = f;
+            nodes[idx / 2].forces[idx % 2] = f;
         }
     }
     nodes
 }
 
+/*
 pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
     let mut nodes: Vec<Node3D> = Vec::with_capacity(points.len());
     for (idx, point) in points.iter().enumerate() {
@@ -312,19 +316,20 @@ pub fn beam1d2n_vec<'beam>(
     }
     beam1d2n_vec
 }
+*/
 
 /// Construct vector of tri2d3n elements
-pub fn tri2d3n_vec<'tri2d3n>(
+pub fn tri2d3n_vec(
     thick: Dtype,
-    nodes: &'tri2d3n [Node2D],
+    nodes: &Vec<Node2D>,
     coupled_nodes: &[Vec<usize>],
-) -> Vec<Tri2D3N<'tri2d3n>> {
+) -> Vec<Tri2D3N> {
     let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
             ele_id,
             thick,
-            [&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]],
+            [nodes[cpld[0]], nodes[cpld[1]], nodes[cpld[2]]],
         ));
     }
     tri2d3n
@@ -354,10 +359,11 @@ pub fn tri2d3n_vec<'tri2d3n>(
 //    tri2d6n
 //}
 
+/*
 /// Construct vector of tri2d6n elements
 pub fn tri2d6n_vec<'tri2d6n>(
     thick: Dtype,
-    nodes: Vec<Node2D>,
+    nodes: &'tri2d6n [Node2D],
     coupled_nodes: &[Vec<usize>],
 ) -> Vec<Tri2D6N<'tri2d6n>> {
     let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
@@ -366,12 +372,12 @@ pub fn tri2d6n_vec<'tri2d6n>(
             ele_id,
             thick,
             [
-                nodes[cpld[0]],
-                nodes[cpld[1]],
-                nodes[cpld[2]],
-                nodes[cpld[3]],
-                nodes[cpld[4]],
-                nodes[cpld[5]],
+                &nodes[cpld[0]],
+                &nodes[cpld[1]],
+                &nodes[cpld[2]],
+                &nodes[cpld[3]],
+                &nodes[cpld[4]],
+                &nodes[cpld[5]],
             ],
         ));
     }
@@ -399,6 +405,7 @@ pub fn quad2d4n_vec<'quad2d4n>(
     }
     rec2d4n
 }
+*/
 
 #[cfg(test)]
 mod testing {

@@ -38,7 +38,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     pub fn xs(&self) -> [Dtype; 2] {
         let mut x_list = [0.0; 2];
         for i in 0..2 {
-            x_list[i] = self.nodes[i].coord[0];
+            x_list[i] = self.nodes[i].coords[0];
         }
         x_list
     }
@@ -53,8 +53,8 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     pub fn disps(&self) -> [Dtype; 4] {
         let mut disps = [0.0; 4];
         for idx in 0..2 {
-            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
-            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+            disps[2 * idx] = self.nodes[idx].displs[0];
+            disps[2 * idx + 1] = self.nodes[idx].displs[1];
         }
         disps
     }
@@ -63,8 +63,8 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     pub fn forces(&self) -> [Dtype; 4] {
         let mut forces = [0.0; 4];
         for idx in 0..2 {
-            forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
-            forces[2 * idx + 1] = *self.nodes[idx].forces[1].borrow();
+            forces[2 * idx] = self.nodes[idx].forces[0];
+            forces[2 * idx + 1] = self.nodes[idx].forces[1];
         }
         forces
     }

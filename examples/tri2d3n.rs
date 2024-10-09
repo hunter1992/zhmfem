@@ -34,16 +34,16 @@ fn main() {
         .collect();
 
     // transform points into nodes
-    let nodes: Vec<Node2D> = nodes2d_vec(&coords, &force_data, false);
+    let mut nodes: Vec<Node2D> = nodes2d_vec(&coords, &force_data, false);
 
     // construct elements by coupled nodes
     let mut tri_vec: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cpld);
 
     // assemble global stiffness matrix
     let mut part1: Part2D<Tri2D3N, { R * C }, F, M> =
-        Part2D::new(1, &nodes, &mut tri_vec, &cpld, &material);
+        Part2D::new(1, &mut nodes, &mut tri_vec, &cpld, &material);
     part1.k(material);
-    //part1.k_printer(0.0);
+    part1.k_printer(0.0);
 
     // construct solver and solve the case
     let mut eqs: LinearEqs<{ R * C * F }> =
@@ -60,10 +60,12 @@ fn main() {
     print_1darr("qe", &part1.disps(), 0.0);
     print_1darr("fe", &part1.forces(), 0.0);
 
+    /*
     for tri in part1.elems.iter() {
         tri.print_strain();
         tri.print_stress(material);
     }
+    */
 
     println!("\n>>> System energy:");
     println!("\tE_d: {:-9.6} (deform energy)", part1.strain_energy());

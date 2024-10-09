@@ -3,16 +3,16 @@ use crate::{node::Node2D, Dtype, Jacobian2D, K};
 use na::*;
 use std::fmt::{self, Write};
 
-pub struct Tri2D3N<'tri2d3n> {
+pub struct Tri2D3N {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'tri2d3n Node2D; 3],
+    pub nodes: [Node2D; 3],
     pub k_matrix: Option<[[Dtype; 6]; 6]>,
 }
 
-impl<'tri2d3n> Tri2D3N<'tri2d3n> {
+impl Tri2D3N {
     /// Generate a 2D Tri2D3N element
-    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 3]) -> Tri2D3N {
+    pub fn new(id: usize, thick: Dtype, nodes: [Node2D; 3]) -> Tri2D3N {
         Tri2D3N {
             id,
             thick,
@@ -25,7 +25,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn xs(&self) -> [Dtype; 3] {
         let mut x_list = [0.0; 3];
         for i in 0..3 {
-            x_list[i] = self.nodes[i].coord[0];
+            x_list[i] = self.nodes[i].coords[0];
         }
         x_list
     }
@@ -34,7 +34,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn ys(&self) -> [Dtype; 3] {
         let mut y_list = [0.0; 3];
         for i in 0..3 {
-            y_list[i] = self.nodes[i].coord[1];
+            y_list[i] = self.nodes[i].coords[1];
         }
         y_list
     }
@@ -65,8 +65,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn disps(&self) -> [Dtype; 6] {
         let mut disps = [0.0; 6];
         for idx in 0..3 {
-            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
-            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+            disps[2 * idx] = self.nodes[idx].displs[0];
+            disps[2 * idx + 1] = self.nodes[idx].displs[1];
         }
         disps
     }
@@ -75,8 +75,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn forces(&self) -> [Dtype; 6] {
         let mut forces = [0.0; 6];
         for idx in 0..3 {
-            forces[2 * idx] = *self.nodes[idx].forces[0].borrow();
-            forces[2 * idx + 1] = *self.nodes[idx].forces[1].borrow();
+            forces[2 * idx] = self.nodes[idx].forces[0];
+            forces[2 * idx + 1] = self.nodes[idx].forces[1];
         }
         forces
     }
@@ -216,7 +216,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 }
 
 /// Implement zhm::K trait for triangle element
-impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
+impl K for Tri2D3N {
     type Kmatrix = [[Dtype; 6]; 6];
 
     /// Cache stiffness matrix for triangle element
@@ -308,7 +308,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
             self.area(),
             self.nodes[0],
             self.nodes[1],
-            self.nodes[2]
+            self.nodes[2],
         )
     }
 
@@ -318,7 +318,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     }
 }
 
-impl fmt::Display for Tri2D3N<'_> {
+impl fmt::Display for Tri2D3N {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -328,21 +328,21 @@ impl fmt::Display for Tri2D3N<'_> {
             self.area(),
             self.nodes[0],
             self.nodes[1],
-            self.nodes[2]
+            self.nodes[2],
         )
     }
 }
 
-pub struct Tri2D6N<'tri2d6n> {
+pub struct Tri2D6N {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'tri2d6n Node2D; 6],
+    pub nodes: [Node2D; 6],
     pub k_matrix: Option<[[Dtype; 12]; 12]>,
 }
 
-impl<'tri2d6n> Tri2D6N<'tri2d6n> {
+impl Tri2D6N {
     /// Generate a 2D Tri2D6N element
-    pub fn new(id: usize, thick: Dtype, nodes: [&Node2D; 6]) -> Tri2D6N {
+    pub fn new(id: usize, thick: Dtype, nodes: [Node2D; 6]) -> Tri2D6N {
         Tri2D6N {
             id,
             thick,
@@ -355,7 +355,7 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     pub fn xs(&self) -> [Dtype; 6] {
         let mut x_list = [0.0; 6];
         for i in 0..6 {
-            x_list[i] = self.nodes[i].coord[0];
+            x_list[i] = self.nodes[i].coords[0];
         }
         x_list
     }
@@ -364,7 +364,7 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     pub fn ys(&self) -> [Dtype; 6] {
         let mut y_list = [0.0; 6];
         for i in 0..6 {
-            y_list[i] = self.nodes[i].coord[1];
+            y_list[i] = self.nodes[i].coords[1];
         }
         y_list
     }
@@ -373,8 +373,8 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     pub fn disps(&self) -> [Dtype; 12] {
         let mut disps = [0.0; 12];
         for idx in 0..6 {
-            disps[2 * idx] = *self.nodes[idx].disps[0].borrow();
-            disps[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+            disps[2 * idx] = self.nodes[idx].displs[0];
+            disps[2 * idx + 1] = self.nodes[idx].displs[1];
         }
         disps
     }
@@ -383,8 +383,8 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     pub fn forces(&self) -> [Dtype; 12] {
         let mut forces = [0.0; 12];
         for idx in 0..6 {
-            forces[2 * idx] = *self.nodes[idx].disps[0].borrow();
-            forces[2 * idx + 1] = *self.nodes[idx].disps[1].borrow();
+            forces[2 * idx] = self.nodes[idx].displs[0];
+            forces[2 * idx + 1] = self.nodes[idx].displs[1];
         }
         forces
     }
@@ -611,12 +611,12 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     }
 
     /// Get element's strain vector, the strain in CST elem is a const
-    pub fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
+    pub fn calc_strain(&self, _xyz: [Dtype; 3]) -> [Dtype; 3] {
         todo!()
     }
 
     /// Get element's stress vector, the stress in CST elem is a const
-    pub fn calc_stress(&self, xyz: [Dtype; 3], material_args: (Dtype, Dtype)) -> [Dtype; 3] {
+    pub fn calc_stress(&self, _xyz: [Dtype; 3], _material_args: (Dtype, Dtype)) -> [Dtype; 3] {
         todo!()
     }
 
@@ -640,7 +640,7 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
 }
 
 /// Implement zhm::K trait for 2D 6nodes triangle
-impl<'tri2d6n> K for Tri2D6N<'tri2d6n> {
+impl K for Tri2D6N {
     type Kmatrix = [[Dtype; 12]; 12];
 
     /// Cache stiffness matrix for triangle element
@@ -745,7 +745,7 @@ impl<'tri2d6n> K for Tri2D6N<'tri2d6n> {
     }
 }
 
-impl fmt::Display for Tri2D6N<'_> {
+impl fmt::Display for Tri2D6N {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,

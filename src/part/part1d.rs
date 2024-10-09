@@ -9,7 +9,7 @@ where
     [[Dtype; N * F]; N * F]: Sized,
 {
     pub id: usize,
-    pub nodes: &'a [Node1D],
+    pub nodes: &'a mut [Node1D],
     pub elems: &'a mut [Elem],
     pub cplds: &'a [Vec<usize>],
     pub material: &'a (Dtype, Dtype),
@@ -23,7 +23,7 @@ where
 {
     pub fn new(
         id: usize,
-        nodes: &'a [Node1D],
+        nodes: &'a mut [Node1D],
         elems: &'a mut [Elem],
         cplds: &'a [Vec<usize>],
         material: &'a (Dtype, Dtype),
@@ -45,7 +45,7 @@ where
     pub fn disps(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx] = *self.nodes[idx].disps[0].borrow();
+            data[idx] = self.nodes[idx].displs[0];
         }
         data
     }
@@ -54,7 +54,7 @@ where
     pub fn forces(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx] = *self.nodes[idx].forces[0].borrow();
+            data[idx] = self.nodes[idx].forces[0];
         }
         data
     }
@@ -83,12 +83,12 @@ where
     }
 
     /// Write the disp and force result into nodes
-    pub fn write_result(&self, slv: &LinearEqs<{ N * F }>) {
+    pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
         let force = slv.forces;
-        for (idx, node) in self.nodes.iter().enumerate() {
-            *node.disps[0].borrow_mut() = disp[idx];
-            *node.forces[0].borrow_mut() = force[idx];
+        for (idx, node) in self.nodes.iter_mut().enumerate() {
+            node.displs[0] = disp[idx];
+            node.forces[0] = force[idx];
         }
     }
 

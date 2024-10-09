@@ -7,12 +7,12 @@ use std::io::{BufWriter, Write};
 //use std::thread;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
-pub struct Part2D<'a, Elem: K, const N: usize, const F: usize, const M: usize>
+pub struct Part2D<'a, Elem: K + 'static, const N: usize, const F: usize, const M: usize>
 where
     [[Dtype; N * F]; N * F]: Sized,
 {
     pub id: usize,
-    pub nodes: &'a [Node2D],
+    pub nodes: &'a mut [Node2D],
     pub elems: &'a mut [Elem],
     pub cplds: &'a [Vec<usize>],
     pub material: &'a (Dtype, Dtype),
@@ -26,7 +26,7 @@ where
 {
     pub fn new(
         id: usize,
-        nodes: &'a [Node2D],
+        nodes: &'a mut [Node2D],
         elems: &'a mut [Elem],
         cplds: &'a [Vec<usize>],
         material: &'a (Dtype, Dtype),
@@ -48,8 +48,8 @@ where
     pub fn disps(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx * 2] = *self.nodes[idx].disps[0].borrow();
-            data[idx * 2 + 1] = *self.nodes[idx].disps[1].borrow();
+            data[idx * 2] = self.nodes[idx].displs[0];
+            data[idx * 2 + 1] = self.nodes[idx].displs[1];
         }
         data
     }
@@ -58,8 +58,8 @@ where
     pub fn forces(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx * 2] = *self.nodes[idx].forces[0].borrow();
-            data[idx * 2 + 1] = *self.nodes[idx].forces[1].borrow();
+            data[idx * 2] = self.nodes[idx].forces[0];
+            data[idx * 2 + 1] = self.nodes[idx].forces[1];
         }
         data
     }
@@ -98,14 +98,14 @@ where
     }
 
     /// Write the disp and force result into nodes
-    pub fn write_result(&self, slv: &LinearEqs<{ N * F }>) {
+    pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
         let force = slv.forces;
-        for (idx, node) in self.nodes.iter().enumerate() {
-            *node.disps[0].borrow_mut() = disp[idx * 2];
-            *node.disps[1].borrow_mut() = disp[idx * 2 + 1];
-            *node.forces[0].borrow_mut() = force[idx * 2];
-            *node.forces[1].borrow_mut() = force[idx * 2 + 1];
+        for (idx, node) in self.nodes.iter_mut().enumerate() {
+            node.displs[0] = disp[idx * 2];
+            node.displs[1] = disp[idx * 2 + 1];
+            node.forces[0] = force[idx * 2];
+            node.forces[1] = force[idx * 2 + 1];
         }
     }
 
