@@ -1,24 +1,24 @@
-use crate::{node::Node1D, Dtype, K};
+use crate::{node::Node2D, Dtype, K};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
-pub struct Rod1D2N<'rod1d2n> {
+pub struct Rod2D2N<'rod2d2n> {
     pub id: usize,
     pub cross_sectional_area: Dtype,
-    pub nodes: [&'rod1d2n Node1D; 2],
-    pub k_matrix: Option<[[Dtype; 2]; 2]>,
+    pub nodes: [&'rod2d2n Node2D; 2],
+    pub k_matrix: Option<[[Dtype; 4]; 4]>,
     pub material: (Dtype, Dtype),
 }
 
-impl<'rod1d2n> Rod1D2N<'rod1d2n> {
-    /// Generate a 1D Rod1D2N element
+impl<'rod2d2n> Rod2D2N<'rod2d2n> {
+    /// Generate a 2D Rod2D2N element
     pub fn new(
         id: usize,
         material: (Dtype, Dtype),
         cross_sectional_area: Dtype,
-        nodes: [&'rod1d2n Node1D; 2],
+        nodes: [&'rod2d2n Node2D; 2],
     ) -> Self {
-        Rod1D2N {
+        Rod2D2N {
             id,
             cross_sectional_area,
             nodes,
@@ -32,10 +32,33 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         self.material = material_args;
     }
 
-    /// Get Rod1D2N element length
-    pub fn length(&self) -> Dtype {
+    /// Get difference in x-coordinates of rod nodes
+    pub fn dx(&self) -> Dtype {
         let x = self.get_nodes_xcoords();
-        (x[0] - x[1]).abs()
+        x[1] - x[0]
+    }
+
+    /// Get difference in y-coordinates of rod nodes
+    pub fn dy(&self) -> Dtype {
+        let y = self.get_nodes_ycoords();
+        y[1] - y[0]
+    }
+
+    /// Get Rod2D2N element length
+    pub fn length(&self) -> Dtype {
+        let dx = self.dx();
+        let dy = self.dy();
+        (dx * dx + dy * dy).sqrt()
+    }
+
+    /// Cosine of the angle between the rod and the horizontal axis
+    pub fn cosine(&self) -> Dtype {
+        ((self.dx() as f64) / self.length() as f64) as Dtype
+    }
+
+    /// Sine of the angle between the rod and the horizontal axis
+    pub fn sine(&self) -> Dtype {
+        ((self.dy() as f64) / self.length() as f64) as Dtype
     }
 
     /// Get the x-coords of nodes in Rod1D2N element
@@ -47,11 +70,29 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         x_list
     }
 
+    /// Get the x-coords of nodes in Rod1D2N element
+    pub fn get_nodes_ycoords(&self) -> [Dtype; 2] {
+        let mut y_list = [0.0; 2];
+        for i in 0..2 {
+            y_list[i] = self.nodes[i].coords[1];
+        }
+        y_list
+    }
+
+    /// Get transformation matrix, trans global to local
+    pub fn trans_mat(&self) -> SMatrix<Dtype, 2, 4> {
+        let cos = self.cosine();
+        let sin = self.sine();
+        let mat = [[cos, 0.0], [sin, 0.0], [0.0, cos], [0.0, sin]];
+        SMatrix::<Dtype, 2, 4>::from(mat)
+    }
+
     /// Get nodes' disps vector in Rod1D2N element
     pub fn get_nodes_displacement(&self) -> [Dtype; 4] {
         let mut disps = [0.0; 4];
         for idx in 0..2 {
-            disps[idx] = self.nodes[idx].displs.borrow()[0];
+            disps[idx * 2] = self.nodes[idx].displs.borrow()[0];
+            disps[idx * 2 + 1] = self.nodes[idx].displs.borrow()[1];
         }
         disps
     }
@@ -60,7 +101,8 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     pub fn get_nodes_force(&self) -> [Dtype; 4] {
         let mut forces = [0.0; 4];
         for idx in 0..2 {
-            forces[idx] = self.nodes[idx].forces.borrow()[0];
+            forces[idx * 2] = self.nodes[idx].forces.borrow()[0];
+            forces[idx * 2 + 1] = self.nodes[idx].forces.borrow()[1];
         }
         forces
     }
@@ -89,33 +131,38 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         [u]
     }
 
-    /// Return a 2x2 element stiffness matrix, elements are Dtype
-    fn calc_k(&self) -> [[Dtype; 2]; 2] {
+    /// Return a 4x4 element stiffness matrix, elements are Dtype
+    fn calc_k(&self) -> [[Dtype; 4]; 4] {
         println!(
-            "\n>>> Calculating Rod1D2N(#{})'s stiffness matrix k{} ......",
+            "\n>>> Calculating Rod2D2N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
-        let (ee, _nu) = self.material;
-        let stiffness_matrix: [[Dtype; 2]; 2] =
-            (SMatrix::<Dtype, 2, 2>::from([[1.0, -1.0], [-1.0, 1.0]])
-                * (ee * self.cross_sectional_area / self.length()))
-            .into();
-        stiffness_matrix
+        let l = self.length();
+        let ee = self.material.0;
+        let tmat = self.trans_mat();
+        let area = self.cross_sectional_area;
+        let base = [[1.0, -1.0], [-1.0, 1.0]];
+        type SM2 = SMatrix<Dtype, 2, 2>;
+        let local_k_mat = (SM2::from(base)) * (ee * area / l);
+        (tmat.transpose() * local_k_mat * tmat).into()
     }
 
     /// Get element's strain vector, in 1d it's a scale
     fn calc_strain(&self) -> [Dtype; 3] {
-        let unit: Dtype = 1.0 / self.length();
-        let node_disps = self.get_nodes_displacement();
-        let strain: [Dtype; 3] = [-unit * node_disps[0] + unit * node_disps[1], 0.0, 0.0];
-        strain
+        let l = self.length();
+        let tmat = self.trans_mat();
+        let disp = self.get_nodes_displacement();
+        let dvec = SMatrix::<Dtype, 4, 1>::from(disp);
+        let bmat = SMatrix::<Dtype, 1, 2>::from([-1.0 / l, 1.0 / l]);
+        let strain: [Dtype; 1] = (bmat * tmat * dvec).into();
+        [strain[0], 0.0, 0.0]
     }
 
     /// Get element's stress vector, in 1d it's a scale
     fn calc_stress(&self) -> [Dtype; 3] {
-        let (ee, _nu) = self.material;
-        let stress: [Dtype; 3] = [ee * self.calc_strain()[0], 0.0, 0.0];
-        stress
+        let ee = self.material.0;
+        let strain = self.calc_strain()[0];
+        [ee * strain, 0.0, 0.0]
     }
 
     /// Print element's strain value
@@ -123,7 +170,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         let strain = self.calc_strain();
         println!(
             "\nelem[{}] strain:\n\tE_xx = {:-12.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
-            self.id, strain[0], strain[1], strain[2]
+            self.id, strain[0], 0.0, 0.0
         );
     }
 
@@ -132,14 +179,14 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         let stress = self.calc_stress();
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-12.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
-            self.id, stress[0], stress[1], stress[2]
+            self.id, stress[0], 0.0, 0.0
         );
     }
 }
 
 /// Implement zhm::K trait for Rod1D2N element
-impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
-    type Kmatrix = [[Dtype; 2]; 2];
+impl<'rod2d2n> K for Rod2D2N<'rod2d2n> {
+    type Kmatrix = [[Dtype; 4]; 4];
 
     /// Cache stiffness matrix for rod element
     fn k(&mut self) -> &Self::Kmatrix
@@ -163,19 +210,19 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
         }
 
         print!("\nRod1D2N k{} =  (* 10^{})\n[", self.id, n_exp as u8);
-        for row in 0..2 {
+        for row in 0..4 {
             if row == 0 {
                 print!("[");
             } else {
                 print!(" [");
             }
-            for col in 0..2 {
+            for col in 0..4 {
                 print!(
                     " {:>-12.6} ",
                     self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
-            if row == 1 {
+            if row == 3 {
                 println!("]]");
             } else {
                 println!("]");
@@ -187,13 +234,13 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
     /// Return Rod1D2N elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
-        for row in 0..2 {
+        for row in 0..4 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
             } else {
                 write!(k_matrix, " [").expect("!!! Write tri k_mat failed!");
             }
-            for col in 0..2 {
+            for col in 0..4 {
                 write!(
                     k_matrix,
                     " {:>-12.6} ",
@@ -201,7 +248,7 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
                 )
                 .expect("!!! Write tri k_mat failed!");
             }
-            if row == 1 {
+            if row == 3 {
                 write!(k_matrix, "]]").expect("!!! Write tri k_mat failed!");
             } else {
                 write!(k_matrix, "]\n").expect("!!! Write tri k_mat failed!");
@@ -222,7 +269,7 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
 
     /// Get element's info string
     fn info(&self, n_exp: Dtype) -> String {
-        format!("\n-----------------------------------------------------------------------------\nElem_Rod1d2N:\n\tId:\t{}\n\tArea: {:-12.4} (cross sectional area)\n\tLen : {:-12.4}\n\tMats: {:-12.4} (Young's modulus)\n\t      {:-12.4} (Poisson's ratio)\n\tNodes:{}{}\n\tStrain:\n\t\t{:-12.6?}\n\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (* 10^{})\n{}",
+        format!("\n-----------------------------------------------------------------------------\nElem_Rod2d2N:\n\tId:\t{}\n\tArea: {:-12.4} (cross sectional area)\n\tLen : {:-12.4}\n\tMats: {:-12.4} (Young's modulus)\n\t      {:-12.4} (Poisson's ratio)\n\tNodes:{}{}\n\tStrain:\n\t\t{:-12.6?}\n\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{}) \n{}",
             self.id,
             self.cross_sectional_area,
             self.length(),
@@ -244,11 +291,11 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
     }
 }
 
-impl fmt::Display for Rod1D2N<'_> {
+impl fmt::Display for Rod2D2N<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nElem_Rod1d2N:\n\tId:\t{}\n\tArea: {:-12.4}\n\tMats: {:-12.4} (Young's modulus)\n\t      {:-12.4} (Poisson's ratio)\n\tNodes:{}{}",
+            "\nElem_Rod2d2N:\n\tId:\t{}\n\tArea: {:-12.4}\n\tMats: {:-12.4} (Young's modulus)\n\t      {:-12.4} (Poisson's ratio)\n\tNodes:{}{}",
             self.id,
             self.cross_sectional_area,
             self.material.0,

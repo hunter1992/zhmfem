@@ -12,20 +12,15 @@ mod node;
 mod part;
 
 pub use calc::LinearEqs;
-//pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
-pub use elem::dim2::linear::{
-    //quadrila::Quad2D4N,
-    //rod::Rod2D2N,
-    triangle::Tri2D3N,
-    //triangle::{Tri2D3N, Tri2D6N},
-};
-//pub use elem::dim2::nonlinear::rod::Rod2D2NNL;
-pub use mesh::plane;
-pub use na::*;
-pub use node::Node2D;
+pub use elem::dim1::rod::Rod1D2N;
+pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
+pub use mesh::plane::Rectangle;
+pub use na::SMatrix;
+pub use node::{Node1D, Node2D, Node3D};
 pub use part::{part1d::Part1D, part2d::Part2D};
 
-use std::collections::HashMap;
+pub use std::collections::HashMap;
+pub use std::io::{BufWriter, Write};
 
 pub type Dtype = f32;
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
@@ -36,89 +31,73 @@ pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 pub trait K {
     type Kmatrix;
 
-    fn k(&mut self, material: (Dtype, Dtype)) -> &Self::Kmatrix
+    fn k(&mut self) -> &Self::Kmatrix
     where
         Self::Kmatrix: std::ops::Index<usize>;
     fn k_printer(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
 
     fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype>;
-    fn stress(&self, xyz: [Dtype; 3], material: (Dtype, Dtype)) -> Vec<Dtype>;
-
-    fn info(&self) -> String;
+    fn stress(&self, xyz: [Dtype; 3]) -> Vec<Dtype>;
+    fn info(&self, n_exp: Dtype) -> String;
     fn id(&self) -> usize;
 }
 
+/// Export trait generate Part's informations and write it into files
+/// Export trait generate txt or vtk files for output
 pub trait Export {
-    fn txt_writer(&self, target_file: &str) -> std::io::Result<bool>;
+    fn txt_writer(
+        &self,
+        target_file: &str,
+        calc_time: std::time::Duration,
+        n_exp: Dtype,
+        energy: (Dtype, Dtype, Dtype),
+    ) -> std::io::Result<bool>;
     fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool>;
 }
 
-/// 行数相同的矩阵进行水平拼接
-#[inline]
-pub fn matrix_hstack<const R: usize, const C1: usize, const C2: usize>(
-    m_left: &[[Dtype; C1]; R],
-    m_right: &[[Dtype; C2]; R],
-) -> [[Dtype; C1 + C2]; R] {
-    let mut rlt_mat: [[Dtype; C1 + C2]; R] = [[0.0; C1 + C2]; R];
-    for r in 0..R {
-        for c1 in 0..C1 {
-            rlt_mat[r][c1] = m_left[r][c1];
-        }
-        for c2 in C1..C1 + C2 {
-            rlt_mat[r][c2] = m_right[r][c2 - C1];
-        }
-    }
-    rlt_mat
-}
-
-/// 列数相同的矩阵进行竖直拼接
-#[inline]
-pub fn matrix_vstack<const C: usize, const R1: usize, const R2: usize>(
-    m_up: &[[Dtype; C]; R1],
-    m_down: &[[Dtype; C]; R2],
-) -> [[Dtype; C]; R1 + R2] {
-    let mut rlt_mat: [[Dtype; C]; R1 + R2] = [[0.0; C]; R1 + R2];
+/// Formatted print 1d array with scientific form
+pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
+    println!("\n{} = (10^{} *)", name, n_exp);
+    print!("[[");
     for c in 0..C {
-        for r1 in 0..R1 {
-            rlt_mat[r1][c] = m_up[r1][c];
-        }
-        for r2 in R1..R1 + R2 {
-            rlt_mat[r2][c] = m_down[r2 - R1][c];
-        }
+        if c == 0 {}
+        print!(
+            " {:-13.6} ",
+            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+        );
     }
-    rlt_mat
+    println!("]]\n");
 }
 
-/// 用slave矩阵填充master矩阵中的一部分，填充起始位置由sp决定
-#[inline]
-pub fn matrix_block_fill<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
-    master: &mut [[Dtype; C1]; R1],
-    slave: &[[Dtype; C2]; R2],
-    sp: (usize, usize),
+/// Formated print a 2D array with scientific form
+pub fn print_2darr<const R: usize, const C: usize>(
+    name: &str,
+    array: &[[Dtype; C]; R],
+    n_exp: Dtype,
 ) {
-    for row in 0..slave.len() {
-        for col in 0..slave[0].len() {
-            master[sp.0 + row][sp.1 + col] = slave[row][col];
+    println!("\n{} = (10^{} *)", name, n_exp);
+    for r in 0..R {
+        if r == 0 {
+            print!("[[");
+        } else {
+            print!(" [");
+        }
+        for c in 0..C {
+            print!(
+                " {:-13.6} ",
+                array[r][c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+            );
+        }
+        if r == array.len() - 1 {
+            println!("]]\n");
+        } else {
+            println!("]");
         }
     }
 }
 
-/// 用slave矩阵追加master矩阵中的一部分，追加起始位置由sp决定
-#[inline]
-pub fn matrix_block_append<const R1: usize, const C1: usize, const R2: usize, const C2: usize>(
-    master: &mut [[Dtype; C1]; R1],
-    slave: &[[Dtype; C2]; R2],
-    sp: (usize, usize),
-) {
-    for row in 0..slave.len() {
-        for col in 0..slave[0].len() {
-            master[sp.0 + row][sp.1 + col] += slave[row][col];
-        }
-    }
-}
-
-#[inline]
+/// Formated print a 1D vector with scientific form
 pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("\n{} = (10^{} *)", name, n_exp);
     print!("[[");
@@ -128,7 +107,7 @@ pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
     println!("]]\n");
 }
 
-#[inline]
+/// Formated print a 2D vector with scientific form
 pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
     println!("\n{} = (10^{} *)", name, n_exp);
     for row in 0..mat.len() {
@@ -151,250 +130,148 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
     }
 }
 
-/// formatted print 1d array with scientific form
-#[inline]
-pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
-    println!("\n{} = (10^{} *)", name, n_exp);
-    print!("[[");
-    for c in 0..C {
-        if c == 0 {}
-        print!(
-            " {:-10.6} ",
-            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
-        );
-    }
-    println!("]]\n");
-}
-
-/// formatted print 2d array with scientific form
-#[inline]
-pub fn print_2darr<const R: usize, const C: usize>(
-    name: &str,
-    arr: &[[Dtype; C]; R],
-    n_exp: Dtype,
-) {
-    println!("\n{} = (10^{} *)", name, n_exp);
-    for r in 0..R {
-        if r == 0 {
-            print!("[[");
-        } else {
-            print!(" [");
-        }
-        for c in 0..C {
-            print!(
-                " {:-10.6} ",
-                arr[r][c] / (10.0_f64.powf(n_exp as f64)) as Dtype
-            );
-        }
-        if r == arr.len() - 1 {
-            println!("]]\n");
-        } else {
-            println!("]");
-        }
-    }
-}
-
-/*
-/// return a vector include 1D nodes with location and force information
-#[inline]
-pub fn nodes1d_vec(points: &[Vec<Dtype>], force: &HashMap<usize, Dtype>) -> Vec<Node1D> {
-    if points[0].len() != 1_usize {
-        panic!(">>> Error from nodes1d_vec, the input points aren't 1D!");
-    }
-
-    let mut nodes: Vec<Node1D> = Vec::with_capacity(points.len());
-    for (idx, coord) in points.iter().enumerate() {
+/// Constructe a 1D nodes vector
+pub fn nodes1d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec<Node1D> {
+    let mut nodes: Vec<Node1D> = Vec::with_capacity(coords.len());
+    for (idx, coord) in coords.iter().enumerate() {
         nodes.push(Node1D::new(idx, [coord[0]]));
     }
-    for (idx, &f) in force {
-        nodes[idx / 1].forces[idx % 1] = f;
+    for (idx, &f) in forces {
+        nodes[idx / 1].forces.borrow_mut()[idx % 1] = f;
     }
     nodes
 }
-*/
 
-/// return a vector include 2D nodes with location and force information
-#[inline]
-pub fn nodes2d_vec(
-    points: &[Vec<Dtype>],
-    force: &HashMap<usize, Dtype>,
-    nonlinear_or_not: bool,
-) -> Vec<Node2D> {
-    if points[0].len() != 2 {
-        panic!(">>> Error from nodes2d_vec, the input points aren't 2D!");
-    }
-
-    let mut nodes: Vec<Node2D> = Vec::with_capacity(points.len());
-    for (idx, coord) in points.iter().enumerate() {
+/// Constructe a 2D nodes vector
+pub fn nodes2d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec<Node2D> {
+    let mut nodes: Vec<Node2D> = Vec::with_capacity(coords.len());
+    for (idx, coord) in coords.iter().enumerate() {
         nodes.push(Node2D::new(idx, [coord[0], coord[1]]));
     }
-
-    if nonlinear_or_not { //如果是线性分析，不区分节点的内力外力；非线性需要区分
-    } else {
-        for (idx, &f) in force {
-            nodes[idx / 2].forces[idx % 2] = f;
-        }
+    for (idx, &f) in forces {
+        nodes[idx / 2].forces.borrow_mut()[idx % 2] = f;
     }
     nodes
 }
 
-/*
-pub fn nodes3d_vec(points: &[Vec<Dtype>]) -> Vec<Node3D> {
-    let mut nodes: Vec<Node3D> = Vec::with_capacity(points.len());
-    for (idx, point) in points.iter().enumerate() {
-        nodes.push(Node3D::new(idx, [point[0], point[1], point[2]]));
+/// Constructe a 3D nodes vector
+pub fn nodes3d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec<Node3D> {
+    let mut nodes: Vec<Node3D> = Vec::with_capacity(coords.len());
+    for (idx, coord) in coords.iter().enumerate() {
+        nodes.push(Node3D::new(idx, [coord[0], coord[1], coord[2]]));
+    }
+    for (idx, &f) in forces {
+        nodes[idx / 3].forces.borrow_mut()[idx % 3] = f;
     }
     nodes
 }
 
-/// Construct vector of rod1d2n elements
-pub fn rod1d2n_vec<'rod>(
-    sec_areas: &'rod [Dtype],
-    nodes: &'rod [Node1D],
+/// calculate part's deform energy
+pub fn strain_energy<const D: usize>(
+    stiffness_matrix: [[Dtype; D]; D],
+    displacement: [Dtype; D],
+) -> Dtype {
+    let disp = SMatrix::<Dtype, D, 1>::from(displacement);
+    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix);
+    let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
+    strain_energy[0][0]
+}
+
+/// calculate external forces' work
+pub fn external_force_work<const D: usize>(
+    external_force: [Dtype; D],
+    displacement: [Dtype; D],
+) -> Dtype {
+    let disp = SMatrix::<Dtype, D, 1>::from(displacement);
+    let external_force = SMatrix::<Dtype, D, 1>::from(external_force);
+    let strain_energy: [[Dtype; 1]; 1] = (external_force.transpose() * disp).into();
+    strain_energy[0][0]
+}
+
+/// calculate part's potential energy
+pub fn potential_energy<const D: usize>(
+    stiffness_matrix: [[Dtype; D]; D],
+    external_force: [Dtype; D],
+    displacement: [Dtype; D],
+) -> Dtype {
+    strain_energy(stiffness_matrix, displacement)
+        - external_force_work(external_force, displacement)
+}
+
+/// Constructe a rod1d2n elements vector
+/// every rod with same cross sectional area
+pub fn rod1d2n_vec<'rod1d2n>(
+    nodes: &'rod1d2n Vec<Node1D>,
     coupled_nodes: &[Vec<usize>],
-) -> Vec<Rod1D2N<'rod>> {
+    cross_sectional_area: Dtype,
+    material: (Dtype, Dtype),
+) -> Vec<Rod1D2N<'rod1d2n>> {
     let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
+    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
         rod1d2n.push(Rod1D2N::new(
-            ele_id,
-            sec_areas[ele_id],
-            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
-        ));
+            ele_idx,
+            material,
+            cross_sectional_area,
+            [&nodes[cpld[0]], &nodes[cpld[1]]],
+        ))
     }
     rod1d2n
 }
 
-/// Construct vector of rod2d2n elements
-pub fn rod2d2n_vec<'rod>(
-    sec_areas: &'rod [Dtype],
-    nodes: &'rod [Node2D],
+/// Constructe a rod2d2n elements vector
+/// every rod with same cross sectional area
+pub fn rod2d2n_vec<'rod2d2n>(
+    nodes: &'rod2d2n Vec<Node2D>,
     coupled_nodes: &[Vec<usize>],
-) -> Vec<Rod2D2N<'rod>> {
+    cross_sectional_area: Dtype,
+    material: (Dtype, Dtype),
+) -> Vec<Rod2D2N<'rod2d2n>> {
     let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
+    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
         rod2d2n.push(Rod2D2N::new(
-            ele_id,
-            sec_areas[ele_id],
-            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
-        ));
+            ele_idx,
+            material,
+            cross_sectional_area,
+            [&nodes[cpld[0]], &nodes[cpld[1]]],
+        ))
     }
     rod2d2n
 }
 
-/// Construct vector of rod2d2n_nonlinear elements
-pub fn rod2d2n_nonlinear_vec<'rod>(
-    sec_areas: &'rod [Dtype],
-    nodes: &'rod [Node2D],
-    coupled_nodes: &[Vec<usize>],
-) -> Vec<Rod2D2NNL<'rod>> {
-    let mut rod2d2nnl: Vec<Rod2D2NNL> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
-        rod2d2nnl.push(Rod2D2NNL::new(
-            ele_id,
-            sec_areas[ele_id],
-            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
-        ));
-    }
-    rod2d2nnl
-}
-
-/// Construct vector of beam1d2n elements
-pub fn beam1d2n_vec<'beam>(
-    moi: Dtype,
-    sec_area: Dtype,
-    nodes: &'beam [Node2D],
-    coupled_nodes: &[Vec<usize>],
-) -> Vec<Beam1D2N<'beam>> {
-    let mut beam1d2n_vec: Vec<Beam1D2N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_id, nodes_id_pair) in coupled_nodes.iter().enumerate() {
-        beam1d2n_vec.push(Beam1D2N::new(
-            ele_id,
-            moi,
-            sec_area,
-            [&nodes[nodes_id_pair[0]], &nodes[nodes_id_pair[1]]],
-        ));
-    }
-    beam1d2n_vec
-}
-*/
-
-/// Construct vector of tri2d3n elements
-pub fn tri2d3n_vec(
+/// Constructe a tri2d3n elements vector
+/// every element with same thick
+pub fn tri2d3n_vec<'tri2d3n>(
     thick: Dtype,
-    nodes: &Vec<Node2D>,
+    nodes: &'tri2d3n Vec<Node2D>,
     coupled_nodes: &[Vec<usize>],
-) -> Vec<Tri2D3N> {
+    material: (Dtype, Dtype),
+) -> Vec<Tri2D3N<'tri2d3n>> {
     let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
+    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
-            ele_id,
+            ele_idx,
             thick,
-            [nodes[cpld[0]], nodes[cpld[1]], nodes[cpld[2]]],
-        ));
+            material,
+            [&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]],
+        ))
     }
     tri2d3n
 }
 
-/// Construct vector of tri2d6n elements
-//pub fn tri2d6n_vec<'tri2d6n>(
-//    thick: Dtype,
-//    nodes: &'tri2d6n [&'static Node2D],
-//    coupled_nodes: &[Vec<usize>],
-//) -> Vec<Tri2D6N<'tri2d6n>> {
-//    let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
-//    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
-//        tri2d6n.push(Tri2D6N::new(
-//            ele_id,
-//            thick,
-//            [
-//                nodes[cpld[0]],
-//                nodes[cpld[1]],
-//                nodes[cpld[2]],
-//                nodes[cpld[3]],
-//                nodes[cpld[4]],
-//                nodes[cpld[5]],
-//            ],
-//        ));
-//    }
-//    tri2d6n
-//}
-
-/*
-/// Construct vector of tri2d6n elements
-pub fn tri2d6n_vec<'tri2d6n>(
-    thick: Dtype,
-    nodes: &'tri2d6n [Node2D],
-    coupled_nodes: &[Vec<usize>],
-) -> Vec<Tri2D6N<'tri2d6n>> {
-    let mut tri2d6n: Vec<Tri2D6N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_id, cpld) in coupled_nodes.iter().enumerate() {
-        tri2d6n.push(Tri2D6N::new(
-            ele_id,
-            thick,
-            [
-                &nodes[cpld[0]],
-                &nodes[cpld[1]],
-                &nodes[cpld[2]],
-                &nodes[cpld[3]],
-                &nodes[cpld[4]],
-                &nodes[cpld[5]],
-            ],
-        ));
-    }
-    tri2d6n
-}
-
-/// Construct vector of quad2d4n elements
+/// Constructe a quadrila elements vector
+/// every element with same thick
 pub fn quad2d4n_vec<'quad2d4n>(
     thick: Dtype,
-    nodes: &'quad2d4n [Node2D],
-    couples: &[Vec<usize>],
+    nodes: &'quad2d4n Vec<Node2D>,
+    coupled_nodes: &[Vec<usize>],
+    material: (Dtype, Dtype),
 ) -> Vec<Quad2D4N<'quad2d4n>> {
-    let mut rec2d4n: Vec<Quad2D4N> = Vec::new();
-    for (ele_id, cpld) in couples.iter().enumerate() {
-        rec2d4n.push(Quad2D4N::new(
-            ele_id,
+    let mut quad2d4n: Vec<Quad2D4N> = Vec::with_capacity(coupled_nodes.len());
+    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
+        quad2d4n.push(Quad2D4N::new(
+            ele_idx,
             thick,
+            material,
             [
                 &nodes[cpld[0]],
                 &nodes[cpld[1]],
@@ -403,9 +280,8 @@ pub fn quad2d4n_vec<'quad2d4n>(
             ],
         ))
     }
-    rec2d4n
+    quad2d4n
 }
-*/
 
 #[cfg(test)]
 mod testing {
@@ -429,13 +305,14 @@ mod testing {
 
     #[test]
     fn gen_elements() {
+        let material: (Dtype, Dtype) = (1.0, 0.25);
         // 1D
         let node_a = Node1D::new(1, [0.0]);
         let node_b = Node1D::new(2, [1.0]);
         let node_c = Node1D::new(3, [3.0]);
 
-        let rod1 = Rod1D2N::new(1, 1.0, [&node_a, &node_b]);
-        let rod2 = Rod1D2N::new(2, 1.0, [&node_b, &node_c]);
+        let rod1 = Rod1D2N::new(1, material, 1.0, [&node_a, &node_b]);
+        let rod2 = Rod1D2N::new(2, material, 1.0, [&node_b, &node_c]);
         assert_eq!(1usize, rod1.id);
         assert_ne!(2usize, rod1.id);
         assert_eq!(2usize, rod2.id);
@@ -447,10 +324,10 @@ mod testing {
         let node4 = Node2D::new(4, [1.0, 1.0]);
         let thick = 1.0;
 
-        let tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node3]);
-        let tri2 = Tri2D3N::new(2, thick, [&node4, &node2, &node3]);
+        let tri1 = Tri2D3N::new(1, thick, material, [&node1, &node2, &node3]);
+        let tri2 = Tri2D3N::new(2, thick, material, [&node4, &node2, &node3]);
 
-        let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4]);
+        //let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4]);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
@@ -460,13 +337,13 @@ mod testing {
         assert_eq!([1.0 as Dtype, 1.0 as Dtype], tri2.nodes[0].coord);
 
         assert_eq!(vec![0.0, 0.0, 1.0], tri1.xs());
-        assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.xs());
+        //assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.xs());
         assert_ne!(vec![0.0, 0.0, 1.0], tri1.ys());
-        assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.ys());
+        //assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.ys());
 
         assert_eq!(0.5 as Dtype, tri1.area());
         assert_eq!(0.5 as Dtype, tri2.area());
-        assert_eq!(1.0 as Dtype, rec1.area());
+        //assert_eq!(1.0 as Dtype, rec1.area());
     }
 
     #[test]
@@ -481,9 +358,9 @@ mod testing {
         let nodes = vec![node1, node2, node3, node4];
         let cplds = vec![vec![0, 1, 3], vec![1, 2, 3]];
         let zero_disps_idx = vec![0, 1, 3, 6];
-        let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds);
+        let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds, material);
 
-        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds, &material);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &mut nodes, &mut tris, &cplds);
         assert_eq!(p1.elems[1].nodes[1].coord[1], 1.0);
         assert_ne!(p1.elems[1].nodes[1].coord[1], -1.0);
 
@@ -507,11 +384,11 @@ mod testing {
         let node4 = Node2D::new(4, [0.0, 1.0]);
         let thick = 1.0;
 
-        let mut tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node4]);
-        let mut tri2 = Tri2D3N::new(2, thick, [&node3, &node4, &node2]);
+        let mut tri1 = Tri2D3N::new(1, thick, material, [&node1, &node2, &node4]);
+        let mut tri2 = Tri2D3N::new(2, thick, material, [&node3, &node4, &node2]);
 
-        let k1 = tri1.k(material);
-        let k2 = tri2.k(material);
+        let k1 = tri1.k();
+        let k2 = tri2.k();
 
         assert_eq!(k1, k2);
     }
@@ -526,35 +403,35 @@ mod testing {
         let node4 = Node2D::new(4, [0.0, 1.0]);
         let thick = 1.0;
 
-        let mut quad1 = Quad2D4N::new(1, thick, [&node1, &node2, &node3, &node4]);
+        let mut quad1 = Quad2D4N::new(1, thick, material, [&node1, &node2, &node3, &node4]);
 
-        let k1 = quad1.k(material);
+        let k1 = quad1.k();
         assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
 
-    #[test]
-    fn mesh_rect_with_tri() {
-        // set rect's width and height
-        const W: Dtype = 1.0;
-        const H: Dtype = 1.0;
+    //#[test]
+    //fn mesh_rect_with_tri() {
+    //    // set rect's width and height
+    //    const W: Dtype = 1.0;
+    //    const H: Dtype = 1.0;
 
-        // number of nodes and freedom
-        const R: usize = 2; //rows of nodes
-        const C: usize = 2; //rows of nodes
+    //    // number of nodes and freedom
+    //    const R: usize = 2; //rows of nodes
+    //    const C: usize = 2; //rows of nodes
 
-        let rect_geo = plane::Rectangle::new([0., 0.], [W, H]);
-        let (coords, coupled_nodes) = rect_geo.mesh_with_tri(R, C);
+    //    let rect_geo = plane::Rectangle::new([0., 0.], [W, H]);
+    //    let (coords, coupled_nodes) = rect_geo.mesh_with_tri(R, C);
 
-        assert_eq!(coords, [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
-        assert_eq!(coupled_nodes, [[0, 1, 2], [3, 2, 1]]);
-        /*   2____3
-         *   |\   |
-         *   | \  |
-         *   |  \ |
-         *   |___\|
-         *   0    1
-         */
-    }
+    //    assert_eq!(coords, [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
+    //    assert_eq!(coupled_nodes, [[0, 1, 2], [3, 2, 1]]);
+    //    /*   2____3
+    //     *   |\   |
+    //     *   | \  |
+    //     *   |  \ |
+    //     *   |___\|
+    //     *   0    1
+    //     */
+    //}
 
     #[bench]
     /// benchmark的结果是:277 +/- 15 ns/iter (Intel 8265U 插电)

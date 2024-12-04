@@ -1,116 +1,58 @@
-extern crate nalgebra as na;
-
-use crate::{calc::LinearEqs, node::Node2D, Dtype, Export, K};
-use na::*;
-use std::collections::HashMap;
+use crate::{Dtype, Export, LinearEqs, Node2D, K};
 use std::io::{BufWriter, Write};
-//use std::thread;
 
-/// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in 1 element
-pub struct Part2D<'a, Elem: K + 'static, const N: usize, const F: usize, const M: usize>
+pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
 where
     [[Dtype; N * F]; N * F]: Sized,
 {
     pub id: usize,
-    pub nodes: &'a mut [Node2D],
-    pub elems: &'a mut [Elem],
-    pub cplds: &'a [Vec<usize>],
-    pub material: &'a (Dtype, Dtype),
+    pub nodes: &'part2d [Node2D],
+    pub elems: &'part2d mut [Elem],
+    pub cplds: &'part2d [Vec<usize>], //cplds: coupled nodes index
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
 }
 
-impl<'a, Elem: K + 'static, const N: usize, const F: usize, const M: usize>
-    Part2D<'a, Elem, N, F, M>
+impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
+    Part2D<'part2d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
 {
     pub fn new(
         id: usize,
-        nodes: &'a mut [Node2D],
-        elems: &'a mut [Elem],
-        cplds: &'a [Vec<usize>],
-        material: &'a (Dtype, Dtype),
-    ) -> Self
-    where
-        [[Dtype; N * F]; N * F]: Sized,
-    {
+        nodes: &'part2d Vec<Node2D>,
+        elems: &'part2d mut Vec<Elem>,
+        cplds: &'part2d Vec<Vec<usize>>,
+    ) -> Self {
         Part2D {
             id,
             nodes,
             elems,
             cplds,
-            material,
             k_matrix: None,
         }
     }
 
     /// Get displacement of all nodes
-    pub fn disps(&self) -> [Dtype; N * F] {
+    pub fn nodes_displacement(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx * 2] = self.nodes[idx].displs[0];
-            data[idx * 2 + 1] = self.nodes[idx].displs[1];
+            data[idx * 2] = self.nodes[idx].displs.borrow()[0];
+            data[idx * 2 + 1] = self.nodes[idx].displs.borrow()[1];
         }
         data
     }
 
     /// Get force of all nodes
-    pub fn forces(&self) -> [Dtype; N * F] {
+    pub fn nodes_force(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for idx in 0..N {
-            data[idx * 2] = self.nodes[idx].forces[0];
-            data[idx * 2 + 1] = self.nodes[idx].forces[1];
+            data[idx * 2] = self.nodes[idx].forces.borrow()[0];
+            data[idx * 2 + 1] = self.nodes[idx].forces.borrow()[1];
         }
         data
     }
 
-    /// Get nodes' external force vector
-    pub fn nodes_external_forces(&self, load_force: &HashMap<usize, Dtype>) -> [Dtype; N * F] {
-        let mut ext_force: [Dtype; N * F] = [0.0; N * F];
-
-        for (&idx, &f) in load_force {
-            ext_force[idx] = f;
-        }
-        ext_force
-    }
-
-    /// Get the deform energy of the part
-    pub fn strain_energy(&self) -> Dtype {
-        if self.k_matrix.is_none() {
-            panic!("---> Error! Part[{}]'s stiffness matrix is null!", self.id);
-        }
-        let q = SMatrix::<Dtype, { N * F }, 1>::from(self.disps());
-        let k = SMatrix::<Dtype, { N * F }, { N * F }>::from(self.k_matrix.unwrap()).transpose();
-        let rlt: [[Dtype; 1]; 1] = (q.transpose() * k * q).into();
-        0.5 * rlt[0][0]
-    }
-
-    /// Get the external force work on the part
-    pub fn force_work(&self) -> Dtype {
-        let q = SMatrix::<Dtype, { N * F }, 1>::from(self.disps());
-        let f = SMatrix::<Dtype, { N * F }, 1>::from(self.forces());
-        let rlt: [[Dtype; 1]; 1] = (f.transpose() * q).into();
-        rlt[0][0]
-    }
-
-    pub fn potential_energy(&self) -> Dtype {
-        self.strain_energy() - self.force_work()
-    }
-
-    /// Write the disp and force result into nodes
-    pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
-        let disp = slv.disps;
-        let force = slv.forces;
-        for (idx, node) in self.nodes.iter_mut().enumerate() {
-            node.displs[0] = disp[idx * 2];
-            node.displs[1] = disp[idx * 2 + 1];
-            node.forces[0] = force[idx * 2];
-            node.forces[1] = force[idx * 2 + 1];
-        }
-    }
-
-    /// Assemble the global stiffness mat K
-    pub fn k(&mut self, material: (Dtype, Dtype)) -> &[[Dtype; N * F]; N * F]
+    pub fn k(&mut self) -> &[[Dtype; N * F]; N * F]
     where
         <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
     {
@@ -122,13 +64,13 @@ where
             }
 
             println!(
-                "\n>>> Assembling Part2D#{}'s global stiffness matrix K{} ......",
+                "\n>>> Assembling Part2D(#{})'s global stiffness matrix K{} ......",
                 self.id, self.id
             );
             let mut part_k: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
 
             // 计算并缓存每个单元的刚度矩阵
-            let elem_ks: Vec<_> = self.elems.iter_mut().map(|x| x.k(material)).collect();
+            let elem_ks: Vec<_> = self.elems.iter_mut().map(|x| x.k()).collect();
 
             // 获取单个单元内的节点数目n，构造0到n的range，用于遍历单个单元的局部刚度矩阵k
             // 暂时认为part中只有一种单元类型，所有单元内节点数目相同，用cplds[0].len
@@ -157,24 +99,24 @@ where
     }
 
     /// Print part's global stiffness matrix
-    pub fn k_printer(&mut self, n_exp: Dtype) {
+    pub fn k_printer(&mut self, n_exp: Dtype)
+    where
+        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
+    {
         if self.k_matrix.is_none() {
-            println!(
-                "!!! Part #{}'s K matrix is empty! call k() to calc it.",
-                self.id
-            );
+            self.k();
         }
 
         print!("\nPart #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
-        for row in 0..N * F {
+        for row in 0..(N * F) {
             if row == 0 {
                 print!("[");
             } else {
                 print!(" [");
             }
-            for col in 0..N * F {
+            for col in 0..(N * F) {
                 print!(
-                    " {:>-10.6} ",
+                    " {:>-12.6} ",
                     self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
@@ -186,6 +128,18 @@ where
         }
         println!("");
     }
+
+    /// Write the disp and force result into nodes
+    pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
+        let disp = slv.disps;
+        let force = slv.forces;
+        for (idx, node) in self.nodes.iter().enumerate() {
+            node.displs.borrow_mut()[0] = disp[idx * 2];
+            node.displs.borrow_mut()[1] = disp[idx * 2 + 1];
+            node.forces.borrow_mut()[0] = force[idx * 2];
+            node.forces.borrow_mut()[1] = force[idx * 2 + 1];
+        }
+    }
 }
 
 impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Export
@@ -193,37 +147,48 @@ impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Export
 where
     [[Dtype; N * F]; N * F]: Sized,
 {
-    fn txt_writer(&self, target_file: &str) -> std::io::Result<bool> {
+    fn txt_writer(
+        &self,
+        target_file: &str,
+        calc_time: std::time::Duration,
+        n_exp: Dtype,
+        energy: (Dtype, Dtype, Dtype),
+    ) -> std::io::Result<bool> {
         let txt_file = std::fs::File::create(target_file).unwrap();
         let mut text_writer = BufWriter::new(txt_file);
 
-        print!("\n>>> Writing calc results into txt file ......");
+        println!("\n>>> Writing calc results into txt file ......");
         write!(text_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
 
+        let (deform, exwork, potential) = energy;
+        write!(text_writer, "\n").expect("Write parts' result into yxy file failed!!!");
+        write!(text_writer, "\n>>> System energy:\n")
+            .expect("Write parts' result into yxy file failed!!!");
+        write!(text_writer, "\t\t\tE_d: {:-12.6} (deform energy)\n", deform)
+            .expect("Write parts' result into yxy file failed!!!");
+        write!(text_writer, "\t\t\tW_f: {:-12.6} (exforce works)\n", exwork)
+            .expect("Write parts' result into yxy file failed!!!");
+        write!(
+            text_writer,
+            "\t\t\tE_p: {:-12.6} (potential energy)\n",
+            potential
+        )
+        .expect("Write parts' result into yxy file failed!!!");
+
+        write!(
+            text_writer,
+            "\n>>> Solver time consuming: {:?}\n",
+            calc_time
+        )
+        .expect("Write txt file error!");
+
+        write!(text_writer, "\n>>> Details of each element:")
+            .expect("Write parts' result into txt file failed!!!");
         for elem in self.elems.iter() {
-            write!(text_writer, "{}\n", elem.info()).expect("Write info failed!");
-            write!(
-                text_writer,
-                "\tStrain: {:-9.6?}\n",
-                elem.strain([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype])
-            )
-            .expect("Write strain failed!");
-            write!(
-                text_writer,
-                "\tStress: {:-9.6?}\n",
-                elem.stress([0.0 as Dtype, 0.0 as Dtype, 0.0 as Dtype], *self.material)
-            )
-            .expect("Write stress failed!");
-            write!(
-                text_writer,
-                "\n\tStiffness matrix k{} = \n{}\n",
-                elem.id(),
-                elem.k_string(0.0) //设置刚度矩阵元素科学记数次数
-            )
-            .expect("!!! Write k matrix failed!");
+            write!(text_writer, "{}\n", elem.info(n_exp)).expect("Write info failed!");
         }
         text_writer.flush().expect("!!! Flush txt file failed!");
-        println!(" Down!");
+        println!("    Down!");
         Ok(true)
     }
 
