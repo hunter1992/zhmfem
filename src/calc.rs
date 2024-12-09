@@ -8,8 +8,8 @@ pub struct LinearEqs<const D: usize> {
     pub disps: [Dtype; D],
     pub forces: [Dtype; D],
     pub disps_0_idx: Vec<usize>,
-    pub static_kmat: [[Dtype; D]; D],
-    pub solver_calc_time: Option<std::time::Duration>, // solved or not flag
+    pub static_kmat: [[Dtype; D]; D], // solved or not flag
+    pub solver_calc_time: Option<std::time::Duration>,
 }
 
 impl<const D: usize> LinearEqs<D> {
@@ -29,31 +29,12 @@ impl<const D: usize> LinearEqs<D> {
         }
     }
 
-    /// get disp on every single node
-    pub fn disps_rlt(&mut self, solve_method: usize, calc_error: Dtype) -> &[Dtype; D] {
-        if self.state == false {
-            if solve_method == 0 {
-                self.lu_direct_solver();
-            } else if solve_method == 1 {
-                self.gauss_seidel_iter_solver(calc_error);
-            }
-            &self.disps
-        } else {
-            &self.disps
-        }
-    }
-
-    /// get force on every single node
-    pub fn forces_rlt(&mut self, solve_method: usize, calc_error: Dtype) -> &[Dtype; D] {
-        if self.state == false {
-            if solve_method == 0 {
-                self.lu_direct_solver();
-            } else if solve_method == 1 {
-                self.gauss_seidel_iter_solver(calc_error);
-            }
-            &self.forces
-        } else {
-            &self.forces
+    /// Solve the defined problem
+    pub fn solve(&mut self, solve_method: &str, calc_error: Dtype) {
+        match solve_method {
+            "lu" => self.lu_direct_solver(),
+            "gs" => self.gauss_seidel_iter_solver(calc_error),
+            _ => panic!("!!! The provided algorithm is currently not supported!"),
         }
     }
 
@@ -86,7 +67,8 @@ impl<const D: usize> LinearEqs<D> {
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
             .collect();
-        self.forces = (((kmat * SVector::from(self.disps)) - force) + force).into();
+        //self.forces = (((kmat * SVector::from(self.disps)) - force) + force).into();
+        self.forces = (kmat * SVector::from(self.disps)).into();
         self.solver_calc_time = Some(duration_lu);
         self.state = true;
     }
@@ -145,7 +127,8 @@ impl<const D: usize> LinearEqs<D> {
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = x[i])
             .collect();
-        self.forces = (((kmat * SVector::from(self.disps)) - force) + force).into();
+        //self.forces = (((kmat * SVector::from(self.disps)) - force) + force).into();
+        self.forces = (kmat * SVector::from(self.disps)).into();
         self.state = true;
     }
 }

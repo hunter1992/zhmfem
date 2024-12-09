@@ -8,7 +8,7 @@ pub struct Quad2D4N<'quad2d4n> {
     pub thick: Dtype,
     pub nodes: [&'quad2d4n Node2D; 4],
     pub k_matrix: Option<[[Dtype; 8]; 8]>,
-    pub material: (Dtype, Dtype),
+    pub material: &'quad2d4n (Dtype, Dtype),
 }
 
 impl<'quad2d4n> Quad2D4N<'quad2d4n> {
@@ -16,8 +16,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn new(
         id: usize,
         thick: Dtype,
-        material: (Dtype, Dtype),
         nodes: [&'quad2d4n Node2D; 4],
+        material: &'quad2d4n (Dtype, Dtype),
     ) -> Self {
         Quad2D4N {
             id,
@@ -29,7 +29,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     }
 
     /// Set element material_args
-    pub fn set_material(&mut self, material_args: (Dtype, Dtype)) {
+    pub fn set_material(&mut self, material_args: &'quad2d4n (Dtype, Dtype)) {
         self.material = material_args;
     }
 
@@ -186,7 +186,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             "\n>>> Calculating Quad2D4N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
-        let (ee, nu) = self.material;
+        let (ee, nu) = *self.material;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
@@ -230,7 +230,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
 
     /// Get element's strss vector
     fn calc_stress(&self, xi_eta: [Dtype; 2]) -> [Dtype; 3] {
-        let (ee, nu) = self.material;
+        let (ee, nu) = *self.material;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],

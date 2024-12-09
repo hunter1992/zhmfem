@@ -53,7 +53,7 @@ fn main() {
     let nodes = nodes2d_vec(&points, &force_data);
 
     // Construct Tri2D3N elements vector
-    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, material);
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
     let element_type: &str = "Tri2D3N_";
 
     // Construct 2D part & assembly global stiffness matrix
@@ -77,6 +77,9 @@ fn main() {
     // 2) solve the linear equations of static system using iter method.
     //eqs.gauss_seidel_iter_solver(0.001);
     //let output_file = "G-S.txt";
+
+    // 3) or you can solve the problem with a more concise call:
+    // eqs.solve("lu", 0.001); // or eqs.solve("gs", 0.001);
 
     let calc_time: std::time::Duration = eqs.solver_calc_time.unwrap();
 

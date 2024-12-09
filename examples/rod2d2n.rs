@@ -10,7 +10,7 @@ fn main() {
     let time_start = Instant::now();
 
     // -------- Part 1:  Set initial parameters --------
-    let cross_section_area: Dtype = 100.0;
+    let cross_section_area: Vec<Dtype> = vec![100.0, 100.0, 100.0, 100.0];
     let material: (Dtype, Dtype) = (295000.0, 0.25); //Young's modulud & Poisson's ratio
 
     // Set mesh and freedom parameters
@@ -45,7 +45,7 @@ fn main() {
     let nodes = nodes2d_vec(&points, &force_data);
 
     // Construct Rod2D2N elements vector
-    let mut rods = rod2d2n_vec(&nodes, &grpdnidx, cross_section_area, material);
+    let mut rods = rod2d2n_vec(&nodes, &grpdnidx, &cross_section_area, &material);
     let element_type: &str = "Rod2D2N_";
 
     // Construct 2D part & assembly global stiffness matrix

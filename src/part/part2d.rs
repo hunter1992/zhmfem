@@ -1,4 +1,5 @@
 use crate::{Dtype, Export, LinearEqs, Node2D, K};
+use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 
 pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
@@ -129,6 +130,39 @@ where
         println!("");
     }
 
+    /// Return Part2D's stiffness matrix's formeted string
+    pub fn k_string(&self, n_exp: Dtype) -> String {
+        let mut k_matrix = String::new();
+        write!(
+            k_matrix,
+            "\nPart #{}  K =  (* 10^{})\n",
+            self.id, n_exp as u8
+        )
+        .expect("Write Part2D Stiffness Matrix Failed!");
+        for row in 0..(N * F) {
+            if row == 0 {
+                write!(k_matrix, "[[").expect("Write Part2D Stiffness Matrix Failed!");
+            } else {
+                write!(k_matrix, " [").expect("Write Part2D Stiffness Matrix Failed!");
+            }
+            for col in 0..(N * F) {
+                write!(
+                    k_matrix,
+                    " {:>-12.6} ",
+                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                )
+                .expect("Write Part2D Stiffness Matrix Failed!");
+            }
+            if row == { N * F - 1 } {
+                write!(k_matrix, "]]").expect("Write Part2D Stiffness Matrix Failed!");
+            } else {
+                write!(k_matrix, " ]\n").expect("Write Part2D Stiffness Matrix Failed!");
+            }
+        }
+        write!(k_matrix, "\n").expect("Write Part2D Stiffness Matrix Failed!");
+        k_matrix
+    }
+
     /// Write the disp and force result into nodes
     pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
@@ -181,6 +215,9 @@ where
             calc_time
         )
         .expect("Write txt file error!");
+
+        write!(text_writer, "\n>>> Part2D stiffness matrix:\n").expect("Write info failed!");
+        write!(text_writer, "{}", self.k_string(n_exp)).expect("Write info failed!");
 
         write!(text_writer, "\n>>> Details of each element:")
             .expect("Write parts' result into txt file failed!!!");

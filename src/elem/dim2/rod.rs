@@ -7,16 +7,16 @@ pub struct Rod2D2N<'rod2d2n> {
     pub cross_sectional_area: Dtype,
     pub nodes: [&'rod2d2n Node2D; 2],
     pub k_matrix: Option<[[Dtype; 4]; 4]>,
-    pub material: (Dtype, Dtype),
+    pub material: &'rod2d2n (Dtype, Dtype),
 }
 
 impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     /// Generate a 2D Rod2D2N element
     pub fn new(
         id: usize,
-        material: (Dtype, Dtype),
         cross_sectional_area: Dtype,
         nodes: [&'rod2d2n Node2D; 2],
+        material: &'rod2d2n (Dtype, Dtype),
     ) -> Self {
         Rod2D2N {
             id,
@@ -28,7 +28,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     }
 
     /// Set element material_args
-    pub fn set_material(&mut self, material_args: (Dtype, Dtype)) {
+    pub fn set_material(&mut self, material_args: &'rod2d2n (Dtype, Dtype)) {
         self.material = material_args;
     }
 

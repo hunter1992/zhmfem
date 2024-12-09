@@ -7,16 +7,16 @@ pub struct Rod1D2N<'rod1d2n> {
     pub cross_sectional_area: Dtype,
     pub nodes: [&'rod1d2n Node1D; 2],
     pub k_matrix: Option<[[Dtype; 2]; 2]>,
-    pub material: (Dtype, Dtype),
+    pub material: &'rod1d2n (Dtype, Dtype),
 }
 
 impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     /// Generate a 1D Rod1D2N element
     pub fn new(
         id: usize,
-        material: (Dtype, Dtype),
         cross_sectional_area: Dtype,
         nodes: [&'rod1d2n Node1D; 2],
+        material: &'rod1d2n (Dtype, Dtype),
     ) -> Self {
         Rod1D2N {
             id,
@@ -28,7 +28,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 
     /// Set element material_args
-    pub fn set_material(&mut self, material_args: (Dtype, Dtype)) {
+    pub fn set_material(&mut self, material_args: &'rod1d2n (Dtype, Dtype)) {
         self.material = material_args;
     }
 
@@ -95,7 +95,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
             "\n>>> Calculating Rod1D2N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
-        let (ee, _nu) = self.material;
+        let ee = self.material.0;
         let stiffness_matrix: [[Dtype; 2]; 2] =
             (SMatrix::<Dtype, 2, 2>::from([[1.0, -1.0], [-1.0, 1.0]])
                 * (ee * self.cross_sectional_area / self.length()))
@@ -113,7 +113,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
 
     /// Get element's stress vector, in 1d it's a scale
     fn calc_stress(&self) -> [Dtype; 3] {
-        let (ee, _nu) = self.material;
+        let ee = self.material.0;
         let stress: [Dtype; 3] = [ee * self.calc_strain()[0], 0.0, 0.0];
         stress
     }

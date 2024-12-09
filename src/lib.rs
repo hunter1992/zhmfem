@@ -12,7 +12,7 @@ mod node;
 mod part;
 
 pub use calc::LinearEqs;
-pub use elem::dim1::rod::Rod1D2N;
+pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
 pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
 pub use mesh::plane::Rectangle;
 pub use na::SMatrix;
@@ -201,18 +201,19 @@ pub fn potential_energy<const D: usize>(
 /// Constructe a rod1d2n elements vector
 /// every rod with same cross sectional area
 pub fn rod1d2n_vec<'rod1d2n>(
-    nodes: &'rod1d2n Vec<Node1D>,
-    coupled_nodes: &[Vec<usize>],
-    cross_sectional_area: Dtype,
-    material: (Dtype, Dtype),
+    //nodes: &'rod1d2n Vec<Node1D>,
+    nodes: &'rod1d2n [Node1D],
+    coupled_nodes_idx: &[Vec<usize>],
+    cross_sectional_area: &'rod1d2n [Dtype],
+    material: &'rod1d2n (Dtype, Dtype),
 ) -> Vec<Rod1D2N<'rod1d2n>> {
-    let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
+    let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(coupled_nodes_idx.len());
+    for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
         rod1d2n.push(Rod1D2N::new(
             ele_idx,
-            material,
-            cross_sectional_area,
+            cross_sectional_area[ele_idx],
             [&nodes[cpld[0]], &nodes[cpld[1]]],
+            material,
         ))
     }
     rod1d2n
@@ -221,38 +222,60 @@ pub fn rod1d2n_vec<'rod1d2n>(
 /// Constructe a rod2d2n elements vector
 /// every rod with same cross sectional area
 pub fn rod2d2n_vec<'rod2d2n>(
-    nodes: &'rod2d2n Vec<Node2D>,
-    coupled_nodes: &[Vec<usize>],
-    cross_sectional_area: Dtype,
-    material: (Dtype, Dtype),
+    nodes: &'rod2d2n [Node2D],
+    coupled_nodes_idx: &[Vec<usize>],
+    cross_sectional_area: &'rod2d2n [Dtype],
+    material: &'rod2d2n (Dtype, Dtype),
 ) -> Vec<Rod2D2N<'rod2d2n>> {
-    let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
+    let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(coupled_nodes_idx.len());
+    for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
         rod2d2n.push(Rod2D2N::new(
             ele_idx,
-            material,
-            cross_sectional_area,
+            cross_sectional_area[ele_idx],
             [&nodes[cpld[0]], &nodes[cpld[1]]],
+            material,
         ))
     }
     rod2d2n
+}
+
+/// Constructe a beam1d2n elements vector
+/// every beam with same cross sectional area
+pub fn beam1d2n_vec<'beam1d2n>(
+    nodes: &'beam1d2n [Node2D],
+    coupled_nodes_idx: &[Vec<usize>],
+    moment_of_inertia: &'beam1d2n [Dtype],
+    cross_sectional_area: &'beam1d2n [Dtype],
+    material: &'beam1d2n (Dtype, Dtype),
+) -> Vec<Beam1D2N<'beam1d2n>> {
+    let mut beam1d2n: Vec<Beam1D2N> = Vec::with_capacity(coupled_nodes_idx.len());
+    for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
+        beam1d2n.push(Beam1D2N::new(
+            ele_idx,
+            moment_of_inertia[ele_idx],
+            cross_sectional_area[ele_idx],
+            [&nodes[cpld[0]], &nodes[cpld[1]]],
+            material,
+        ))
+    }
+    beam1d2n
 }
 
 /// Constructe a tri2d3n elements vector
 /// every element with same thick
 pub fn tri2d3n_vec<'tri2d3n>(
     thick: Dtype,
-    nodes: &'tri2d3n Vec<Node2D>,
-    coupled_nodes: &[Vec<usize>],
-    material: (Dtype, Dtype),
+    nodes: &'tri2d3n [Node2D],
+    coupled_nodes_idx: &[Vec<usize>],
+    material: &'tri2d3n (Dtype, Dtype),
 ) -> Vec<Tri2D3N<'tri2d3n>> {
-    let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
+    let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes_idx.len());
+    for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
         tri2d3n.push(Tri2D3N::new(
             ele_idx,
             thick,
-            material,
             [&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]],
+            material,
         ))
     }
     tri2d3n
@@ -264,20 +287,20 @@ pub fn quad2d4n_vec<'quad2d4n>(
     thick: Dtype,
     nodes: &'quad2d4n Vec<Node2D>,
     coupled_nodes: &[Vec<usize>],
-    material: (Dtype, Dtype),
+    material: &'quad2d4n (Dtype, Dtype),
 ) -> Vec<Quad2D4N<'quad2d4n>> {
     let mut quad2d4n: Vec<Quad2D4N> = Vec::with_capacity(coupled_nodes.len());
     for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
         quad2d4n.push(Quad2D4N::new(
             ele_idx,
             thick,
-            material,
             [
                 &nodes[cpld[0]],
                 &nodes[cpld[1]],
                 &nodes[cpld[2]],
                 &nodes[cpld[3]],
             ],
+            material,
         ))
     }
     quad2d4n
@@ -298,9 +321,9 @@ mod testing {
         assert_ne!(3usize, node2.id);
         assert_eq!(3usize, node3.id);
 
-        assert_eq!([1.0 as Dtype], node1.coord);
-        assert_eq!([1.0 as Dtype, 2.0 as Dtype], node2.coord);
-        assert_eq!([1.0 as Dtype, 2.0 as Dtype, 3.0 as Dtype], node3.coord);
+        assert_eq!([1.0 as Dtype], node1.coords);
+        assert_eq!([1.0 as Dtype, 2.0 as Dtype], node2.coords);
+        assert_eq!([1.0 as Dtype, 2.0 as Dtype, 3.0 as Dtype], node3.coords);
     }
 
     #[test]
@@ -327,23 +350,23 @@ mod testing {
         let tri1 = Tri2D3N::new(1, thick, material, [&node1, &node2, &node3]);
         let tri2 = Tri2D3N::new(2, thick, material, [&node4, &node2, &node3]);
 
-        //let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4]);
+        let rec1 = Quad2D4N::new(3, thick, material, [&node1, &node2, &node3, &node4]);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
         assert_eq!(3usize, rec1.id);
 
-        assert_ne!([10.0 as Dtype, 11.0 as Dtype], tri2.nodes[0].coord);
-        assert_eq!([1.0 as Dtype, 1.0 as Dtype], tri2.nodes[0].coord);
+        assert_ne!([10.0 as Dtype, 11.0 as Dtype], tri2.nodes[0].coords);
+        assert_eq!([1.0 as Dtype, 1.0 as Dtype], tri2.nodes[0].coords);
 
-        assert_eq!(vec![0.0, 0.0, 1.0], tri1.xs());
-        //assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.xs());
-        assert_ne!(vec![0.0, 0.0, 1.0], tri1.ys());
-        //assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.ys());
+        assert_eq!(vec![0.0, 0.0, 1.0], tri1.get_nodes_xcoords());
+        assert_eq!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_nodes_xcoords());
+        assert_ne!(vec![0.0, 0.0, 1.0], tri1.get_nodes_ycoords());
+        assert_ne!(vec![0.0, 0.0, 1.0, 1.0], rec1.get_nodes_ycoords());
 
         assert_eq!(0.5 as Dtype, tri1.area());
         assert_eq!(0.5 as Dtype, tri2.area());
-        //assert_eq!(1.0 as Dtype, rec1.area());
+        assert_eq!(1.0 as Dtype, rec1.area());
     }
 
     #[test]
@@ -357,19 +380,18 @@ mod testing {
 
         let nodes = vec![node1, node2, node3, node4];
         let cplds = vec![vec![0, 1, 3], vec![1, 2, 3]];
-        let zero_disps_idx = vec![0, 1, 3, 6];
         let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds, material);
 
-        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &mut nodes, &mut tris, &cplds);
-        assert_eq!(p1.elems[1].nodes[1].coord[1], 1.0);
-        assert_ne!(p1.elems[1].nodes[1].coord[1], -1.0);
+        let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds);
+        assert_eq!(p1.elems[1].nodes[1].coords[1], 1.0);
+        assert_ne!(p1.elems[1].nodes[1].coords[1], -1.0);
 
         let disp = vec![
             -1024., -1024., -1024., -1024., -1024., -1024., -1024., -1024.,
         ];
         let force = vec![0., 0., 0., 0., 0., 0., 0., 0.];
-        let nodes_disp = p1.disps();
-        let nodes_force = p1.forces();
+        let nodes_disp = p1.nodes_displacement();
+        let nodes_force = p1.nodes_force();
         assert_ne!(disp, nodes_disp);
         assert_eq!(force, nodes_force);
     }
@@ -409,33 +431,39 @@ mod testing {
         assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
 
-    //#[test]
-    //fn mesh_rect_with_tri() {
-    //    // set rect's width and height
-    //    const W: Dtype = 1.0;
-    //    const H: Dtype = 1.0;
+    #[test]
+    fn mesh_rect_with_tri() {
+        // set rect's width and height
+        const W: Dtype = 1.0;
+        const H: Dtype = 1.0;
 
-    //    // number of nodes and freedom
-    //    const R: usize = 2; //rows of nodes
-    //    const C: usize = 2; //rows of nodes
+        // number of nodes and freedom
+        const R: usize = 2; //rows of nodes
+        const C: usize = 2; //rows of nodes
 
-    //    let rect_geo = plane::Rectangle::new([0., 0.], [W, H]);
-    //    let (coords, coupled_nodes) = rect_geo.mesh_with_tri(R, C);
+        let rect_geo = Rectangle::new([0., 0.], [W, H]);
+        let (coords, coupled_nodes) = rect_geo.mesh_with_tri2d3n(R, C);
 
-    //    assert_eq!(coords, [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
-    //    assert_eq!(coupled_nodes, [[0, 1, 2], [3, 2, 1]]);
-    //    /*   2____3
-    //     *   |\   |
-    //     *   | \  |
-    //     *   |  \ |
-    //     *   |___\|
-    //     *   0    1
-    //     */
-    //}
+        assert_eq!(coords, [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]);
+        assert_eq!(coupled_nodes, [[0, 1, 2], [3, 2, 1]]);
+        /*   2____3
+         *   |\   |
+         *   | \  |
+         *   |  \ |
+         *   |___\|
+         *   0    1
+         */
+    }
 
     #[bench]
-    /// benchmark的结果是:277 +/- 15 ns/iter (Intel 8265U 插电)
-    fn calc_elem_k_speed(b: &mut Bencher) {
+    /// benchmark的结果是:393.49 ns +/- 36.23 ns/iter (Intel 8265U 插电) 20241205
+    fn calc_quad_k_speed(b: &mut Bencher) {
         b.iter(|| calc_quad_elem_k());
+    }
+
+    #[bench]
+    /// benchmark的结果是:229.13 ns +/- 06.28 ns/iter (Intel 8265U 插电) 20241205
+    fn calc_tri_k_speed(b: &mut Bencher) {
+        b.iter(|| calc_tri_elem_k());
     }
 }

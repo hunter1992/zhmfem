@@ -7,7 +7,7 @@ pub struct Tri2D3N<'tri2d3n> {
     pub thick: Dtype,
     pub nodes: [&'tri2d3n Node2D; 3],
     pub k_matrix: Option<[[Dtype; 6]; 6]>,
-    pub material: (Dtype, Dtype),
+    pub material: &'tri2d3n (Dtype, Dtype),
 }
 
 impl<'tri2d3n> Tri2D3N<'tri2d3n> {
@@ -15,8 +15,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn new(
         id: usize,
         thick: Dtype,
-        material: (Dtype, Dtype),
         nodes: [&'tri2d3n Node2D; 3],
+        material: &'tri2d3n (Dtype, Dtype),
     ) -> Self {
         Tri2D3N {
             id,
@@ -28,7 +28,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// Set element material_args
-    pub fn set_material(&mut self, material_args: (Dtype, Dtype)) {
+    pub fn set_material(&mut self, material_args: &'tri2d3n (Dtype, Dtype)) {
         self.material = material_args;
     }
 
@@ -164,7 +164,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
             "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
             self.id, self.id
         );
-        let (ee, nu) = self.material;
+        let (ee, nu) = *self.material;
         let elasticity_mat = (ee / (1.0 - nu * nu))
             * (SMatrix::<Dtype, 3, 3>::from([
                 [1.0, nu, 0.0],
@@ -194,7 +194,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Get element's stress vector, the stress in CST elem is a const
     fn calc_stress(&self) -> [Dtype; 3] {
-        let (ee, nu) = self.material;
+        let (ee, nu) = *self.material;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
