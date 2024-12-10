@@ -170,8 +170,8 @@ _install and using steps:_
 The usage process of zhmfem is briefly introduced with the example of 
 solving plane stress problems with CST element (linear triangular element).
 
-This question comes from _[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)
-_(Page105) written by _Zeng Pan_
+This question comes from _[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)_
+(Page105) written by _Zeng Pan_
 
 (in Chinese: 曾攀(清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）)。
 
@@ -179,7 +179,8 @@ For the plane stress problem shown in the Figure 4-7 below，the material parame
 $E = 1$ (Young's modulus), $\nu = 0.25$ (Poisson's ratio), and the thickness is $1$. 
 
 + The displacement boundary conditions are: $u_A=0,\quad v_A=0,\quad u_D=0$
-+ The external load conditions are:$ P_{B_x}=-1,\quad P_{B_y}=0,\quad P_{C_x}=1,\quad P_{C_y}=0,\quad P_{D_y}=0 $
++ The external load conditions are:
+  $$ P_{B_x}=-1,\quad P_{B_y}=0,\quad P_{C_x}=1,\quad P_{C_y}=0,\quad P_{D_y}=0 $$
 
 Try to calculate the displacement field, strain field, stress field, 
 support reaction force at each node, strain energy of the system, 
