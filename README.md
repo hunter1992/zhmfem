@@ -187,7 +187,7 @@ E = 1 (Young's modulus), $\nu$ = 0.25 (Poisson's ratio), and the thickness is $1
 
 + The external load conditions are: 
   
-  $$p_{Bx}=-1,\quad p_{By}=0,\quad p_{Cx}=1,\quad p_{Cy}=0,\quad P_{Dy}=0$$
+  $$p_{Bx}=-1,\quad p_{By}=0,\quad p_{Cx}=1,\quad p_{Cy}=0,\quad p_{Dy}=0$$
 
 
 Try to calculate the displacement field, strain field, stress field, 
