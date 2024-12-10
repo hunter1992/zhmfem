@@ -180,8 +180,14 @@ This question comes from _[Fundamentals of Finite Element Analysis](http://www.c
 For the plane stress problem shown in the Figure 4-7 below，the material parameters are:
 $E = 1$ (Young's modulus), $\nu = 0.25$ (Poisson's ratio), and the thickness is $1$. 
 
-+ The displacement boundary conditions are: $$u_A=0,\quad v_A=0,\quad u_D=0$$
-+ The external load conditions are: $$P_{Bx}=-1,\quad P_{By}=0,\quad P_{Cx}=1,\quad P_{Cy}=0,\quad P_{Dy}=0$$
++ The displacement boundary conditions are: 
+
+  $$u_A=0,\quad v_A=0,\quad u_D=0$$
+
++ The external load conditions are: 
+  
+  $$P_{Bx}=-1,\quad P_{By}=0,\quad P_{Cx}=1,\quad P_{Cy}=0,\quad P_{Dy}=0$$
+
 
 Try to calculate the displacement field, strain field, stress field, 
 support reaction force at each node, strain energy of the system, 
