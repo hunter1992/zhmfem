@@ -76,20 +76,8 @@
 
 <!-- ABOUT THE PROJECT -->
 ## About The Project
-```
-      ___           ___         ___           ___     
-     /  /\         /  /\       /  /\         /__/\    
-    /  /::|       /  /:/_     /  /:/_       |  |::\   
-   /  /:/:|      /  /:/ /\   /  /:/ /\      |  |:|:\  
-  /  /:/|:|__   /  /:/ /:/  /  /:/ /:/_   __|__|:|\:\ 
- /__/:/ |:| /\ /__/:/ /:/  /__/:/ /:/ /\ /__/::::| \:\
- \__\/  |:|/:/ \  \:\/:/   \  \:\/:/ /:/ \  \:\~~\__\/
-     |  |:/:/   \  \::/     \  \::/ /:/   \  \:\      
-     |  |::/     \  \:\      \  \:\/:/     \  \:\     
-     |  |:/       \  \:\      \  \::/       \  \:\    
-     |__|/         \__\/       \__\/         \__\/    
 
-```
+![FEM]( "FEM application")
 
 After studying the theory and application of finite element technology for several years, 
 hunter1992 started this open source project out of interest when he graduated with his doctorate.
