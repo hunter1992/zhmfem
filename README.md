@@ -82,7 +82,7 @@ A finite element calculation command line software based on Rust
 ![FEM](imgs/FEM.jpg "FEM application")
 
 After studying the theory and application of finite element technology for several years, 
-hunter1992 started this open source project out of interest when he graduated with his doctorate.
+ZHM started this open source project out of interest when he graduated with his doctorate.
 
 The answers to several basic questions related to this project are as follows:
 * Why Rust? -- Performance, Reliability and Productivity.
