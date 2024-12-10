@@ -179,7 +179,7 @@ _If you are interested in learning FEM,
 here is a great [lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) by Prof. Zeng Pan_
 
 For the plane stress problem shown in the Figure 4-7 below，the material parameters are:
-$E = 1$ (Young's modulus), $\nu = 0.25$ (Poisson's ratio), and the thickness is $1$. 
+E = 1 (Young's modulus), $\nu$ = 0.25 (Poisson's ratio), and the thickness is $1$. 
 
 + The displacement boundary conditions are: 
 
@@ -187,7 +187,7 @@ $E = 1$ (Young's modulus), $\nu = 0.25$ (Poisson's ratio), and the thickness is 
 
 + The external load conditions are: 
   
-  $$P_{Bx}=-1,\quad P_{By}=0,\quad P_{Cx}=1,\quad P_{Cy}=0,\quad P_{Dy}=0$$
+  $$p_{Bx}=-1,\quad p_{By}=0,\quad p_{Cx}=1,\quad p_{Cy}=0,\quad P_{Dy}=0$$
 
 
 Try to calculate the displacement field, strain field, stress field, 
