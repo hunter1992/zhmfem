@@ -101,7 +101,7 @@ The answers to several basic questions related to this project are as follows:
   node data; post-processing can be achieved in ParaView after outputting .vtk files.
 
 
-The zhmfem project is in the early stages of development, and all parts are not yet completely stable. 
+The zhmfem project is in the early stages of development, and all parts are **not** yet completely stable. 
 Users are welcome to make suggestions, and the author will accept them after careful consideration.
 
 <p align="right">
