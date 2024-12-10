@@ -26,10 +26,10 @@ A finite element calculation crate based on Rust.
 [linkedin-url]: https://github.com/hunter1992
 
 ## 目录
-
 - [上手指南](#上手指南)
-    - [配置要求](#开发前的配置要求)
-    - [安装步骤](#安装步骤)
+    - [配置要求](#配置要求)
+    - [安装步骤](#安装与使用)
+    - [计算示例](#计算示例)
 - [文件目录](#文件目录说明)
 - [开发的架构](#开发的架构)
 - [部署](#部署)
@@ -40,44 +40,117 @@ A finite element calculation crate based on Rust.
 - [作者](#作者)
 - [鸣谢](#鸣谢)
 
-### 上手指南
+## 上手指南
 
-请将所有链接中的“shaojintian/Best_README_template”改为“your_github_name/your_repository”
+### 配置要求
 
-###### 开发前的配置要求
+#### 操作系统 
 
-1. xxxxx x.x.x
-2. xxxxx x.x.x
-
-###### **安装步骤**
-
-1. Get a free API Key at [https://example.com](https://example.com)
-2. Clone the repo
-
-```sh
-git clone https://github.com/shaojintian/Best_README_template.git
+作者开发zhmfem使用的操作系统是Manjaro Linux，由于zhmfem目前处于早期核心功能开发阶段，
+因此未对MacOS及Windows系统进行适配。截至2024年12月，作者所使用的操作系统信息如下：
 ```
+ ██████████████████  ████████     zhm@zhm
+ ██████████████████  ████████     OS: Manjaro 24.2.0 Yonada
+ ██████████████████  ████████     Kernel: x86_64 Linux 6.1.119-1-MANJARO
+ ██████████████████  ████████     Uptime: 12h 4m
+ ████████            ████████     Packages: 1599
+ ████████  ████████  ████████     Shell: zsh 5.9
+ ████████  ████████  ████████     Resolution: 2560x1440
+ ████████  ████████  ████████     DE: KDE
+ ████████  ████████  ████████     WM: KWin
+ ████████  ████████  ████████     GTK Theme: Breath [GTK2/3]
+ ████████  ████████  ████████     Icon Theme: breeze
+ ████████  ████████  ████████     Disk: 185G / 325G (61%)
+ ████████  ████████  ████████     CPU: Intel Core i5-8265U @ 8x 3.9GHz [44.0°C]
+ ████████  ████████  ████████     GPU: NVIDIA GeForce MX250
+                                  RAM: 3456MiB / 7699MiB
+```
+
+#### Rust版本
+
+zhmfem的开发在Rust的nightly版本下展开，作者使用的Rust版本信息如下：
+```
+rustc 1.85.0-nightly (7db7489f9 2024-11-25)
+binary: rustc
+commit-date: 2024-11-25
+host: x86_64-unknown-linux-gnu
+release: 1.85.0-nightly
+LLVM version: 19.1.4
+```
+
+### **安装与使用**
+
+1.Install Rust on your operating system, [install Rust now](https://www.rust-lang.org/tools/install)
+
+2.Clone the repo:
+```
+git clone https://github.com/hunter1992/zhmfem.git
+```
+
+3.Check out the examples under 'zhmfem/examples/' path using:
+```
+cargo run --examples <example-name>
+```
+Or you can compile and run the examples more quickly using the following command:
+```
+cargo run -j 8 --release --example <example-name>
+```
+
+4.Use the example file as a template
+to write a .rs file for the problem 
+you need to solve (still placed in 
+the examples path), compile and run it, 
+and view the output results.
+
+### 计算示例
+
+zhmfem目录的example路径下有许多示例，这些例子使用各种单元求解不同类型的有限元问题，并对计算的结果进行了展示（包括将结果
+展示在命令行或输出为供人类阅读的.txt文件或供ParaView显示的.vtk文件）。
+
+借助以CST（线性三角形单元）求解平面应力问题的例子简单介绍zhmfem的使用流程。
+
+##### Step0   从crate根中引入构造问题/计算/输出结果所需的各种类型、trait、函数
+
 
 ### 文件目录说明
 eg:
 
 ```
 filetree 
-├── ARCHITECTURE.md
-├── LICENSE.txt
+├── Cargo.lock
+├── Cargo.toml
+├── examples
+│   ├── beam1d2n.rs
+│   ├── rect2d4n.rs
+│   ├── rod1d2n.rs
+│   ├── rod2d_10bar.rs
+│   ├── rod2d2n.rs
+│   └── tri2d3n.rs
 ├── README.md
-├── /account/
-├── /bbs/
-├── /docs/
-│  ├── /rules/
-│  │  ├── backend.txt
-│  │  └── frontend.txt
-├── manage.py
-├── /oa/
-├── /static/
-├── /templates/
-├── useless.md
-└── /util/
+├── src
+│   ├── calc.rs
+│   ├── elem
+│   │   ├── dim1
+│   │   │   ├── beam.rs
+│   │   │   ├── mod.rs
+│   │   │   └── rod.rs
+│   │   ├── dim2
+│   │   │   ├── mod.rs
+│   │   │   ├── quadrila.rs
+│   │   │   ├── rod.rs
+│   │   │   └── triangle.rs
+│   │   └── mod.rs
+│   ├── lib.rs
+│   ├── main.rs
+│   ├── mesh
+│   │   ├── mod.rs
+│   │   └── plane.rs
+│   ├── node.rs
+│   └── part
+│       ├── mod.rs
+│       ├── part1d.rs
+│       └── part2d.rs
+└── tree.txt
 
 ```
 
