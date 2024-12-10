@@ -175,7 +175,7 @@ solving plane stress problems with CST element (linear triangular element).
 This question comes from _[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)_
 (Page105) written by _Zeng Pan_
 
-(in Chinese: 曾攀(清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）)。
+(in Chinese: [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)(清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）)。
 
 For the plane stress problem shown in the Figure 4-7 below，the material parameters are:
 $E = 1$ (Young's modulus), $\nu = 0.25$ (Poisson's ratio), and the thickness is $1$. 
