@@ -42,6 +42,41 @@ A finite element calculation crate based on Rust.
 
 ## 上手指南
 
+
+
+### **安装与使用**
+
+1.Install Rust on your operating system, [install Rust now](https://www.rust-lang.org/tools/install)
+
+2.Clone the repo:
+```
+git clone https://github.com/hunter1992/zhmfem.git
+```
+
+3.Check out the examples under 'zhmfem/examples/' path using:
+```
+cargo run --examples <example-name>
+```
+Or you can compile and run the examples more quickly using the following command:
+```
+cargo run -j 8 --release --example <example-name>
+```
+
+4.Use the example file as a template
+to write a .rs file for the problem 
+you need to solve (still placed in 
+the examples path), compile and run it, 
+and view the output results.
+
+### 计算示例
+
+zhmfem目录的example路径下有许多示例，这些例子使用各种单元求解不同类型的有限元问题，并对计算的结果进行了展示（包括将结果
+展示在命令行或输出成供人类阅读的.txt文件或供ParaView显示的.vtk文件）。
+
+借助以CST（线性三角形单元）求解平面应力问题的例子简单介绍zhmfem的使用流程。
+
+##### Step0   从crate根中引入构造问题/计算/输出结果所需的各种类型、trait、函数
+
 ### 配置要求
 
 #### 操作系统 
@@ -77,40 +112,6 @@ host: x86_64-unknown-linux-gnu
 release: 1.85.0-nightly
 LLVM version: 19.1.4
 ```
-
-### **安装与使用**
-
-1.Install Rust on your operating system, [install Rust now](https://www.rust-lang.org/tools/install)
-
-2.Clone the repo:
-```
-git clone https://github.com/hunter1992/zhmfem.git
-```
-
-3.Check out the examples under 'zhmfem/examples/' path using:
-```
-cargo run --examples <example-name>
-```
-Or you can compile and run the examples more quickly using the following command:
-```
-cargo run -j 8 --release --example <example-name>
-```
-
-4.Use the example file as a template
-to write a .rs file for the problem 
-you need to solve (still placed in 
-the examples path), compile and run it, 
-and view the output results.
-
-### 计算示例
-
-zhmfem目录的example路径下有许多示例，这些例子使用各种单元求解不同类型的有限元问题，并对计算的结果进行了展示（包括将结果
-展示在命令行或输出为供人类阅读的.txt文件或供ParaView显示的.vtk文件）。
-
-借助以CST（线性三角形单元）求解平面应力问题的例子简单介绍zhmfem的使用流程。
-
-##### Step0   从crate根中引入构造问题/计算/输出结果所需的各种类型、trait、函数
-
 
 ### 文件目录说明
 eg:
@@ -151,35 +152,14 @@ filetree
 │       ├── part1d.rs
 │       └── part2d.rs
 └── tree.txt
-
 ```
-
-
-
-
-
-### 开发的架构
-
-请阅读[ARCHITECTURE.md](https://github.com/shaojintian/Best_README_template/blob/master/ARCHITECTURE.md) 查阅为该项目的架构。
-
-### 部署
-
-暂无
 
 ### 使用到的框架
 
-- [xxxxxxx](https://getbootstrap.com)
-- [xxxxxxx](https://jquery.com)
-- [xxxxxxx](https://laravel.com)
-
-### 贡献者
-
-请阅读**CONTRIBUTING.md** 查阅为该项目做出贡献的开发者。
+- [nalgebra](https://github.com/dimforge/nalgebra)
+- [vtkio](https://github.com/elrnv/vtkio)
 
 #### 如何参与开源项目
-
-贡献使开源社区成为一个学习、激励和创造的绝佳场所。你所作的任何贡献都是**非常感谢**的。
-
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
@@ -188,25 +168,19 @@ filetree
 5. Open a Pull Request
 
 
-
 ### 版本控制
 
 该项目使用Git进行版本管理。您可以在repository参看当前可用版本。
 
 ### 作者
 
-xxx@xxxx
-
-知乎:xxxx  &ensp; qq:xxxxxx
-
-*您也可以在贡献者名单中参看所有参与该项目的开发者。*
+- [Zhang Hongming](https://github.com/hunter1992) e-mail:1101510340zhm@gmail.com
 
 ### 版权说明
 
 该项目签署了MIT 授权许可，详情请参阅 [LICENSE.txt](https://github.com/shaojintian/Best_README_template/blob/master/LICENSE.txt)
 
 ### 鸣谢
-
 
 - [GitHub Emoji Cheat Sheet](https://www.webpagefx.com/tools/emoji-cheat-sheet)
 - [Img Shields](https://shields.io)
