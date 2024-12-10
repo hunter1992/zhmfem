@@ -3,6 +3,8 @@
 
 # zhmfem
 
+A finite element calculation command line software based on Rust
+
 <!-- PROJECT SHIELDS -->
 <!--
 *** I'm using markdown "reference style" links for readability.
@@ -31,7 +33,7 @@
 <h3 align="center">ZFEM</h3>
 
   <p align="center">
-    A finite element calculation crate based on Rust
+    A finite element calculation command line software based on Rust
     <br />
     <a href="https://github.com/hunter1992/zhmfem"><strong>Explore the docs »</strong></a>
     <br />
