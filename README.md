@@ -101,7 +101,7 @@ The answers to several basic questions related to this project are as follows:
   node data; post-processing can be achieved in ParaView after outputting .vtk files.
 
 
-The zhmfem project is in the early stages of development, and all parts are **not** yet completely stable. 
+The zhmfem project is in the early stages of development, and all parts are not yet completely stable. 
 Users are welcome to make suggestions, and the author will accept them after careful consideration.
 
 <p align="right">
@@ -122,7 +122,7 @@ Users are welcome to make suggestions, and the author will accept them after car
 #### 1. operating system
 The operating system used by the author to develop zhmfem is Manjaro Linux. 
 Since zhmfem is currently in the early stage of core function development, 
-it has not been adapted to MacOS and Windows systems. As of December 2024, 
+it has **not** been adapted to MacOS and Windows systems. As of December 2024, 
 the operating system information used by the author is as follows:
 ```
  ██████████████████  ████████     zhm@zhm
