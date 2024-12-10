@@ -24,7 +24,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/hunter1992/zhmfem">
-    <img src="imgs/zfem.png" alt="Logo" width="80" height="80">
+    <img src="imgs/zfem.png" alt="Logo" width="1000" height="391">
 
   </a>
 
@@ -77,7 +77,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-![FEM]( "FEM application")
+![FEM](imgs/FEM.jpg "FEM application")
 
 After studying the theory and application of finite element technology for several years, 
 hunter1992 started this open source project out of interest when he graduated with his doctorate.
@@ -99,7 +99,7 @@ Users are welcome to make suggestions, and the author will accept them after car
 
 ### Built With
 
-* [![Rust][Rust]][Rust-url]
+* [![Rust][Rustc]][Rust-url]
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- GETTING STARTED -->
@@ -518,5 +518,5 @@ Project Link: [https://github.com/your_username/repo_name](https://github.com/yo
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://github.com/hunter1992
 [product-screenshot]: images/screenshot.png
-[Rust]: https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white
+[Rustc]: https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white
 [Rust-url]: https://www.rust-lang.org/
