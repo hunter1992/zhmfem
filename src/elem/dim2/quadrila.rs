@@ -242,6 +242,16 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         stress
     }
 
+    /// Get element node's stress
+    pub fn nodes_stress(&self) -> [[Dtype; 3]; 4] {
+        let mut sigma: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
+        let nodes_coords: [[Dtype; 2]; 4] = [[1.0, 1.0], [-1.0, 1.0], [-1.0, -1.0], [1.0, -1.0]];
+        for idx in 0..4 {
+            sigma[idx] = self.calc_stress(nodes_coords[idx]);
+        }
+        sigma
+    }
+
     /// Print element's strain value
     pub fn print_strain(&self, xi_eta: [Dtype; 2]) {
         let strain = self.calc_strain(xi_eta);

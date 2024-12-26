@@ -1,6 +1,7 @@
 use crate::{Dtype, Export, LinearEqs, Node1D, K};
 use std::io::{BufWriter, Write};
 
+/// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
 pub struct Part1D<'part1d, Elem: K, const N: usize, const F: usize, const M: usize>
 where
     [[Dtype; N * F]; N * F]: Sized,
@@ -8,7 +9,7 @@ where
     pub id: usize,
     pub nodes: &'part1d [Node1D],
     pub elems: &'part1d mut [Elem],
-    pub cplds: &'part1d [Vec<usize>], //cplds: coupled nodes index
+    pub grpdnidx: &'part1d [Vec<usize>], //nodes idx in element
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
 }
 
@@ -21,13 +22,13 @@ where
         id: usize,
         nodes: &'part1d Vec<Node1D>,
         elems: &'part1d mut Vec<Elem>,
-        cplds: &'part1d Vec<Vec<usize>>,
+        grpdnidx: &'part1d Vec<Vec<usize>>,
     ) -> Self {
         Part1D {
             id,
             nodes,
             elems,
-            cplds,
+            grpdnidx,
             k_matrix: None,
         }
     }
@@ -55,7 +56,7 @@ where
         <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
     {
         if self.k_matrix.is_none() {
-            if self.cplds.len() != self.elems.len() {
+            if self.grpdnidx.len() != self.elems.len() {
                 println!("---> Error! From Part2D.calc_k func.");
                 println!("     The count of elements not eq to K mat size.");
                 panic!("---> Assembly global K failed!");
@@ -72,13 +73,13 @@ where
 
             // 获取单个单元内的节点数目n，构造0到n的range，用于遍历单个单元的局部刚度矩阵k
             // 暂时认为part中只有一种单元类型，所有单元内节点数目相同，用cplds[0].len
-            let n_nodes_in_elem: Vec<usize> = (0..self.cplds[0].len()).collect();
+            let n_nodes_in_elem: Vec<usize> = (0..self.grpdnidx[0].len()).collect();
             let node_loc: Vec<Vec<usize>> = full_combination(&n_nodes_in_elem);
 
             // 构造整体刚度矩阵中需要修改的节点坐标对
             // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
             let loc_g: Vec<Vec<Vec<usize>>> =
-                self.cplds.iter().map(|x| full_combination(&x)).collect();
+                self.grpdnidx.iter().map(|x| full_combination(&x)).collect();
 
             for i in 0..loc_g.len() {
                 for j in 0..node_loc.len() {
@@ -130,7 +131,7 @@ where
     /// Write the disp and force result into nodes
     pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
-        let force = slv.forces;
+        let force = slv.external_force.unwrap();
         for (idx, node) in self.nodes.iter().enumerate() {
             node.displs.borrow_mut()[0] = disp[idx];
             node.forces.borrow_mut()[0] = force[idx];

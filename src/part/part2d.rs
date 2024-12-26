@@ -2,6 +2,7 @@ use crate::{Dtype, Export, LinearEqs, Node2D, K};
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 
+/// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
 pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
 where
     [[Dtype; N * F]; N * F]: Sized,
@@ -166,7 +167,7 @@ where
     /// Write the disp and force result into nodes
     pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
-        let force = slv.forces;
+        let force = slv.external_force.unwrap();
         for (idx, node) in self.nodes.iter().enumerate() {
             node.displs.borrow_mut()[0] = disp[idx * 2];
             node.displs.borrow_mut()[1] = disp[idx * 2 + 1];

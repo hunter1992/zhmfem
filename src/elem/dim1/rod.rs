@@ -32,6 +32,18 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         self.material = material_args;
     }
 
+    /// Get difference in x-coordinates of rod node
+    pub fn dx(&self) -> Dtype {
+        let x = self.get_nodes_xcoords();
+        x[1] - x[0]
+    }
+
+    /// Get the node force difference in the x direction
+    pub fn df_x(&self) -> Dtype {
+        let f = self.get_nodes_force();
+        f[1] + f[0]
+    }
+
     /// Get Rod1D2N element length
     pub fn length(&self) -> Dtype {
         let x = self.get_nodes_xcoords();
@@ -48,8 +60,8 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 
     /// Get nodes' disps vector in Rod1D2N element
-    pub fn get_nodes_displacement(&self) -> [Dtype; 4] {
-        let mut disps = [0.0; 4];
+    pub fn get_nodes_displacement(&self) -> [Dtype; 2] {
+        let mut disps = [0.0; 2];
         for idx in 0..2 {
             disps[idx] = self.nodes[idx].displs.borrow()[0];
         }
@@ -57,12 +69,17 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 
     /// Get nodes's force vector in Rod1D2N element
-    pub fn get_nodes_force(&self) -> [Dtype; 4] {
-        let mut forces = [0.0; 4];
+    pub fn get_nodes_force(&self) -> [Dtype; 2] {
+        let mut forces = [0.0; 2];
         for idx in 0..2 {
             forces[idx] = self.nodes[idx].forces.borrow()[0];
         }
         forces
+    }
+
+    /// Get axial force in Rod1D2N element
+    pub fn get_axial_force(&self) -> Dtype {
+        self.df_x()
     }
 
     /// Get shape matrix element N_i

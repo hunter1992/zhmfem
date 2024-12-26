@@ -13,7 +13,11 @@ mod part;
 
 pub use calc::LinearEqs;
 pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
-pub use elem::dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N};
+pub use elem::dim2::{
+    quadrila::Quad2D4N,
+    rod::Rod2D2N,
+    triangle::{Tri2D3N, Tri2D6N},
+};
 pub use mesh::plane::Rectangle;
 pub use na::SMatrix;
 pub use node::{Node1D, Node2D, Node3D};
@@ -140,6 +144,27 @@ pub fn nodes1d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec
         nodes[idx / 1].forces.borrow_mut()[idx % 1] = f;
     }
     nodes
+}
+
+/// convert 1D or 2D points to 3D points
+pub fn convert_to_3d_points<'zhmfem>(
+    dim: usize,
+    points: &'zhmfem mut Vec<Vec<Dtype>>,
+) -> &'zhmfem Vec<Vec<Dtype>> {
+    let l: usize = points.len();
+    if dim == 1 {
+        for idx in 0..l {
+            points[idx].push(0.0);
+            points[idx].push(0.0);
+        }
+    } else if dim == 2 {
+        for idx in 0..l {
+            points[idx].push(0.0);
+        }
+    } else {
+        panic!("!!! convert 1d/2d points to 3d points failed.");
+    }
+    points
 }
 
 /// Constructe a 2D nodes vector
@@ -334,8 +359,8 @@ mod testing {
         let node_b = Node1D::new(2, [1.0]);
         let node_c = Node1D::new(3, [3.0]);
 
-        let rod1 = Rod1D2N::new(1, material, 1.0, [&node_a, &node_b]);
-        let rod2 = Rod1D2N::new(2, material, 1.0, [&node_b, &node_c]);
+        let rod1 = Rod1D2N::new(1, 1.0, [&node_a, &node_b], &material);
+        let rod2 = Rod1D2N::new(2, 1.0, [&node_b, &node_c], &material);
         assert_eq!(1usize, rod1.id);
         assert_ne!(2usize, rod1.id);
         assert_eq!(2usize, rod2.id);
@@ -347,10 +372,10 @@ mod testing {
         let node4 = Node2D::new(4, [1.0, 1.0]);
         let thick = 1.0;
 
-        let tri1 = Tri2D3N::new(1, thick, material, [&node1, &node2, &node3]);
-        let tri2 = Tri2D3N::new(2, thick, material, [&node4, &node2, &node3]);
+        let tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node3], &material);
+        let tri2 = Tri2D3N::new(2, thick, [&node4, &node2, &node3], &material);
 
-        let rec1 = Quad2D4N::new(3, thick, material, [&node1, &node2, &node3, &node4]);
+        let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4], &material);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
@@ -380,7 +405,7 @@ mod testing {
 
         let nodes = vec![node1, node2, node3, node4];
         let cplds = vec![vec![0, 1, 3], vec![1, 2, 3]];
-        let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds, material);
+        let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds, &material);
 
         let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds);
         assert_eq!(p1.elems[1].nodes[1].coords[1], 1.0);
@@ -394,41 +419,6 @@ mod testing {
         let nodes_force = p1.nodes_force();
         assert_ne!(disp, nodes_disp);
         assert_eq!(force, nodes_force);
-    }
-
-    #[test]
-    fn calc_tri_elem_k() {
-        let material = (1.0 as Dtype, 0.25 as Dtype);
-
-        let node1 = Node2D::new(1, [0.0, 0.0]);
-        let node2 = Node2D::new(2, [1.0, 0.0]);
-        let node3 = Node2D::new(3, [1.0, 1.0]);
-        let node4 = Node2D::new(4, [0.0, 1.0]);
-        let thick = 1.0;
-
-        let mut tri1 = Tri2D3N::new(1, thick, material, [&node1, &node2, &node4]);
-        let mut tri2 = Tri2D3N::new(2, thick, material, [&node3, &node4, &node2]);
-
-        let k1 = tri1.k();
-        let k2 = tri2.k();
-
-        assert_eq!(k1, k2);
-    }
-
-    #[test]
-    fn calc_quad_elem_k() {
-        let material = (1.0 as Dtype, 0.25 as Dtype);
-
-        let node1 = Node2D::new(1, [0.0, 0.0]);
-        let node2 = Node2D::new(2, [1.0, 0.0]);
-        let node3 = Node2D::new(3, [1.0, 1.0]);
-        let node4 = Node2D::new(4, [0.0, 1.0]);
-        let thick = 1.0;
-
-        let mut quad1 = Quad2D4N::new(1, thick, material, [&node1, &node2, &node3, &node4]);
-
-        let k1 = quad1.k();
-        assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
 
     #[test]
@@ -450,10 +440,48 @@ mod testing {
          *   |\   |
          *   | \  |
          *   |  \ |
-         *   |___\|
-         *   0    1
+         *   |   \|
+         *   0____1
          */
     }
+
+    #[test]
+    fn calc_tri_elem_k() {
+        let material = (1.0 as Dtype, 0.25 as Dtype);
+
+        let node1 = Node2D::new(1, [0.0, 0.0]);
+        let node2 = Node2D::new(2, [1.0, 0.0]);
+        let node3 = Node2D::new(3, [1.0, 1.0]);
+        let node4 = Node2D::new(4, [0.0, 1.0]);
+        let thick = 1.0;
+
+        let mut tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node4], &material);
+        let mut tri2 = Tri2D3N::new(2, thick, [&node3, &node4, &node2], &material);
+
+        let k1 = tri1.k();
+        let k2 = tri2.k();
+
+        assert_eq!(k1, k2);
+    }
+
+    #[test]
+    fn calc_quad_elem_k() {
+        let material = (1.0 as Dtype, 0.25 as Dtype);
+
+        let thick = 1.0;
+        let node1 = Node2D::new(1, [0.0, 0.0]);
+        let node2 = Node2D::new(2, [1.0, 0.0]);
+        let node3 = Node2D::new(3, [1.0, 1.0]);
+        let node4 = Node2D::new(4, [0.0, 1.0]);
+
+        let mut quad1 = Quad2D4N::new(1, thick, [&node1, &node2, &node3, &node4], &material);
+
+        let k1 = quad1.k();
+        assert_eq!(0.48888892 as Dtype, k1[0][0]);
+    }
+
+    #[test]
+    fn part_test() {}
 
     #[bench]
     /// benchmark的结果是:393.49 ns +/- 36.23 ns/iter (Intel 8265U 插电) 20241205

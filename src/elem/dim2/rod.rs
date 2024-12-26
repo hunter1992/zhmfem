@@ -44,6 +44,18 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
         y[1] - y[0]
     }
 
+    /// Get the node force difference in the x direction
+    pub fn df_x(&self) -> Dtype {
+        let f = self.get_nodes_force();
+        f[2] + f[0]
+    }
+
+    /// Get the node force difference in the y direction
+    pub fn df_y(&self) -> Dtype {
+        let f = self.get_nodes_force();
+        f[3] + f[1]
+    }
+
     /// Get Rod2D2N element length
     pub fn length(&self) -> Dtype {
         let dx = self.dx();
@@ -105,6 +117,13 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
             forces[idx * 2 + 1] = self.nodes[idx].forces.borrow()[1];
         }
         forces
+    }
+
+    /// Get axial force in Rod2D2N element
+    pub fn get_axial_force(&self) -> Dtype {
+        let dfx = self.df_x();
+        let dfy = self.df_y();
+        dfx * self.cosine() + dfy * self.sine()
     }
 
     /// Get shape matrix element N_i

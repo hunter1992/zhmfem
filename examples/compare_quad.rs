@@ -1,3 +1,7 @@
+// 这个例子来自曾攀《有限元基础教程》4.7节
+// 使用三角形单元和四边形单元求解
+// 实际材料参数下的平面应力问题
+
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -6,46 +10,54 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    // set timing start
+    // Set time start
     let time_start = Instant::now();
 
-    // -------- Part 1:  Set initial parameters --------
-    let cross_section_area: Vec<Dtype> = vec![1.0];
-    let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
+    // ------ Part 1: Set initial parameters ------
+    let thick: Dtype = 0.1; //Thickness of the plate
+    let force: Dtype = 100000.0;
+    let material: (Dtype, Dtype) = (10000000.0, 0.33); //Young's modulud & Poisson's ratio
 
-    // Set mesh and freedom parameters
-    const R: usize = 1; // rows of nodes
-    const C: usize = 2; // columns of nodes
-    const M: usize = 2; // num of nodes in single element
-    const F: usize = 1; // num of degree freedom at single node
+    // Number of nodes and freedom
+    const R: usize = 2; // rows of nodes
+    const C: usize = 3; // columns of nodes
+    const M: usize = 4; // node num in single element
+    const F: usize = 2; // freedom num in single node
 
     //Controls the style of printing numbers in scientific notation
-    const E: Dtype = 0.0;
+    const E: Dtype = 6.0;
 
     // Manually set coords and grouped nodes index
-    let points: Vec<Vec<Dtype>> = vec![vec![0.0], vec![1.0]];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1]];
+    let points: Vec<Vec<Dtype>> = vec![
+        vec![2.0, 1.0],
+        vec![2.0, 0.0],
+        vec![1.0, 1.0],
+        vec![1.0, 0.0],
+        vec![0.0, 1.0],
+        vec![0.0, 0.0],
+    ];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 2, 3, 1], vec![2, 4, 5, 3]];
 
-    // Set boundary conditions and external loads
-    let zero_disp_index: Vec<usize> = vec![0];
-    let force_index: Vec<usize> = vec![1];
-    let force_value: Vec<Dtype> = vec![1.0];
+    // Set boundary conditions and mesh it
+    let zero_disp_index: Vec<usize> = vec![8, 9, 10, 11];
+    let force_index: Vec<usize> = vec![1, 3];
+    let force_value: Vec<Dtype> = vec![-0.5 * force, -0.5 * force];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
 
     // -------- Part 2:  Construct nodes, elements and parts --------
-    // Construct 1D nodes vector
-    let nodes = nodes1d_vec(&points, &force_data);
+    // construct 2D nodes vector
+    let nodes = nodes2d_vec(&points, &force_data);
 
-    // Construct Rod1D2N elements vector
-    let mut rods = rod1d2n_vec(&nodes, &grpdnidx, &cross_section_area, &material);
-    let element_type: &str = "Rod1D2N_";
+    // Construct Quad2D4N elements vector
+    let mut quads = quad2d4n_vec(thick, &nodes, &grpdnidx, &material);
+    let element_type: &str = "Compare_Quad_";
 
     // Construct 2D part & assembly global stiffness matrix
-    let mut part: Part1D<'_, Rod1D2N<'_>, { R * C }, F, M> =
-        Part1D::new(1, &nodes, &mut rods, &grpdnidx);
+    let mut part: Part2D<'_, Quad2D4N<'_>, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut quads, &grpdnidx);
     part.k_printer(E);
 
     // -------- Part 3:  Solve the problem --------
@@ -57,21 +69,22 @@ fn main() {
         *part.k(),
     );
 
-    // 1) solve the linear equations of static system using direct method.
-    //eqs.lu_direct_solver(); //LU decomposition method
+    // solve method:
+    //     "lu" --- LU decomposition method
+    //     "gs" --- gaussr seidel iter method
+    //eqs.solve("lu", 0.00001);
     //let output_file = "LU.txt";
 
-    // 2) solve the linear equations of static system using iter method.
-    eqs.gauss_seidel_iter_solver(0.001);
+    eqs.solve("gs", 0.00001);
     let output_file = "G-S.txt";
+
+    // write the displacement and force result into nodes' field
+    part.write_result(&eqs);
 
     let calc_time: std::time::Duration = eqs.solver_calc_time.unwrap();
 
-    // write the displacement and force result into Node2D's field
-    part.write_result(&eqs);
-
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), E);
+    print_1darr("qe", &part.nodes_displacement(), 0.0);
     print_1darr("fe", &part.nodes_force(), E);
 
     println!("\n>>> System energy:");
@@ -86,8 +99,8 @@ fn main() {
 
     for elem in part.elems.iter() {
         elem.k_printer(E);
-        elem.print_strain();
-        elem.print_stress();
+        elem.print_strain([0.0, 0.0]);
+        elem.print_stress([0.0, 0.0]);
     }
 
     // -------- Part 5:  Write clac result into txt file --------
@@ -100,7 +113,6 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
-    println!("杆件内力{}", rods[0].get_axial_force());
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);
