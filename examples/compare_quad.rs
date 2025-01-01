@@ -99,8 +99,8 @@ fn main() {
 
     for elem in part.elems.iter() {
         elem.k_printer(E);
-        elem.print_strain([0.0, 0.0]);
-        elem.print_stress([0.0, 0.0]);
+        elem.print_strain([0.0, 0.0, 0.0]);
+        elem.print_stress([0.0, 0.0, 0.0]);
     }
 
     // -------- Part 5:  Write clac result into txt file --------

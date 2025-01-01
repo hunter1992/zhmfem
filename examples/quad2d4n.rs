@@ -11,8 +11,8 @@ fn main() {
 
     // ------ Part 1: Set initial parameters ------
     let thick: Dtype = 0.1; //Thickness of the plate
-    let force: Dtype = 100000.0;
-    let material: (Dtype, Dtype) = (10000000.0, 0.33); //Young's modulud & Poisson's ratio
+    let force: Dtype = 10000.0;
+    let material: (Dtype, Dtype) = (30.0, 0.3); //Young's modulud & Poisson's ratio
 
     // Number of nodes and freedom
     const R: usize = 2; // rows of nodes
@@ -25,17 +25,17 @@ fn main() {
 
     // Manually set coords and grouped nodes index
     let points: Vec<Vec<Dtype>> = vec![
-        vec![2.0, 1.0],
+        vec![1.0, 0.0],
         vec![2.0, 0.0],
-        vec![0.0, 1.0],
-        vec![0.0, 0.0],
+        vec![2.25, 1.5],
+        vec![1.25, 1.0],
     ];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 2, 1], vec![3, 1, 2]];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2, 3]];
 
     // Set boundary conditions and mesh it
-    let zero_disp_index: Vec<usize> = vec![4, 5, 6, 7];
-    let force_index: Vec<usize> = vec![1, 3];
-    let force_value: Vec<Dtype> = vec![-0.5 * force, 0.5 * force];
+    let zero_disp_index: Vec<usize> = vec![0, 1, 2, 3];
+    let force_index: Vec<usize> = vec![4];
+    let force_value: Vec<Dtype> = vec![force];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
@@ -46,12 +46,12 @@ fn main() {
     let nodes = nodes2d_vec(&points, &force_data);
 
     // Construct Quad2D4N elements vector
-    let mut triangle = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
-    let element_type: &str = "Compare_Tri_";
+    let mut quads = quad2d4n_vec(thick, &nodes, &grpdnidx, &material);
+    let element_type: &str = "Quad2D4N_";
 
     // Construct 2D part & assembly global stiffness matrix
-    let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
-        Part2D::new(1, &nodes, &mut triangle, &grpdnidx);
+    let mut part: Part2D<'_, Quad2D4N<'_>, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut quads, &grpdnidx);
     part.k_printer(E);
 
     // -------- Part 3:  Solve the problem --------
@@ -91,8 +91,8 @@ fn main() {
 
     for elem in part.elems.iter() {
         elem.k_printer(E);
-        elem.print_strain();
-        elem.print_stress();
+        elem.print_strain([0., 0., 0.]);
+        elem.print_stress([0., 0., 0.]);
     }
 
     // -------- Part 5:  Write clac result into txt file --------
