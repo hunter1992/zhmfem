@@ -62,12 +62,6 @@ A finite element calculation command line software based on Rust
       <a href="#getting-started">Getting Started</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
-          <ul>
-            <li><a  href="#operating-system">1. Operating system</a></li>
-          </ul>
-          <ul>
-            <li><a  href="#rust-version">2. Rust version</a></li>
-          </ul>
         <li><a href="#installation-and-use">Installation and use</a></li>
       </ul>
     </li>
