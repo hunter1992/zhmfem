@@ -18,7 +18,7 @@ A finite element calculation command line software based on Rust
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![Unlicense License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+[![Author][linkedin-shield]][linkedin-url]
 
 
 
@@ -593,7 +593,7 @@ Distributed under the GPL License. See [LICENSE](https://github.com/hunter1992/z
 [license-shield]: https://img.shields.io/github/license/hunter1992/zhmfem.svg?style=for-the-badge
 [license-url]: https://github.com/hunter1992/zhmfem/blob/master/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://github.com/hunter1992
+[linkedin-url]: http://zhanghongming.com
 [product-screenshot]: images/screenshot.png
 [Rustc]: https://img.shields.io/badge/Rust-000000?style=flat&logo=rust&logoColor=white
 [Rust-url]: https://www.rust-lang.org/
