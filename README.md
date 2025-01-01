@@ -84,11 +84,11 @@ A finite element calculation command line software based on Rust
 After several years of research on the theoretical analysis and application of finite element methods, ZHM initiated this open source project out of interest upon his PhD graduation.
 
 The main goals of this open source project are: 
-* 1) to efficiently implement classical finite element algorithms using the Rust language, and to be able to perform engineering calculations with the required efficiency and precision; 
-* 2) Explore the application of new finite element algorithms (such as virtual element method, peridynamics method, etc.) in practical problems.
+* to efficiently implement classical finite element algorithms using the Rust language, and to be able to perform engineering calculations with the required efficiency and precision; 
+* Explore the application of new finite element algorithms (such as virtual element method, peridynamics method, etc.) in practical problems.
 
 The answers to some basic questions about this project are as follows:
-* Why Rust? -- Performance, Reliability and Productivity.[(About Rust Language)](https://www.rust-lang.org/)
+* Why Rust? -- Performance, Reliability and Productivity. [(About Rust Language)](https://www.rust-lang.org/)
 * pre/post processing module? -- ZHMFEM is in the early stages of core function development and there are currently no plans for pre/post processing modules. The nodes, cells, loads and boundary conditions required for pre-processing can be set by code; Post-processing is implemented in ParaView after the calculation result is output to vtk file.
 
 
@@ -168,9 +168,9 @@ The using of ZHMFEM is introduced through modeling, calculation and output resul
 
 This example question comes from 
 __[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)__
-(Page105) written by __Zeng Pan__. 
+(Page105) written by Zeng Pan. 
 
-(in Chinese: [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)(清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
+(in Chinese: __[曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)__ (清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
 
 If you are interested in learning FEM, here is a great 
 [lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
@@ -349,7 +349,7 @@ constructing nodes and cells, setting boundary conditions and external loads, ca
 
    After compiling and running the tri2d3n.rs file, the following results are displayed in the Shell:
 
-   ```
+    ```
     >>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
     
     >>> Calculating Tri2D3N(#0)'s local stiffness matrix k0 ......
@@ -429,62 +429,62 @@ constructing nodes and cells, setting boundary conditions and external loads, ca
 
    After compiling and running the rect2d4n.rs file, the following results are displayed in the Shell:
    ```
->>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
+    >>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
 
->>> Calculating Quad2D4N(#0)'s stiffness matrix k0 ......
+    >>> Calculating Quad2D4N(#0)'s stiffness matrix k0 ......
 
-Part #1  K =  (* 10^0)
-[[     0.488889      0.166667     -0.288889     -0.033333      0.044444      0.033333     -0.244444     -0.166667 ]
- [     0.166667      0.488889      0.033333      0.044444     -0.033333     -0.288889     -0.166667     -0.244444 ]
- [    -0.288889      0.033333      0.488889     -0.166667     -0.244444      0.166667      0.044444     -0.033333 ]
- [    -0.033333      0.044444     -0.166667      0.488889      0.166667     -0.244444      0.033333     -0.288889 ]
- [     0.044444     -0.033333     -0.244444      0.166667      0.488889     -0.166667     -0.288889      0.033333 ]
- [     0.033333     -0.288889      0.166667     -0.244444     -0.166667      0.488889     -0.033333      0.044444 ]
- [    -0.244444     -0.166667      0.044444      0.033333     -0.288889     -0.033333      0.488889      0.166667 ]
- [    -0.166667     -0.244444     -0.033333     -0.288889      0.033333      0.044444      0.166667      0.488889 ]]
-
-
->>> LU decomposition method down!
-        time consuming = 2.172µs
-
-qe = (10^0 *)
-[[      0.000000       0.000000      -4.090909      -4.090909       0.000000      -0.000001       4.090909      -4.090909 ]]
+    Part #1  K =  (* 10^0)
+    [[     0.488889      0.166667     -0.288889     -0.033333      0.044444      0.033333     -0.244444     -0.166667 ]
+    [     0.166667      0.488889      0.033333      0.044444     -0.033333     -0.288889     -0.166667     -0.244444 ]
+    [    -0.288889      0.033333      0.488889     -0.166667     -0.244444      0.166667      0.044444     -0.033333 ]
+    [    -0.033333      0.044444     -0.166667      0.488889      0.166667     -0.244444      0.033333     -0.288889 ]
+    [     0.044444     -0.033333     -0.244444      0.166667      0.488889     -0.166667     -0.288889      0.033333 ]
+    [     0.033333     -0.288889      0.166667     -0.244444     -0.166667      0.488889     -0.033333      0.044444 ]
+    [    -0.244444     -0.166667      0.044444      0.033333     -0.288889     -0.033333      0.488889      0.166667 ]
+    [    -0.166667     -0.244444     -0.033333     -0.288889      0.033333      0.044444      0.166667      0.488889 ]]
 
 
-fe = (10^0 *)
-[[      1.000000       0.000000      -1.000000       0.000000      -1.000000      -0.000000       1.000000       0.000000 ]]
+    >>> LU decomposition method down!
+            time consuming = 2.172µs
+
+    qe = (10^0 *)
+    [[      0.000000       0.000000      -4.090909      -4.090909       0.000000      -0.000001       4.090909      -4.090909 ]]
 
 
->>> System energy:
-        E_d:  4.090909 (deform energy)
-        W_f:  8.181817 (exforce works)
-        E_p: -4.090909 (potential energy)
-Quad2D4N k0 =  (* 10^0)
-[[     0.488889     0.166667    -0.288889    -0.033333    -0.244444    -0.166667     0.044444     0.033333]
- [     0.166667     0.488889     0.033333     0.044444    -0.166667    -0.244444    -0.033333    -0.288889]
- [    -0.288889     0.033333     0.488889    -0.166667     0.044444    -0.033333    -0.244444     0.166667]
- [    -0.033333     0.044444    -0.166667     0.488889     0.033333    -0.288889     0.166667    -0.244444]
- [    -0.244444    -0.166667     0.044444     0.033333     0.488889     0.166667    -0.288889    -0.033333]
- [    -0.166667    -0.244444    -0.033333    -0.288889     0.166667     0.488889     0.033333     0.044444]
- [     0.044444    -0.033333    -0.244444     0.166667    -0.288889     0.033333     0.488889    -0.166667]
- [     0.033333    -0.288889     0.166667    -0.244444    -0.033333     0.044444    -0.166667     0.488889]]
+    fe = (10^0 *)
+    [[      1.000000       0.000000      -1.000000       0.000000      -1.000000      -0.000000       1.000000       0.000000 ]]
 
 
-elem[0] strain:
-        E_xx =        -4.090909
-        E_yy =        -0.000001
-        E_xy =        -4.090909
+    >>> System energy:
+            E_d:  4.090909 (deform energy)
+            W_f:  8.181817 (exforce works)
+            E_p: -4.090909 (potential energy)
+    Quad2D4N k0 =  (* 10^0)
+    [[     0.488889     0.166667    -0.288889    -0.033333    -0.244444    -0.166667     0.044444     0.033333]
+    [     0.166667     0.488889     0.033333     0.044444    -0.166667    -0.244444    -0.033333    -0.288889]
+    [    -0.288889     0.033333     0.488889    -0.166667     0.044444    -0.033333    -0.244444     0.166667]
+    [    -0.033333     0.044444    -0.166667     0.488889     0.033333    -0.288889     0.166667    -0.244444]
+    [    -0.244444    -0.166667     0.044444     0.033333     0.488889     0.166667    -0.288889    -0.033333]
+    [    -0.166667    -0.244444    -0.033333    -0.288889     0.166667     0.488889     0.033333     0.044444]
+    [     0.044444    -0.033333    -0.244444     0.166667    -0.288889     0.033333     0.488889    -0.166667]
+    [     0.033333    -0.288889     0.166667    -0.244444    -0.033333     0.044444    -0.166667     0.488889]]
 
-elem[0] stress:
-        S_xx =        -4.363636
-        S_yy =        -1.090910
-        S_xy =        -1.636364
 
->>> Writing calc results into txt file ......
-    Down!
+    elem[0] strain:
+            E_xx =        -4.090909
+            E_yy =        -0.000001
+            E_xy =        -4.090909
 
->>> Total time consuming: 446.086µs
-   ```
+    elem[0] stress:
+            S_xx =        -4.363636
+            S_yy =        -1.090910
+            S_xy =        -1.636364
+
+    >>> Writing calc results into txt file ......
+        Down!
+
+    >>> Total time consuming: 446.086µs
+    ```
    
 The calculation results of two kinds of units for the same problem show that:
 
