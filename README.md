@@ -164,13 +164,12 @@ LLVM version: 19.1.6
 <!-- USAGE EXAMPLES -->
 ## Tutorial
 
-The using of ZHMFEM is introduced through modeling, calculation and output results of a practical problem.
-
+The using of ZHMFEM is introduced through modeling, calculation and output results of a practical example question.
 This example question comes from 
 __[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)__
 (Page105) written by Zeng Pan. 
 
-(in Chinese: __[曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)__ (清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
+(in Chinese: [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80) (清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
 
 If you are interested in learning FEM, here is a great 
 [lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
@@ -199,7 +198,7 @@ Triangular elements and rectangular elements are used to mesh square thin plates
 
 ### Solution
 
-1. **The constant strain triangular element in ZHMFEM, namely Tri2D3N element, is used for programming calculation.**
+1. **Solution of linear triangular element**
 
 You can find the tri2d3n.rs file under 'zhmfem/examples/', 
 which shows all the steps of setting material and size parameters, 
