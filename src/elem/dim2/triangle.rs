@@ -81,22 +81,12 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
         forces
     }
 
-    /// Get shape matrix element N_i(s, t)
-    /// The shape mat of tri2d6n elem:
-    /// |N1  0   N2  0   N3  0   N4  0   N5  0   N6  0 |
-    /// |0   N1  0   N2  0   N3  0   N4  0   N5  0   N6|
-    ///
-    /// N1 = (1 - s - t) * (1 - 2s - 2t)
-    /// N2 = s * (2s - 1)
-    /// N3 = t * (2t - 1)
-    /// N4 = 4 * s * (1 - s - t)
-    /// N5 = 4 * s * t
-    /// N6 = 4 * t * (1 - s - t)
-    /// for every s and t in [0, 1]
-    ///
-    /// 输入参数i用于选择输出哪个Ni
-    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
-        let area = self.area();
+    /// a,b,c通过计算下式的代数余子式获得：
+    /// | 1  x1  y1 |     | a1  b1  c1 |
+    /// | 1  x2  y2 |     | a2  b2  c2 |
+    /// | 1  x3  y3 |     | a3  b3  c3 |
+    /// 对应关系是右边ai或bi或ci位置上的代数余子式
+    fn coef_a(&self, ith: usize) -> Dtype {
         let xs = self.get_nodes_xcoords();
         let ys = self.get_nodes_ycoords();
         let idx = |x: usize| (x % 3) as usize;
@@ -105,17 +95,116 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
             xs[idx(1 + 1)] * ys[idx(1 + 2)] - xs[idx(1 + 2)] * ys[idx(1 + 1)],
             xs[idx(2 + 1)] * ys[idx(2 + 2)] - xs[idx(2 + 2)] * ys[idx(2 + 1)],
         ];
+        a[ith]
+    }
+
+    /// Calculate coefficient b
+    fn coef_b(&self, ith: usize) -> Dtype {
+        let ys = self.get_nodes_ycoords();
+        let idx = |x: usize| (x % 3) as usize;
         let b: [Dtype; 3] = [
             ys[idx(0 + 1)] - ys[idx(0 + 2)],
             ys[idx(1 + 1)] - ys[idx(1 + 2)],
             ys[idx(2 + 1)] - ys[idx(2 + 2)],
         ];
+        b[ith]
+    }
+
+    /// Calculate coefficient c
+    fn coef_c(&self, ith: usize) -> Dtype {
+        let xs = self.get_nodes_xcoords();
+        let idx = |x: usize| (x % 3) as usize;
         let c: [Dtype; 3] = [
             xs[idx(0 + 2)] - xs[idx(0 + 1)],
             xs[idx(1 + 2)] - xs[idx(1 + 1)],
             xs[idx(2 + 2)] - xs[idx(2 + 1)],
         ];
-        move |x: Dtype, y: Dtype| 0.5 * (a[ith] + x * b[ith] + y * c[ith]) / area
+        c[ith]
+    }
+
+    /// Transform physical coordinates into parametric coordinates
+    /// | L1 |                  | a1  b1  c1 |   | 1 |
+    /// | L2 |  =  (1 / 2*area) | a2  b2  c2 | * | x |
+    /// | L3 |                  | a3  b3  c3 |   | y |
+    fn coords_transform_xtol(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
+        let x = xyz[0];
+        let y = xyz[1];
+        let area = self.area();
+        let mut l: [Dtype; 3] = [0.0; 3];
+        for idx in 0..3 {
+            l[idx] = 0.5 * (self.coef_a(idx) + self.coef_b(idx) * x + self.coef_c(idx) * y) / area;
+        }
+        l
+    }
+
+    /// Transform parametric coordinates into physical coordinates
+    /// | 1 |     |  1   1   1 |   | L1 |
+    /// | x |  =  | x1  x2  x3 | * | L2 |
+    /// | y |     | y1  y2  y3 |   | L3 |
+    fn coords_transform_ltox(&self, l123: [Dtype; 3]) -> [Dtype; 3] {
+        let l1 = l123[0];
+        let l2 = l123[1];
+        let l3 = l123[2];
+        let mut xyz: [Dtype; 3] = [0.0; 3];
+        let x1 = self.get_nodes_xcoords()[0];
+        let x2 = self.get_nodes_xcoords()[1];
+        let x3 = self.get_nodes_xcoords()[2];
+        let y1 = self.get_nodes_ycoords()[0];
+        let y2 = self.get_nodes_ycoords()[1];
+        let y3 = self.get_nodes_ycoords()[2];
+        xyz[0] = x1 * l1 + x2 * l2 + x3 * l3;
+        xyz[1] = y1 * l1 + y2 * l2 + y3 * l3;
+        xyz
+    }
+
+    /// Get shape matrix element N_i(s, t)
+    /// The shape mat of tri2d6n elem:
+    /// |N1  0   N2  0   N3  0   N4  0   N5  0   N6  0 |
+    /// |0   N1  0   N2  0   N3  0   N4  0   N5  0   N6|
+    ///
+    /// N1 = (2L1 - 1) * L1
+    /// N2 = (2L2 - 1) * L2
+    /// N3 = (2L3 - 1) * L3
+    /// N4 = 4 * L1 * L2
+    /// N5 = 4 * L2 * L3
+    /// N6 = 4 * L3 * L1
+    ///
+    /// 输入参数i用于选择输出哪个Ni
+    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype, Dtype) -> Dtype {
+        let n1 = move |l1: Dtype, _: Dtype, _: Dtype| (2.0 * l1 - 1.0) * l1;
+        let n2 = move |_: Dtype, l2: Dtype, _: Dtype| (2.0 * l2 - 1.0) * l2;
+        let n3 = move |_: Dtype, _: Dtype, l3: Dtype| (2.0 * l3 - 1.0) * l3;
+        let n4 = move |l1: Dtype, l2: Dtype, _: Dtype| 4.0 * l1 * l2;
+        let n5 = move |_: Dtype, l2: Dtype, l3: Dtype| 4.0 * l2 * l3;
+        let n6 = move |l1: Dtype, _: Dtype, l3: Dtype| 4.0 * l3 * l1;
+        let n = [n1, n2, n3, n4, n5, n6];
+        n[ith]
+    }
+
+    /// point displacement inner tri2d6n
+    pub fn point_disp(&self, point_coord_local: [Dtype; 3]) -> [Dtype; 2] {
+        let [l1, l2, l3] = self.coords_transform_xtol(point_coord_local);
+        let n0 = self.shape_mat_i(0usize)(l1, l2, l3);
+        let n1 = self.shape_mat_i(1usize)(l1, l2, l3);
+        let n2 = self.shape_mat_i(2usize)(l1, l2, l3);
+        let n3 = self.shape_mat_i(3usize)(l1, l2, l3);
+        let n4 = self.shape_mat_i(4usize)(l1, l2, l3);
+        let n5 = self.shape_mat_i(5usize)(l1, l2, l3);
+
+        let disps = self.get_nodes_displacement();
+        let u = n0 * disps[0]
+            + n1 * disps[2]
+            + n2 * disps[4]
+            + n3 * disps[6]
+            + n4 * disps[8]
+            + n5 * disps[10];
+        let v = n0 * disps[1]
+            + n1 * disps[3]
+            + n2 * disps[5]
+            + n3 * disps[7]
+            + n4 * disps[9]
+            + n5 * disps[11];
+        [u, v]
     }
 }
 
@@ -267,12 +356,12 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// Get any point's disps vector in tri element
-    pub fn point_disp(&self, point_coord: [Dtype; 2]) -> [Dtype; 2] {
-        let x = point_coord[0];
-        let y = point_coord[1];
-        let n0 = self.shape_mat_i(0usize)(x, y);
-        let n1 = self.shape_mat_i(1usize)(x, y);
-        let n2 = self.shape_mat_i(2usize)(x, y);
+    pub fn point_disp(&self, point_coord_local: [Dtype; 2]) -> [Dtype; 2] {
+        let s = point_coord_local[0];
+        let t = point_coord_local[1];
+        let n0 = self.shape_mat_i(0usize)(s, t);
+        let n1 = self.shape_mat_i(1usize)(s, t);
+        let n2 = self.shape_mat_i(2usize)(s, t);
 
         let disps = self.get_nodes_displacement();
         let u = n0 * disps[0] + n1 * disps[2] + n2 * disps[4];
@@ -297,7 +386,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// The H matrix transforms the strain in the parameter coordinate system to
     /// the physical coordinate system
     ///
-    /// epsilon = H * Epsilon
+    /// epsilon = Du/Dx
+    ///         = Du/Ds * Ds/Dx
+    ///         = J^(-1) * Du/Ds
+    ///         = H * Epsilon
     ///
     /// |     du/dx     |        | du/ds |
     /// |     dv/dy     |  = H * | du/dt |
@@ -320,8 +412,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         h / det_j
     }
 
-    /// Calculate B matrix
-    /// B matrix is the  differentiation of N(s, t):
+    /// Calculate Q matrix
+    /// Q matrix is the  differentiation of N(s, t):
     ///
     /// | du/ds |   | d /ds,   0   |   | u |
     /// | du/dt | = | d /dt,   0   | * |   |
@@ -340,10 +432,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///                 | u3 |
     ///                 | v3 |
     ///
-    /// Q = | d /ds,   0   |                             
+    /// Q = | d /ds,   0   |
     ///     | d /dt,   0   | * | N1, 0 , N2, 0 , N3, 0  |
     ///     |   0  , d /ds |   | 0 , N1, 0 , N2, 0 , N3 |
-    ///     |   0  , d /dt |                             
+    ///     |   0  , d /dt |
     ///
     ///   = | b1  0  b2  0  b3  0 |
     ///     | c1  0  c2  0  c3  0 |

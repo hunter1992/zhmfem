@@ -63,9 +63,10 @@ fn main() {
     // solve method:
     //     "lu" --- LU decomposition method
     //     "gs" --- gaussr seidel iter method
-    eqs.solve("gs", 0.001);
-    //let output_file = "LU.txt";
-    let output_file = "G-S.txt";
+    eqs.solve("lu", 0.001);
+    let output_file = "LU.txt";
+    //eqs.solve("gs", 0.001);
+    //let output_file = "G-S.txt";
 
     // write the displacement and force result into nodes' field
     part.write_result(&eqs);
@@ -88,8 +89,8 @@ fn main() {
 
     for elem in part.elems.iter() {
         elem.k_printer(E);
-        elem.print_strain([-1.0, -1.0]);
-        elem.print_stress([-1.0, -1.0]);
+        elem.print_strain([-1.0, -1.0, 0.0]);
+        elem.print_stress([-1.0, -1.0, 0.0]);
     }
 
     // -------- Part 5:  Write clac result into txt file --------

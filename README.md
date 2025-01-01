@@ -81,18 +81,18 @@ A finite element calculation command line software based on Rust
 
 ![FEM](imgs/FEM.jpg "FEM application")
 
-After studying the theory and application of finite element technology for several years, 
-ZHM started this open source project out of interest when he graduated with his doctorate.
+After several years of research on the theoretical analysis and application of finite element methods, ZHM initiated this open source project out of interest upon his PhD graduation.
 
-The answers to several basic questions related to this project are as follows:
-* Why Rust? -- Performance, Reliability and Productivity.
-* Pre/Post-Processing Module? -- The current development plan of zhmfem does not 
-  include pre-/post-processing modules. Pre-processing can be achieved by providing 
-  node data; post-processing can be achieved in ParaView after outputting .vtk files.
+The main goals of this open source project are: 
+* 1) to efficiently implement classical finite element algorithms using the Rust language, and to be able to perform engineering calculations with the required efficiency and precision; 
+* 2) Explore the application of new finite element algorithms (such as virtual element method, peridynamics method, etc.) in practical problems.
+
+The answers to some basic questions about this project are as follows:
+* Why Rust? -- Performance, Reliability and Productivity.[(About Rust Language)](https://www.rust-lang.org/)
+* pre/post processing module? -- ZHMFEM is in the early stages of core function development and there are currently no plans for pre/post processing modules. The nodes, cells, loads and boundary conditions required for pre-processing can be set by code; Post-processing is implemented in ParaView after the calculation result is output to vtk file.
 
 
-The zhmfem project is in the early stages of development, and all parts are not yet completely stable. 
-Users are welcome to make suggestions, and the author will accept them after careful consideration.
+ZHMFEM is currently in the early stages of development, and the authors look forward to receiving suggestions from various user groups, and will accept good suggestions after full consideration and discussion.
 
 <p align="right">
 (<a href="#readme-top">back to top</a>)</p>
@@ -109,51 +109,47 @@ Users are welcome to make suggestions, and the author will accept them after car
 
 ### Prerequisites
 
-#### 1. operating system
-The operating system used by the author to develop zhmfem is Manjaro Linux. 
-Since zhmfem is currently in the early stage of core function development, 
-it has **not** been adapted to MacOS and Windows systems. As of December 2024, 
-the operating system information used by the author is as follows:
+#### 1. Operating system
+The author developed the original version of ZHMFEM using the Manjaro Linux system. Currently in the early stages of core functionality development, the compiled version of ZHMFEM is not compatible with MacOS and Windows (you can fix this by compiling the source code yourself on your system). The operating system information used by the author is as follows:
 ```
  ██████████████████  ████████     zhm@zhm
- ██████████████████  ████████     OS: Manjaro 24.2.0 Yonada
+ ██████████████████  ████████     OS: Manjaro 24.2.1 Yonada
  ██████████████████  ████████     Kernel: x86_64 Linux 6.1.119-1-MANJARO
- ██████████████████  ████████     Uptime: 12h 4m
- ████████            ████████     Packages: 1599
+ ██████████████████  ████████     Uptime: 2h 26m
+ ████████            ████████     Packages: 1600
  ████████  ████████  ████████     Shell: zsh 5.9
- ████████  ████████  ████████     Resolution: 2560x1440
+ ████████  ████████  ████████     Resolution: 1920x1080
  ████████  ████████  ████████     DE: KDE
  ████████  ████████  ████████     WM: KWin
  ████████  ████████  ████████     GTK Theme: Breath [GTK2/3]
  ████████  ████████  ████████     Icon Theme: breeze
- ████████  ████████  ████████     Disk: 185G / 325G (61%)
- ████████  ████████  ████████     CPU: Intel Core i5-8265U @ 8x 3.9GHz [44.0°C]
+ ████████  ████████  ████████     Disk: 199G / 326G (65%)
+ ████████  ████████  ████████     CPU: Intel Core i5-8265U @ 8x 3.9GHz [35.0°C]
  ████████  ████████  ████████     GPU: NVIDIA GeForce MX250
-                                  RAM: 3456MiB / 7699MiB
+                                  RAM: 4701MiB / 7699MiB
 ```
 
 #### 2. Rust version
 
-zhmfem is developed in the nightly version of Rust. The Rust version used by the author is as follows:
+ZHMFEM was developed using the neightly version of the Rust language, and the latest version of Rust that currently makes ZHMFEM run is:
 ```
-rustc 1.85.0-nightly (7db7489f9 2024-11-25)
+rustc 1.85.0-nightly (7c002ff9a 2024-12-25)
 binary: rustc
-commit-date: 2024-11-25
+commit-date: 2024-12-25
 host: x86_64-unknown-linux-gnu
 release: 1.85.0-nightly
-LLVM version: 19.1.4
+LLVM version: 19.1.6
 ```
 
-### Installation
+### Installation and use
 
-_install and using steps:_
-
-1. Install Rust on your operating system, [install Rust now](https://www.rust-lang.org/tools/install)
-2. Clone the repo
+1. Install the Rust language environment on your operating system. [install Rust now](https://www.rust-lang.org/tools/install)
+2. Clone or download the ZHMFEM repository to local
    ```
    git clone https://github.com/hunter1992/zhmfem.git
    ```
-3. Check out the examples under 'zhmfem/examples/' path using:
+3. Check out the FEM calculation examples located in the 'zhmfem/examples/' path. 
+   Run an example with the following command:
    ```
    cargo run --examples <example-name>
    ```
@@ -165,49 +161,50 @@ _install and using steps:_
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
 <!-- USAGE EXAMPLES -->
-## Example
+## Tutorial
 
-The usage process of zhmfem is briefly introduced with the example of 
-solving plane stress problems with CST element (linear triangular element).
+The using of ZHMFEM is introduced through modeling, calculation and output results of a practical problem.
 
-This question comes from _[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)_
-(Page105) written by _Zeng Pan_. (in Chinese: [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)(清华大学)
-《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
-If you are interested in learning FEM, 
-here is a great [lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) by Prof. Zeng Pan.
+This example question comes from 
+__[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)__
+(Page105) written by __Zeng Pan__. 
 
-For the plane stress problem shown in the Figure 4-7 below，the material parameters are:
-E = 1 (Young's modulus), $\nu$ = 0.25 (Poisson's ratio), and the thickness is $1$. 
+(in Chinese: [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)(清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
 
-+ The displacement boundary conditions are: 
+If you are interested in learning FEM, here is a great 
+[lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
+by Prof. Zeng Pan.
+
+The sample question is:
+For the plane stress problem shown in the figure below, the given material parameters are:
+E = 1 (Young's modulus), $\nu$ = 0.25 (Poisson's ratio). The thickness of the sheet is $1$. 
+
++ Known displacement boundary conditions: 
 
   $$u_A=0,\quad v_A=0,\quad u_D=0$$
 
-+ The external load conditions are: 
++ Known external loads: 
   
   $$p_{Bx}=-1,\quad p_{By}=0,\quad p_{Cx}=1,\quad p_{Cy}=0,\quad p_{Dy}=0$$
 
 
-Try to calculate the displacement field, strain field, stress field, 
-support reaction force at each node, strain energy of the system, 
-external work, and total potential energy of the system under the following two modeling situations. 
-And compare the calculation accuracy of two modeling scheme.
+Problems to be solved:
 
-The two modeling schemes are shown in Figure 4-8.
-As shown in Figure 4-8(a), two constant strain triangle elements are used, 
-and one four-node rectangular element is used in Figure 4-8(b).
+The linear triangular element (CST) and rectangular element are used to solve this problem respectively. The displacement, strain, stress, support reaction force at the nodes; strain energy, external force work and total potential energy of the system need to be calculated. Through the calculation results of the two schemes, the difference in calculation accuracy of the two elements for the same problem is compared.
 
-![平面应力问题](imgs/CST.png "plane stress problem")
+Triangular elements and rectangular elements are used to mesh square thin plates, as shown in Figure 4-8(a) and 4-8(b).
+
+![Plane stress problem 平面应力问题](imgs/CST.png "plane stress problem")
 
 ### Solution
 
-1. **programming the problem**
+1. **The constant strain triangular element in ZHMFEM, namely Tri2D3N element, is used for programming calculation.**
 
-   Under zhmfem/example path, the _tri2d3n.rs_ file uses comments to explain in detail 
-how to build a model for the problem to be solved, how to apply boundary conditions 
-and external loads, how to calculate, and how to display and export calculation results.
+You can find the tri2d3n.rs file under 'zhmfem/examples/', 
+which shows all the steps of setting material and size parameters, 
+constructing nodes and cells, setting boundary conditions and external loads, calculating problems, output result files, etc.
+
     ```
     #![allow(incomplete_features)]
     #![feature(generic_const_exprs)]
@@ -332,18 +329,25 @@ and external loads, how to calculate, and how to display and export calculation 
         println!("\n>>> Total time consuming: {:?}", total_time);
     }
     ```
+    
+  The rect2d4n.rs file under 'zhmfem/examples/' shows the steps to solve the example problem with linear rectangular elements. 
+  Open the file to explore for more details.
 
 2. **Build & Run**
 
    Open Shell in the zhmfem root directory and use the following command
-   to compile and run the tri2d3n.rs file:
+   to compile and run the tri2d3n.rs file and rect2d4n.rs file:
    ```
    cargo run -j 8 --release --example tri2d3n
+   ```
+   
+   ```
+   cargo run -j 8 --release --example rect2d4n
    ```
 
 3. **Check the results**
 
-   The calculation result displayed in the shell is
+   After compiling and running the tri2d3n.rs file, the following results are displayed in the Shell:
 
    ```
     >>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
@@ -423,15 +427,78 @@ and external loads, how to calculate, and how to display and export calculation 
     >>> Total time consuming: 1.537479ms
    ```
 
-The calculation results of zhmfem are exactly the same as those in the book.
+   After compiling and running the rect2d4n.rs file, the following results are displayed in the Shell:
+   ```
+>>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
 
-There are many [examples](https://github.com/hunter1992/zhmfem/tree/main/examples) under 
+>>> Calculating Quad2D4N(#0)'s stiffness matrix k0 ......
+
+Part #1  K =  (* 10^0)
+[[     0.488889      0.166667     -0.288889     -0.033333      0.044444      0.033333     -0.244444     -0.166667 ]
+ [     0.166667      0.488889      0.033333      0.044444     -0.033333     -0.288889     -0.166667     -0.244444 ]
+ [    -0.288889      0.033333      0.488889     -0.166667     -0.244444      0.166667      0.044444     -0.033333 ]
+ [    -0.033333      0.044444     -0.166667      0.488889      0.166667     -0.244444      0.033333     -0.288889 ]
+ [     0.044444     -0.033333     -0.244444      0.166667      0.488889     -0.166667     -0.288889      0.033333 ]
+ [     0.033333     -0.288889      0.166667     -0.244444     -0.166667      0.488889     -0.033333      0.044444 ]
+ [    -0.244444     -0.166667      0.044444      0.033333     -0.288889     -0.033333      0.488889      0.166667 ]
+ [    -0.166667     -0.244444     -0.033333     -0.288889      0.033333      0.044444      0.166667      0.488889 ]]
+
+
+>>> LU decomposition method down!
+        time consuming = 2.172µs
+
+qe = (10^0 *)
+[[      0.000000       0.000000      -4.090909      -4.090909       0.000000      -0.000001       4.090909      -4.090909 ]]
+
+
+fe = (10^0 *)
+[[      1.000000       0.000000      -1.000000       0.000000      -1.000000      -0.000000       1.000000       0.000000 ]]
+
+
+>>> System energy:
+        E_d:  4.090909 (deform energy)
+        W_f:  8.181817 (exforce works)
+        E_p: -4.090909 (potential energy)
+Quad2D4N k0 =  (* 10^0)
+[[     0.488889     0.166667    -0.288889    -0.033333    -0.244444    -0.166667     0.044444     0.033333]
+ [     0.166667     0.488889     0.033333     0.044444    -0.166667    -0.244444    -0.033333    -0.288889]
+ [    -0.288889     0.033333     0.488889    -0.166667     0.044444    -0.033333    -0.244444     0.166667]
+ [    -0.033333     0.044444    -0.166667     0.488889     0.033333    -0.288889     0.166667    -0.244444]
+ [    -0.244444    -0.166667     0.044444     0.033333     0.488889     0.166667    -0.288889    -0.033333]
+ [    -0.166667    -0.244444    -0.033333    -0.288889     0.166667     0.488889     0.033333     0.044444]
+ [     0.044444    -0.033333    -0.244444     0.166667    -0.288889     0.033333     0.488889    -0.166667]
+ [     0.033333    -0.288889     0.166667    -0.244444    -0.033333     0.044444    -0.166667     0.488889]]
+
+
+elem[0] strain:
+        E_xx =        -4.090909
+        E_yy =        -0.000001
+        E_xy =        -4.090909
+
+elem[0] stress:
+        S_xx =        -4.363636
+        S_yy =        -1.090910
+        S_xy =        -1.636364
+
+>>> Writing calc results into txt file ......
+    Down!
+
+>>> Total time consuming: 446.086µs
+   ```
+   
+The calculation results of two kinds of units for the same problem show that:
+
+1) The calculation result of linear quadrilateral element is higher than that of linear triangular element;
+
+2) The calculation results of ZHMFEM are accurate and reliable.
+
+There are several [examples](https://github.com/hunter1992/zhmfem/tree/main/examples) under 
 zhmfem/exampls path.
-These examples use various elements to solve different types of finite
-element problems and display the calculation results (including displaying
-the results on the command line or outputting them into .txt files for human reading
-or .vtk files for ParaView display). For more examples, please refer to the 
-_[examples](https://github.com/hunter1992/zhmfem/tree/main/examples)_.
+
+These calculation examples show how to solve plane stress problems with various elements of ZHMFEM. 
+The code for modeling, imposing boundary conditions, calculating systems of equations, 
+and outputting the resulting files are clearly marked with comments in each sample file.
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -440,6 +507,7 @@ _[examples](https://github.com/hunter1992/zhmfem/tree/main/examples)_.
 <!-- ROADMAP -->
 ## Roadmap
 
+- [ ] Add Tri2D6N element
 - [ ] Add output .vtk file
 - [ ] Add non-linear rod element
 - [ ] Add Tri2D6N elements
@@ -462,9 +530,9 @@ You can also simply open an issue with the tag "enhancement".
 Don't forget to give the project a star! Thanks again!
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+2. Create your Feature Branch (`git checkout -b feature/zhmfem`)
+3. Commit your Changes (`git commit -m 'Add some zhmfem'`)
+4. Push to the Branch (`git push origin feature/zhmfem`)
 5. Open a Pull Request
 
 ### Top contributors:
