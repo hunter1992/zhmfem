@@ -204,286 +204,286 @@ You can find the tri2d3n.rs file under 'zhmfem/examples/',
 which shows all the steps of setting material and size parameters, 
 constructing nodes and cells, setting boundary conditions and external loads, calculating problems, output result files, etc.
 
-  ```
-  #![allow(incomplete_features)]
-  #![feature(generic_const_exprs)]
+```
+#![allow(incomplete_features)]
+#![feature(generic_const_exprs)]
 
-  use std::time::Instant;
+use std::time::Instant;
 
-  use zhmfem::*;
+use zhmfem::*;
 
-  fn main() {
-      // set timing start
-      let time_start = Instant::now();
+fn main() {
+    // set timing start
+    let time_start = Instant::now();
 
-      // -------- Part 1:  Set initial parameters --------
-      let thick: Dtype = 1.0; //Thickness of the plate
-      let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
+    // -------- Part 1:  Set initial parameters --------
+    let thick: Dtype = 1.0; //Thickness of the plate
+    let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
 
-      // Set mesh and freedom parameters
-      const R: usize = 2; // rows of nodes
-      const C: usize = 2; // columns of nodes
-      const M: usize = 3; // num of nodes in single element
-      const F: usize = 2; // num of degree freedom at single node
+    // Set mesh and freedom parameters
+    const R: usize = 2; // rows of nodes
+    const C: usize = 2; // columns of nodes
+    const M: usize = 3; // num of nodes in single element
+    const F: usize = 2; // num of degree freedom at single node
 
-      //Controls the style of printing numbers in scientific notation
-      const E: Dtype = 0.0;
+    //Controls the style of printing numbers in scientific notation
+    const E: Dtype = 0.0;
 
-      // Manually set coords and grouped nodes index
-      let points: Vec<Vec<Dtype>> = vec![
-          vec![0.0, 0.0],
-          vec![1.0, 0.0],
-          vec![1.0, 1.0],
-          vec![0.0, 1.0],
-      ];
-      let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
+    // Manually set coords and grouped nodes index
+    let points: Vec<Vec<Dtype>> = vec![
+        vec![0.0, 0.0],
+        vec![1.0, 0.0],
+        vec![1.0, 1.0],
+        vec![0.0, 1.0],
+    ];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
 
-      /*
-      // Auto-mesh generate coords and grouped nodes index
-      const W: Dtype = 1.0; // width
-      const H: Dtype = 1.0; // height
-      let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
-      let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
-      */
+    /*
+    // Auto-mesh generate coords and grouped nodes index
+    const W: Dtype = 1.0; // width
+    const H: Dtype = 1.0; // height
+    let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
+    let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
+    */
 
-      // Set boundary conditions and external loads
-      let zero_disp_index: Vec<usize> = vec![0, 1, 6];
-      let force_index: Vec<usize> = vec![2, 4];
-      let force_value: Vec<Dtype> = vec![-1.0, 1.0];
-      let force_data: HashMap<usize, Dtype> = force_index
-          .into_iter()
-          .zip(force_value.into_iter())
-          .collect();
+    // Set boundary conditions and external loads
+    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
+    let force_index: Vec<usize> = vec![2, 4];
+    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+    let force_data: HashMap<usize, Dtype> = force_index
+        .into_iter()
+        .zip(force_value.into_iter())
+        .collect();
 
-      // -------- Part 2:  Construct nodes, elements and parts --------
-      // Construct 2D nodes vector
-      let nodes = nodes2d_vec(&points, &force_data);
+    // -------- Part 2:  Construct nodes, elements and parts --------
+    // Construct 2D nodes vector
+    let nodes = nodes2d_vec(&points, &force_data);
 
-      // Construct Tri2D3N elements vector
-      let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
-      let element_type: &str = "Tri2D3N_";
+    // Construct Tri2D3N elements vector
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
+    let element_type: &str = "Tri2D3N_";
 
-      // Construct 2D part & assembly global stiffness matrix
-      let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
-          Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-      part.k_printer(E);
+    // Construct 2D part & assembly global stiffness matrix
+    let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
+    part.k_printer(E);
 
-      // -------- Part 3:  Solve the problem --------
-      // construct solver and solve the case
-      let mut eqs: LinearEqs<{ R * C * F }> = LinearEqs::new(
-          part.nodes_displacement(),
-          part.nodes_force(),
-          zero_disp_index,
-          *part.k(),
-      );
+    // -------- Part 3:  Solve the problem --------
+    // construct solver and solve the case
+    let mut eqs: LinearEqs<{ R * C * F }> = LinearEqs::new(
+        part.nodes_displacement(),
+        part.nodes_force(),
+        zero_disp_index,
+        *part.k(),
+    );
 
-      // 1) solve the linear equations of static system using direct method.
-      eqs.lu_direct_solver(); //LU decomposition method
-      let output_file = "LU.txt";
+    // 1) solve the linear equations of static system using direct method.
+    eqs.lu_direct_solver(); //LU decomposition method
+    let output_file = "LU.txt";
 
-      // 2) solve the linear equations of static system using iter method.
-      //eqs.gauss_seidel_iter_solver(0.001);
-      //let output_file = "G-S.txt";
+    // 2) solve the linear equations of static system using iter method.
+    //eqs.gauss_seidel_iter_solver(0.001);
+    //let output_file = "G-S.txt";
 
-      // 3) or you can solve the problem with a more concise call:
-      // eqs.solve("lu", 0.001); // or eqs.solve("gs", 0.001);
+    // 3) or you can solve the problem with a more concise call:
+    // eqs.solve("lu", 0.001); // or eqs.solve("gs", 0.001);
 
-      let calc_time: std::time::Duration = eqs.solver_calc_time.unwrap();
+    let calc_time: std::time::Duration = eqs.solver_calc_time.unwrap();
 
-      // write the displacement and force result into Node2D's field
-      part.write_result(&eqs);
+    // write the displacement and force result into Node2D's field
+    part.write_result(&eqs);
 
-      // -------- Part 4:  Print all kinds of result --------
-      print_1darr("qe", &part.nodes_displacement(), E);
-      print_1darr("fe", &part.nodes_force(), E);
+    // -------- Part 4:  Print all kinds of result --------
+    print_1darr("qe", &part.nodes_displacement(), E);
+    print_1darr("fe", &part.nodes_force(), E);
 
-      println!("\n>>> System energy:");
-      let strain_energy: Dtype = strain_energy(*part.k(), part.nodes_displacement());
-      let external_force_work: Dtype =
-          external_force_work(part.nodes_force(), part.nodes_displacement());
-      let potential_energy: Dtype =
-          potential_energy(*part.k(), part.nodes_force(), part.nodes_displacement());
-      println!("\tE_d: {:-9.6} (deform energy)", strain_energy);
-      println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
-      println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
+    println!("\n>>> System energy:");
+    let strain_energy: Dtype = strain_energy(*part.k(), part.nodes_displacement());
+    let external_force_work: Dtype =
+        external_force_work(part.nodes_force(), part.nodes_displacement());
+    let potential_energy: Dtype =
+        potential_energy(*part.k(), part.nodes_force(), part.nodes_displacement());
+    println!("\tE_d: {:-9.6} (deform energy)", strain_energy);
+    println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
+    println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
-      for elem in part.elems.iter() {
-          elem.k_printer(E);
-          elem.print_strain();
-          elem.print_stress();
-      }
+    for elem in part.elems.iter() {
+        elem.k_printer(E);
+        elem.print_strain();
+        elem.print_stress();
+    }
 
-      // -------- Part 5:  Write clac result into txt file --------
-      let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
-      let output = format!("{output_path}{element_type}{output_file}");
-      part.txt_writer(
-          &output,
-          calc_time,
-          E,
-          (strain_energy, external_force_work, potential_energy),
-      )
-      .expect(">>> !!! Failed to output text result file !!!");
+    // -------- Part 5:  Write clac result into txt file --------
+    let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
+    let output = format!("{output_path}{element_type}{output_file}");
+    part.txt_writer(
+        &output,
+        calc_time,
+        E,
+        (strain_energy, external_force_work, potential_energy),
+    )
+    .expect(">>> !!! Failed to output text result file !!!");
 
-      let total_time = time_start.elapsed();
-      println!("\n>>> Total time consuming: {:?}", total_time);
-  }
-  ```
+    let total_time = time_start.elapsed();
+    println!("\n>>> Total time consuming: {:?}", total_time);
+}
+```
     
   The rect2d4n.rs file under 'zhmfem/examples/' shows the steps to solve the example problem with linear rectangular elements. 
   Open the file to explore for more details.
 
 2. **Build & Run**
 
-   Open Shell in the zhmfem root directory and use the following command
-   to compile and run the tri2d3n.rs file and rect2d4n.rs file:
-   ```
-   cargo run -j 8 --release --example tri2d3n
-   ```
-   
-   ```
-   cargo run -j 8 --release --example rect2d4n
-   ```
+Open Shell in the zhmfem root directory and use the following command
+to compile and run the tri2d3n.rs file and rect2d4n.rs file:
+```
+cargo run -j 8 --release --example tri2d3n
+```
+
+```
+cargo run -j 8 --release --example rect2d4n
+```
 
 3. **Check the results**
 
-   After compiling and running the tri2d3n.rs file, the following results are displayed in the Shell:
+After compiling and running the tri2d3n.rs file, the following results are displayed in the Shell:
 
-    ```
-    >>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
-    
-    >>> Calculating Tri2D3N(#0)'s local stiffness matrix k0 ......
-    
-    >>> Calculating Tri2D3N(#1)'s local stiffness matrix k1 ......
-    
-    Part #1  K =  (* 10^0)
-    [[     0.733333      0.333333     -0.533333     -0.200000      0.000000      0.000000     -0.200000     -0.133333 ]
-     [     0.333333      0.733333     -0.133333     -0.200000      0.000000      0.000000     -0.200000     -0.533333 ]
-     [    -0.533333     -0.133333      0.733333      0.000000     -0.200000     -0.200000      0.000000      0.333333 ]
-     [    -0.200000     -0.200000      0.000000      0.733333     -0.133333     -0.533333      0.333333      0.000000 ]
-     [     0.000000      0.000000     -0.200000     -0.133333      0.733333      0.333333     -0.533333     -0.200000 ]
-     [     0.000000      0.000000     -0.200000     -0.533333      0.333333      0.733333     -0.133333     -0.200000 ]
-     [    -0.200000     -0.200000      0.000000      0.333333     -0.533333     -0.133333      0.733333      0.000000 ]
-     [    -0.133333     -0.533333      0.333333      0.000000     -0.200000     -0.200000      0.000000      0.733333 ]]
-    
-    
-    >>> LU decomposition method down!
-    time consuming = 4.356µs
-    
-    qe = (10^0 *)
-     [[      0.000000       0.000000      -1.718750      -0.937500       1.718750      -1.718750       0.000000       0.781250 ]]
-    
-    
-    fe = (10^0 *)
-     [[      1.000000       0.000000      -1.000000       0.000000       1.000000      -0.000000      -1.000000       0.000000 ]]
-    
-    
-    >>> System energy:
-    E_d:  1.718750 (deform energy)
-    W_f:  3.437500 (exforce works)
-    E_p: -1.718750 (potential energy)
-    
-    Tri2D3N k0 =  (* 10^0)
-    [[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
-     [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
-     [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
-     [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
-     [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
-     [    -0.133333     -0.533333      0.133333      0.000000      0.000000      0.533333 ]]
-    
-    
-    elem[0] strain:
-    E_xx =        -1.718750
-    E_yy =         0.781250
-    E_xy =        -0.937500
-    
-    elem[0] stress:
-    S_xx =        -1.625000
-    S_yy =         0.375000
-    S_xy =        -0.375000
-    
-    Tri2D3N k1 =  (* 10^0)
-    [[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
-     [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
-     [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
-     [    -0.200000     -0.200000     -0.000000      0.200000      0.200000     -0.000000 ]
-     [    -0.200000     -0.200000     -0.000000      0.200000      0.200000     -0.000000 ]
-     [    -0.133333     -0.533333      0.133333      0.000000      0.000000      0.533333 ]]
-    
-    
-    elem[1] strain:
-    E_xx =         1.718750
-    E_yy =        -0.781250
-    E_xy =         0.937500
-    
-    elem[1] stress:
-    S_xx =         1.625000
-    S_yy =        -0.375000
-    S_xy =         0.375000
-    
-    >>> Writing calc results into txt file ......
+```
+>>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
+
+>>> Calculating Tri2D3N(#0)'s local stiffness matrix k0 ......
+
+>>> Calculating Tri2D3N(#1)'s local stiffness matrix k1 ......
+
+Part #1  K =  (* 10^0)
+[[     0.733333      0.333333     -0.533333     -0.200000      0.000000      0.000000     -0.200000     -0.133333 ]
+  [     0.333333      0.733333     -0.133333     -0.200000      0.000000      0.000000     -0.200000     -0.533333 ]
+  [    -0.533333     -0.133333      0.733333      0.000000     -0.200000     -0.200000      0.000000      0.333333 ]
+  [    -0.200000     -0.200000      0.000000      0.733333     -0.133333     -0.533333      0.333333      0.000000 ]
+  [     0.000000      0.000000     -0.200000     -0.133333      0.733333      0.333333     -0.533333     -0.200000 ]
+  [     0.000000      0.000000     -0.200000     -0.533333      0.333333      0.733333     -0.133333     -0.200000 ]
+  [    -0.200000     -0.200000      0.000000      0.333333     -0.533333     -0.133333      0.733333      0.000000 ]
+  [    -0.133333     -0.533333      0.333333      0.000000     -0.200000     -0.200000      0.000000      0.733333 ]]
+
+
+>>> LU decomposition method down!
+time consuming = 4.356µs
+
+qe = (10^0 *)
+  [[      0.000000       0.000000      -1.718750      -0.937500       1.718750      -1.718750       0.000000       0.781250 ]]
+
+
+fe = (10^0 *)
+  [[      1.000000       0.000000      -1.000000       0.000000       1.000000      -0.000000      -1.000000       0.000000 ]]
+
+
+>>> System energy:
+E_d:  1.718750 (deform energy)
+W_f:  3.437500 (exforce works)
+E_p: -1.718750 (potential energy)
+
+Tri2D3N k0 =  (* 10^0)
+[[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
+  [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
+  [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
+  [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
+  [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
+  [    -0.133333     -0.533333      0.133333      0.000000      0.000000      0.533333 ]]
+
+
+elem[0] strain:
+E_xx =        -1.718750
+E_yy =         0.781250
+E_xy =        -0.937500
+
+elem[0] stress:
+S_xx =        -1.625000
+S_yy =         0.375000
+S_xy =        -0.375000
+
+Tri2D3N k1 =  (* 10^0)
+[[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
+  [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
+  [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
+  [    -0.200000     -0.200000     -0.000000      0.200000      0.200000     -0.000000 ]
+  [    -0.200000     -0.200000     -0.000000      0.200000      0.200000     -0.000000 ]
+  [    -0.133333     -0.533333      0.133333      0.000000      0.000000      0.533333 ]]
+
+
+elem[1] strain:
+E_xx =         1.718750
+E_yy =        -0.781250
+E_xy =         0.937500
+
+elem[1] stress:
+S_xx =         1.625000
+S_yy =        -0.375000
+S_xy =         0.375000
+
+>>> Writing calc results into txt file ......
+Down!
+
+>>> Total time consuming: 1.537479ms
+```
+
+After compiling and running the rect2d4n.rs file, the following results are displayed in the Shell:
+```
+>>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
+
+>>> Calculating Quad2D4N(#0)'s stiffness matrix k0 ......
+
+Part #1  K =  (* 10^0)
+[[     0.488889      0.166667     -0.288889     -0.033333      0.044444      0.033333     -0.244444     -0.166667 ]
+[     0.166667      0.488889      0.033333      0.044444     -0.033333     -0.288889     -0.166667     -0.244444 ]
+[    -0.288889      0.033333      0.488889     -0.166667     -0.244444      0.166667      0.044444     -0.033333 ]
+[    -0.033333      0.044444     -0.166667      0.488889      0.166667     -0.244444      0.033333     -0.288889 ]
+[     0.044444     -0.033333     -0.244444      0.166667      0.488889     -0.166667     -0.288889      0.033333 ]
+[     0.033333     -0.288889      0.166667     -0.244444     -0.166667      0.488889     -0.033333      0.044444 ]
+[    -0.244444     -0.166667      0.044444      0.033333     -0.288889     -0.033333      0.488889      0.166667 ]
+[    -0.166667     -0.244444     -0.033333     -0.288889      0.033333      0.044444      0.166667      0.488889 ]]
+
+
+>>> LU decomposition method down!
+        time consuming = 2.172µs
+
+qe = (10^0 *)
+[[      0.000000       0.000000      -4.090909      -4.090909       0.000000      -0.000001       4.090909      -4.090909 ]]
+
+
+fe = (10^0 *)
+[[      1.000000       0.000000      -1.000000       0.000000      -1.000000      -0.000000       1.000000       0.000000 ]]
+
+
+>>> System energy:
+        E_d:  4.090909 (deform energy)
+        W_f:  8.181817 (exforce works)
+        E_p: -4.090909 (potential energy)
+Quad2D4N k0 =  (* 10^0)
+[[     0.488889     0.166667    -0.288889    -0.033333    -0.244444    -0.166667     0.044444     0.033333]
+[     0.166667     0.488889     0.033333     0.044444    -0.166667    -0.244444    -0.033333    -0.288889]
+[    -0.288889     0.033333     0.488889    -0.166667     0.044444    -0.033333    -0.244444     0.166667]
+[    -0.033333     0.044444    -0.166667     0.488889     0.033333    -0.288889     0.166667    -0.244444]
+[    -0.244444    -0.166667     0.044444     0.033333     0.488889     0.166667    -0.288889    -0.033333]
+[    -0.166667    -0.244444    -0.033333    -0.288889     0.166667     0.488889     0.033333     0.044444]
+[     0.044444    -0.033333    -0.244444     0.166667    -0.288889     0.033333     0.488889    -0.166667]
+[     0.033333    -0.288889     0.166667    -0.244444    -0.033333     0.044444    -0.166667     0.488889]]
+
+
+elem[0] strain:
+        E_xx =        -4.090909
+        E_yy =        -0.000001
+        E_xy =        -4.090909
+
+elem[0] stress:
+        S_xx =        -4.363636
+        S_yy =        -1.090910
+        S_xy =        -1.636364
+
+>>> Writing calc results into txt file ......
     Down!
-    
-    >>> Total time consuming: 1.537479ms
-   ```
 
-   After compiling and running the rect2d4n.rs file, the following results are displayed in the Shell:
-   ```
-    >>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
-
-    >>> Calculating Quad2D4N(#0)'s stiffness matrix k0 ......
-
-    Part #1  K =  (* 10^0)
-    [[     0.488889      0.166667     -0.288889     -0.033333      0.044444      0.033333     -0.244444     -0.166667 ]
-    [     0.166667      0.488889      0.033333      0.044444     -0.033333     -0.288889     -0.166667     -0.244444 ]
-    [    -0.288889      0.033333      0.488889     -0.166667     -0.244444      0.166667      0.044444     -0.033333 ]
-    [    -0.033333      0.044444     -0.166667      0.488889      0.166667     -0.244444      0.033333     -0.288889 ]
-    [     0.044444     -0.033333     -0.244444      0.166667      0.488889     -0.166667     -0.288889      0.033333 ]
-    [     0.033333     -0.288889      0.166667     -0.244444     -0.166667      0.488889     -0.033333      0.044444 ]
-    [    -0.244444     -0.166667      0.044444      0.033333     -0.288889     -0.033333      0.488889      0.166667 ]
-    [    -0.166667     -0.244444     -0.033333     -0.288889      0.033333      0.044444      0.166667      0.488889 ]]
-
-
-    >>> LU decomposition method down!
-            time consuming = 2.172µs
-
-    qe = (10^0 *)
-    [[      0.000000       0.000000      -4.090909      -4.090909       0.000000      -0.000001       4.090909      -4.090909 ]]
-
-
-    fe = (10^0 *)
-    [[      1.000000       0.000000      -1.000000       0.000000      -1.000000      -0.000000       1.000000       0.000000 ]]
-
-
-    >>> System energy:
-            E_d:  4.090909 (deform energy)
-            W_f:  8.181817 (exforce works)
-            E_p: -4.090909 (potential energy)
-    Quad2D4N k0 =  (* 10^0)
-    [[     0.488889     0.166667    -0.288889    -0.033333    -0.244444    -0.166667     0.044444     0.033333]
-    [     0.166667     0.488889     0.033333     0.044444    -0.166667    -0.244444    -0.033333    -0.288889]
-    [    -0.288889     0.033333     0.488889    -0.166667     0.044444    -0.033333    -0.244444     0.166667]
-    [    -0.033333     0.044444    -0.166667     0.488889     0.033333    -0.288889     0.166667    -0.244444]
-    [    -0.244444    -0.166667     0.044444     0.033333     0.488889     0.166667    -0.288889    -0.033333]
-    [    -0.166667    -0.244444    -0.033333    -0.288889     0.166667     0.488889     0.033333     0.044444]
-    [     0.044444    -0.033333    -0.244444     0.166667    -0.288889     0.033333     0.488889    -0.166667]
-    [     0.033333    -0.288889     0.166667    -0.244444    -0.033333     0.044444    -0.166667     0.488889]]
-
-
-    elem[0] strain:
-            E_xx =        -4.090909
-            E_yy =        -0.000001
-            E_xy =        -4.090909
-
-    elem[0] stress:
-            S_xx =        -4.363636
-            S_yy =        -1.090910
-            S_xy =        -1.636364
-
-    >>> Writing calc results into txt file ......
-        Down!
-
-    >>> Total time consuming: 446.086µs
-    ```
+>>> Total time consuming: 446.086µs
+```
    
 The calculation results of two kinds of elements for the same problem shows that:
 
