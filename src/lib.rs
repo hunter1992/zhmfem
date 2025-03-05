@@ -61,39 +61,56 @@ pub trait Export {
 }
 
 /// Formatted print 1d array with scientific form
-pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype) {
+pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype, h_or_v: &str) {
     println!("\n{} = (10^{} *)", name, n_exp);
-    print!("[[");
-    for c in 0..C {
-        if c == 0 {}
-        print!(
-            " {:-13.6} ",
-            arr[c] / (10.0_f64.powf(n_exp as f64)) as Dtype
-        );
+    match h_or_v {
+        "h" => {
+            print!("[[");
+            for col in 0..C {
+                if col == 0 {}
+                print!(
+                    " {:-18.6} ",
+                    arr[col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                );
+            }
+            println!("]]\n");
+        }
+        "v" => {
+            print!("[[\n");
+            for row in 0..C {
+                if row == 0 {}
+                print!(
+                    " {:-18.6} \n",
+                    arr[row] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                );
+            }
+            println!("]]\n");
+        }
+        _ => panic!("!!! Wrong print arg for print_1darr, from /src/lib/fn print_1darr !!!"),
     }
-    println!("]]\n");
 }
 
 /// Formated print a 2D array with scientific form
 pub fn print_2darr<const R: usize, const C: usize>(
     name: &str,
+    id: usize,
     array: &[[Dtype; C]; R],
     n_exp: Dtype,
 ) {
-    println!("\n{} = (10^{} *)", name, n_exp);
-    for r in 0..R {
-        if r == 0 {
+    println!("\n{}[{}] = (10^{} *)", name, id, n_exp);
+    for row in 0..R {
+        if row == 0 {
             print!("[[");
         } else {
             print!(" [");
         }
-        for c in 0..C {
+        for col in 0..C {
             print!(
-                " {:-13.6} ",
-                array[r][c] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                " {:>-18.6} ",
+                array[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
             );
         }
-        if r == array.len() - 1 {
+        if row == array.len() - 1 {
             println!("]]\n");
         } else {
             println!("]");
@@ -102,11 +119,17 @@ pub fn print_2darr<const R: usize, const C: usize>(
 }
 
 /// Formated print a 1D vector with scientific form
-pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype) {
+pub fn print_1dvec(name: &str, vec: &[Dtype], n_exp: Dtype, h_or_v: &str) {
     println!("\n{} = (10^{} *)", name, n_exp);
     print!("[[");
-    for &ele in vec.iter() {
-        print!(" {:-9.4} ", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
+    if h_or_v == "h" {
+        for &ele in vec.iter() {
+            print!(" {:-18.6} ", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
+        }
+    } else if h_or_v == "v" {
+        for &ele in vec.iter() {
+            print!(" {:-18.6} \n", ele / (10.0_f64.powf(n_exp as f64)) as Dtype);
+        }
     }
     println!("]]\n");
 }
@@ -122,7 +145,7 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
         }
         for col in 0..mat[0].len() {
             print!(
-                " {:-9.4} ",
+                " {:-18.6} ",
                 mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
             );
         }

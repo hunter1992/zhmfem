@@ -68,7 +68,8 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Rod2D2N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut rods, &grpdnidx);
-    part.k_printer(E);
+    let parallel_or_singllel = "singllel";
+    part.k_printer(parallel_or_singllel, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -76,7 +77,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(),
+        *part.k(parallel_or_singllel),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -87,21 +88,25 @@ fn main() {
     //eqs.gauss_seidel_iter_solver(0.001);
     //let output_file = "G-S.txt";
 
-    let calc_time: std::time::Duration = eqs.solver_calc_time.unwrap();
+    let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
     // write the displacement and force result into Node2D's field
     part.write_result(&eqs);
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), 0.0);
-    print_1darr("fe", &part.nodes_force(), E);
+    print_1darr("qe", &part.nodes_displacement(), 0.0, "v");
+    print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype = strain_energy(*part.k(), part.nodes_displacement());
+    let strain_energy: Dtype =
+        strain_energy(*part.k(parallel_or_singllel), part.nodes_displacement());
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
-    let potential_energy: Dtype =
-        potential_energy(*part.k(), part.nodes_force(), part.nodes_displacement());
+    let potential_energy: Dtype = potential_energy(
+        *part.k(parallel_or_singllel),
+        part.nodes_force(),
+        part.nodes_displacement(),
+    );
     println!("\tE_d: {:-9.6} (deform energy)", strain_energy);
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
@@ -110,6 +115,7 @@ fn main() {
         elem.k_printer(E);
         elem.print_strain();
         elem.print_stress();
+        println!("\nelem[{}] axial force: {}", elem.id, elem.axial_force());
     }
 
     // -------- Part 5:  Write clac result into txt file --------

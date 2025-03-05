@@ -10,7 +10,7 @@ pub struct LinearEqs<const D: usize> {
     pub disps_0_idx: Vec<usize>,
     pub static_kmat: [[Dtype; D]; D],
     pub external_force: Option<[Dtype; D]>,
-    pub solver_calc_time: Option<std::time::Duration>,
+    pub solver_time_consuming: Option<std::time::Duration>,
 }
 
 impl<const D: usize> LinearEqs<D> {
@@ -27,7 +27,7 @@ impl<const D: usize> LinearEqs<D> {
             disps_0_idx,
             static_kmat,
             external_force: None,
-            solver_calc_time: None,
+            solver_time_consuming: None,
         }
     }
 
@@ -71,7 +71,7 @@ impl<const D: usize> LinearEqs<D> {
                 .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
                 .collect();
             self.external_force = Some((kmat * SVector::from(self.disps)).into());
-            self.solver_calc_time = Some(duration_lu);
+            self.solver_time_consuming = Some(duration_lu);
             self.state = true;
         } else {
             return;
@@ -112,7 +112,7 @@ impl<const D: usize> LinearEqs<D> {
 
                 if (&tmp - &x).abs().max() < calc_error {
                     let duration_gs = time_gs.elapsed();
-                    self.solver_calc_time = Some(duration_gs);
+                    self.solver_time_consuming = Some(duration_gs);
                     print!("\n>>> Gauss-Seidel iter method down!");
                     println!(
                         "\n\ttime consuming = {:?}\n\tresult:   iter = {}\n\t\t   err = {:8.6}",
