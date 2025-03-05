@@ -1,10 +1,11 @@
 [package]
 name = "zhmfem"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 nalgebra = "0.32.5"
+rayon = "1.10"
 #vtkio = {version = "0.6", default-features = false}

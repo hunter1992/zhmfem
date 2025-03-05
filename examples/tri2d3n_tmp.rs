@@ -1,5 +1,3 @@
-// 这个例子来源于曾攀《有限元基础教程》的例题3.2.5(1)
-
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -12,31 +10,28 @@ fn main() {
     let time_start = Instant::now();
 
     // -------- Part 1:  Set initial parameters --------
-    let cross_section_area: Vec<Dtype> = vec![100.0, 100.0, 100.0, 100.0];
-    let material: (Dtype, Dtype) = (295000.0, 0.25); //Young's modulud & Poisson's ratio
+    let thick: Dtype = 10.0; //Thickness of the plate
+    let material: (Dtype, Dtype) = (206000.0, 0.3); //Young's modulud & Poisson's ratio
 
     // Set mesh and freedom parameters
     const R: usize = 2; // rows of nodes
     const C: usize = 2; // columns of nodes
-    const M: usize = 2; // num of nodes in single element
+    const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
     //Controls the style of printing numbers in scientific notation
-    const E: Dtype = 4.0;
+    const E: Dtype = 6.0;
 
     // Manually set coords and grouped nodes index
-    let points: Vec<Vec<Dtype>> = vec![
-        vec![0.0, 0.0],
-        vec![400.0, 0.0],
-        vec![400.0, 300.0],
-        vec![0.0, 300.0],
-    ];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1], vec![2, 1], vec![0, 2], vec![3, 2]];
+    const L: Dtype = 300.;
+    const H: Dtype = 200.;
+    let points: Vec<Vec<Dtype>> = vec![vec![L, 0.0], vec![L, H], vec![0.0, H], vec![0.0, 0.0]];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
 
     // Set boundary conditions and external loads
-    let zero_disp_index: Vec<usize> = vec![0, 1, 3, 6, 7];
-    let force_index: Vec<usize> = vec![2, 5];
-    let force_value: Vec<Dtype> = vec![20000.0, -25000.0];
+    let zero_disp_index: Vec<usize> = vec![1, 4, 5, 6, 7];
+    let force_index: Vec<usize> = vec![3];
+    let force_value: Vec<Dtype> = vec![-500000.0];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
@@ -46,14 +41,14 @@ fn main() {
     // Construct 2D nodes vector
     let nodes = nodes2d_vec(&points, &force_data);
 
-    // Construct Rod2D2N elements vector
-    let mut rods = rod2d2n_vec(&nodes, &grpdnidx, &cross_section_area, &material);
-    let element_type: &str = "Rod2D2N_";
+    // Construct Tri2D3N elements vector
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
+    let element_type: &str = "Tri2D3N_test_";
 
     // Construct 2D part & assembly global stiffness matrix
-    let mut part: Part2D<'_, Rod2D2N<'_>, { R * C }, F, M> =
-        Part2D::new(1, &nodes, &mut rods, &grpdnidx);
-    let parallel_or_singllel = "singllel";
+    let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
+    let parallel_or_singllel: &str = "p";
     part.k_printer(parallel_or_singllel, E);
 
     // -------- Part 3:  Solve the problem --------
@@ -73,13 +68,16 @@ fn main() {
     //eqs.gauss_seidel_iter_solver(0.001);
     //let output_file = "G-S.txt";
 
+    // 3) or you can solve the problem with a more concise call:
+    // eqs.solve("lu", 0.001); // or eqs.solve("gs", 0.001);
+
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
     // write the displacement and force result into Node2D's field
     part.write_result(&eqs);
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), 0.0, "v");
+    print_1darr("qe", &part.nodes_displacement(), 0., "v");
     print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
@@ -100,7 +98,6 @@ fn main() {
         elem.k_printer(E);
         elem.print_strain();
         elem.print_stress();
-        println!("\nelem[{}] F_axial = {}", elem.id, elem.axial_force());
     }
 
     // -------- Part 5:  Write clac result into txt file --------

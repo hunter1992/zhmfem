@@ -350,7 +350,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
             )
         }
 
-        print!("Quad2D4N k{} =  (* 10^{})\n[", self.id, n_exp as i32);
+        print!("\nQuad2D4N k{} =  (* 10^{})\n[", self.id, n_exp as i32);
         for row in 0..8 {
             if row == 0 {
                 print!("[");

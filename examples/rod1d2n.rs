@@ -65,14 +65,14 @@ fn main() {
     eqs.gauss_seidel_iter_solver(0.001);
     let output_file = "G-S.txt";
 
-    let calc_time: std::time::Duration = eqs.solver_calc_time.unwrap();
+    let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
     // write the displacement and force result into Node2D's field
     part.write_result(&eqs);
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), E);
-    print_1darr("fe", &part.nodes_force(), E);
+    print_1darr("qe", &part.nodes_displacement(), E, "v");
+    print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(*part.k(), part.nodes_displacement());

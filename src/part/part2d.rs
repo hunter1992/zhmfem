@@ -1,6 +1,10 @@
 use crate::{Dtype, Export, LinearEqs, Node2D, K};
+use rayon::prelude::*;
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::time::Instant;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
 pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
@@ -12,6 +16,7 @@ where
     pub elems: &'part2d mut [Elem],
     pub cplds: &'part2d [Vec<usize>], //cplds: coupled nodes index
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
+    pub assembly_time_consuming: Option<std::time::Duration>,
 }
 
 impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
@@ -31,15 +36,16 @@ where
             elems,
             cplds,
             k_matrix: None,
+            assembly_time_consuming: None,
         }
     }
 
     /// Get displacement of all nodes
     pub fn nodes_displacement(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
-        for idx in 0..N {
-            data[idx * 2] = self.nodes[idx].displs.borrow()[0];
-            data[idx * 2 + 1] = self.nodes[idx].displs.borrow()[1];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            data[idx * 2] = node.displs.borrow()[0];
+            data[idx * 2 + 1] = node.displs.borrow()[1];
         }
         data
     }
@@ -47,16 +53,81 @@ where
     /// Get force of all nodes
     pub fn nodes_force(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
-        for idx in 0..N {
-            data[idx * 2] = self.nodes[idx].forces.borrow()[0];
-            data[idx * 2 + 1] = self.nodes[idx].forces.borrow()[1];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            data[idx * 2] = node.forces.borrow()[0];
+            data[idx * 2 + 1] = node.forces.borrow()[1];
         }
         data
     }
 
-    pub fn k(&mut self) -> &[[Dtype; N * F]; N * F]
+    /// Calculate part's global stiffness matrix
+    /// The value of arg parallel_or_singllel can be:
+    /// "parallel" or "p" or "singllel" or "s"
+    pub fn k(&mut self, parallel_or_singllel: &str) -> &[[Dtype; N * F]; N * F]
+    where
+        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]> + Sync,
+    {
+        match parallel_or_singllel{
+            "singllel"=> self.k_singllel(),
+            "s"=> self.k_singllel(),
+            "parallel"=> self.k_parallel(),
+            "p"=> self.k_parallel(),
+            _ => panic!("!!! Wrong arg for Part's stiffness matrix calc fun k(), from/src/part/part2d.rs fn k()"),
+        }
+    }
+
+    fn k_singllel(&mut self) -> &[[Dtype; N * F]; N * F]
     where
         <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
+    {
+        if self.k_matrix.is_none() {
+            if self.cplds.len() != self.elems.len() {
+                println!("\n---> Error! From Part2D.calc_k func.");
+                println!("     The count of elements not eq to K mat size.");
+                panic!("---> Assembly global K failed!");
+            }
+
+            println!(
+                "\n>>> Assembling Part2D(#{})'s global stiffness matrix K{} ......",
+                self.id, self.id
+            );
+
+            let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
+
+            // 计算并缓存每个单元的刚度矩阵
+            let elem_stiffness_mats_vec: Vec<_> = self.elems.iter_mut().map(|x| x.k()).collect();
+
+            let timing_start = Instant::now();
+            for n in 0..self.cplds.len() {
+                let cpld = &self.cplds[n];
+                let elem_k = elem_stiffness_mats_vec[n];
+                for idx in 0..cpld.len() {
+                    for idy in 0..cpld.len() {
+                        for row in 0..F {
+                            for col in 0..F {
+                                part_stiffness_mat[cpld[idx] * F + row][cpld[idy] * F + col] +=
+                                    elem_k[idx * F + row][idy * F + col];
+                            }
+                        }
+                    }
+                }
+            }
+            let time_consuming = timing_start.elapsed();
+            println!(
+                "\n>>> Assembly Down!\n        time consuming: {:?}",
+                time_consuming
+            );
+            self.assembly_time_consuming = Some(time_consuming);
+            self.k_matrix.get_or_insert(part_stiffness_mat)
+        } else {
+            self.k_matrix.as_ref().unwrap()
+        }
+    }
+
+    #[allow(non_snake_case)]
+    fn k_parallel(&mut self) -> &[[Dtype; N * F]; N * F]
+    where
+        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]> + Sync,
     {
         if self.k_matrix.is_none() {
             if self.cplds.len() != self.elems.len() {
@@ -69,44 +140,57 @@ where
                 "\n>>> Assembling Part2D(#{})'s global stiffness matrix K{} ......",
                 self.id, self.id
             );
-            let mut part_k: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
+
+            let part_K: Arc<Mutex<[[Dtype; N * F]; N * F]>> =
+                Arc::new(Mutex::new([[0.0; N * F]; N * F]));
 
             // 计算并缓存每个单元的刚度矩阵
-            let elem_ks: Vec<_> = self.elems.iter_mut().map(|x| x.k()).collect();
+            let elem_stiffness_mats_vec: Vec<_> = self.elems.iter_mut().map(|x| x.k()).collect();
 
-            // 获取单个单元内的节点数目n，构造0到n的range，用于遍历单个单元的局部刚度矩阵k
-            // 暂时认为part中只有一种单元类型，所有单元内节点数目相同，用cplds[0].len
-            let n_nodes_in_elem: Vec<usize> = (0..self.cplds[0].len()).collect();
-            let node_loc: Vec<Vec<usize>> = full_combination(&n_nodes_in_elem);
-
-            // 构造整体刚度矩阵中需要修改的节点坐标对
-            // 注意！这种写法默认传进来的coupled_nodes中节点编号从1起
-            let loc_g: Vec<Vec<Vec<usize>>> =
-                self.cplds.iter().map(|x| full_combination(&x)).collect();
-
-            for i in 0..loc_g.len() {
-                for j in 0..node_loc.len() {
-                    for k in 0..F {
-                        for l in 0..F {
-                            part_k[(loc_g[i][j][0]) * F + k][(loc_g[i][j][1]) * F + l] +=
-                                elem_ks[i][node_loc[j][0] * F + k][node_loc[j][1] * F + l];
-                        }
-                    }
-                }
-            }
-            self.k_matrix.get_or_insert(part_k)
+            let timing_start = Instant::now();
+            self.cplds
+                .iter()
+                .zip(elem_stiffness_mats_vec.iter())
+                .map(|(cpld, elem_k)| {
+                    cpld.par_iter()
+                        .enumerate()
+                        .map(|(x, X)| {
+                            cpld.par_iter()
+                                .enumerate()
+                                .map(|(y, Y)| {
+                                    for row in 0..F {
+                                        for col in 0..F {
+                                            part_K.lock().unwrap()[X * F + row][Y * F + col] +=
+                                                elem_k[x * F + row][y * F + col];
+                                        }
+                                    }
+                                })
+                                .count();
+                        })
+                        .count();
+                })
+                .count();
+            let time_consuming = timing_start.elapsed();
+            println!(
+                "\n>>> Assembly Down!\n        time consuming: {:?}",
+                time_consuming
+            );
+            let part_K: [[Dtype; N * F]; N * F] =
+                Arc::try_unwrap(part_K).unwrap().into_inner().unwrap();
+            self.assembly_time_consuming = Some(time_consuming);
+            self.k_matrix.get_or_insert(part_K)
         } else {
             self.k_matrix.as_ref().unwrap()
         }
     }
 
     /// Print part's global stiffness matrix
-    pub fn k_printer(&mut self, n_exp: Dtype)
+    pub fn k_printer(&mut self, parallel_or_singllel: &str, n_exp: Dtype)
     where
-        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
+        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]> + Sync,
     {
         if self.k_matrix.is_none() {
-            self.k();
+            self.k(parallel_or_singllel);
         }
 
         print!("\nPart #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
@@ -118,7 +202,7 @@ where
             }
             for col in 0..(N * F) {
                 print!(
-                    " {:>-12.6} ",
+                    " {:>-13.6} ",
                     self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
@@ -149,7 +233,7 @@ where
             for col in 0..(N * F) {
                 write!(
                     k_matrix,
-                    " {:>-12.6} ",
+                    " {:>-13.6} ",
                     self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("Write Part2D Stiffness Matrix Failed!");
@@ -199,13 +283,13 @@ where
         write!(text_writer, "\n").expect("Write parts' result into yxy file failed!!!");
         write!(text_writer, "\n>>> System energy:\n")
             .expect("Write parts' result into yxy file failed!!!");
-        write!(text_writer, "\t\t\tE_d: {:-12.6} (deform energy)\n", deform)
+        write!(text_writer, "\t\t\tE_d: {:-13.6} (deform energy)\n", deform)
             .expect("Write parts' result into yxy file failed!!!");
-        write!(text_writer, "\t\t\tW_f: {:-12.6} (exforce works)\n", exwork)
+        write!(text_writer, "\t\t\tW_f: {:-13.6} (exforce works)\n", exwork)
             .expect("Write parts' result into yxy file failed!!!");
         write!(
             text_writer,
-            "\t\t\tE_p: {:-12.6} (potential energy)\n",
+            "\t\t\tE_p: {:-13.6} (potential energy)\n",
             potential
         )
         .expect("Write parts' result into yxy file failed!!!");
@@ -233,14 +317,4 @@ where
     fn vtk_writer(&self, _target_file: &str) -> std::io::Result<bool> {
         Ok(true)
     }
-}
-
-fn full_combination(aim: &Vec<usize>) -> Vec<Vec<usize>> {
-    let mut rlt: Vec<Vec<usize>> = Vec::new();
-    for i in 0..aim.len() {
-        for j in 0..aim.len() {
-            rlt.push(vec![aim[i], aim[j]]);
-        }
-    }
-    rlt
 }
