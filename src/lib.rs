@@ -26,7 +26,7 @@ pub use part::{part1d::Part1D, part2d::Part2D};
 pub use std::collections::HashMap;
 pub use std::io::{BufWriter, Write};
 
-pub type Dtype = f32;
+pub type Dtype = f32; // f32 or f64
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
 /// K trait generate element's stiffness matrix under linear analysis.

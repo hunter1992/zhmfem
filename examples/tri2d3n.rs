@@ -14,8 +14,8 @@ fn main() {
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
 
     // Set mesh and freedom parameters
-    const R: usize = 15; // rows of nodes
-    const C: usize = 15; // columns of nodes
+    const R: usize = 16; // rows of nodes
+    const C: usize = 16; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
