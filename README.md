@@ -338,7 +338,7 @@ fn main() {
         .count();
 
     // -------- Part 5:  Write clac result into txt file --------
-    let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
+    let output_path = "path/to/results/";
     let output = format!("{output_path}{element_type}{output_file}");
     part.txt_writer(
         &output,
