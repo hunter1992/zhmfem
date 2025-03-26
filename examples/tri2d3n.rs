@@ -9,12 +9,12 @@ fn main() {
     // set timing start
     let time_start = Instant::now();
 
-    // -------- Part 1:  Set initial parameters --------
-    const E: Dtype = 0.0; // scientific notation
-    const CPU_CORES: usize = 4;
+    // -------- Part 0: Set initial parameters --------
+    const E: Dtype = 0.0; // Exponent in scientific notation to base 10
+    const CPU_CORES: usize = 2;
 
-    let calc_method: &str = "lu"; // "lu" or "gs"
-    let calc_accuracy: Dtype = 0.001;
+    let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+    let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
     let output_file = "LU.txt"; // "LU.txt" or "GS.txt"
     let parallel_or_singllel: &str = "p"; // "s" or "p"
@@ -22,14 +22,15 @@ fn main() {
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
 
-    /*
-    // Manually set coords and grouped nodes index
+    // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
     const R: usize = 2; // rows of nodes
     const C: usize = 2; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
+    // Manually set coords and grouped nodes index
+    /*
     let points: Vec<Vec<Dtype>> = vec![
         vec![0.0, 0.0],
         vec![1.0, 0.0],
@@ -48,12 +49,7 @@ fn main() {
         .collect();
     */
 
-    // Set mesh and freedom parameters
-    const R: usize = 5; // rows of nodes
-    const C: usize = 5; // columns of nodes
-    const M: usize = 3; // num of nodes in single element
-    const F: usize = 2; // num of degree freedom at single node
-
+    // Automatically set coords and grouped nodes index
     // Auto-mesh generate coords and grouped nodes index
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
@@ -80,7 +76,7 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-    //part.k_printer(parallel_or_singllel, CPU_CORES, E);
+    part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -108,8 +104,8 @@ fn main() {
     part.write_result(&eqs);
 
     // -------- Part 4:  Print all kinds of result --------
-    //print_1darr("qe", &part.nodes_displacement(), E, "v");
-    //print_1darr("fe", &part.nodes_force(), E, "v");
+    print_1darr("qe", &part.nodes_displacement(), E, "v");
+    print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
@@ -127,13 +123,12 @@ fn main() {
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
-    /*
-    for elem in triangles.iter() {
-        elem.k_printer(E);
-        elem.print_strain();
-        elem.print_stress();
-    }
-    */
+    part.elems
+        .iter()
+        .map(|elem| {
+            println!("{}", elem.info(0.0));
+        })
+        .count();
 
     // -------- Part 5:  Write clac result into txt file --------
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";

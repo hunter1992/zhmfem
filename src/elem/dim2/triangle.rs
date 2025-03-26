@@ -217,10 +217,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///         = thick * INT[ B(s, t)' * D * B(s, t) * det(J) ] dsdt
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * 0.5 这里的0.5是标准是三角形单元的面积
     fn calc_k(&self) -> [[Dtype; 6]; 6] {
-        //println!(
-        //    "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
-        //    self.id, self.id
-        //);
+        println!(
+            "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
+            self.id, self.id
+        );
         let (ee, nu) = *self.material;
         let elasticity_mat = (ee / (1.0 - nu * nu))
             * (SMatrix::<Dtype, 3, 3>::from([
