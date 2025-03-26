@@ -48,7 +48,7 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-    let parallel_or_singllel: &str = "p";
+    let parallel_or_singllel: &str = "s";
     part.k_printer(parallel_or_singllel, E);
 
     // -------- Part 3:  Solve the problem --------

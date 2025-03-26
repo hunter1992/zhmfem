@@ -10,20 +10,26 @@ fn main() {
     let time_start = Instant::now();
 
     // -------- Part 1:  Set initial parameters --------
+    const E: Dtype = 0.0; // scientific notation
+    const CPU_CORES: usize = 4;
+
+    let calc_method: &str = "lu"; // "lu" or "gs"
+    let calc_accuracy: Dtype = 0.001;
+
+    let output_file = "LU.txt"; // "LU.txt" or "GS.txt"
+    let parallel_or_singllel: &str = "p"; // "s" or "p"
+
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
 
+    /*
+    // Manually set coords and grouped nodes index
     // Set mesh and freedom parameters
-    const R: usize = 16; // rows of nodes
-    const C: usize = 16; // columns of nodes
+    const R: usize = 2; // rows of nodes
+    const C: usize = 2; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
-    //Controls the style of printing numbers in scientific notation
-    const E: Dtype = 0.0;
-
-    // Manually set coords and grouped nodes index
-    /*
     let points: Vec<Vec<Dtype>> = vec![
         vec![0.0, 0.0],
         vec![1.0, 0.0],
@@ -31,7 +37,22 @@ fn main() {
         vec![0.0, 1.0],
     ];
     let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
+
+    // Set boundary conditions and external loads manually
+    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
+    let force_index: Vec<usize> = vec![2, 4];
+    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+    let force_data: HashMap<usize, Dtype> = force_index
+        .into_iter()
+        .zip(force_value.into_iter())
+        .collect();
     */
+
+    // Set mesh and freedom parameters
+    const R: usize = 5; // rows of nodes
+    const C: usize = 5; // columns of nodes
+    const M: usize = 3; // num of nodes in single element
+    const F: usize = 2; // num of degree freedom at single node
 
     // Auto-mesh generate coords and grouped nodes index
     const W: Dtype = 1.0; // width
@@ -39,9 +60,9 @@ fn main() {
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
     let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
 
-    // Set boundary conditions and external loads
-    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
-    let force_index: Vec<usize> = vec![2, 4];
+    // Set boundary conditions and external loads automatically
+    let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
+    let force_index: Vec<usize> = vec![C * F, (C * R - 1) * F];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
@@ -53,14 +74,13 @@ fn main() {
     let nodes = nodes2d_vec(&points, &force_data);
 
     // Construct Tri2D3N elements vector
-    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
     let element_type: &str = "Tri2D3N_";
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
 
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-    let parallel_or_singllel = "s";
-    //part.k_printer(parallel_or_singllel, E);
+    //part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -68,19 +88,19 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
     );
 
     // 1) solve the linear equations of static system using direct method.
-    eqs.lu_direct_solver(); //LU decomposition method
-    let output_file = "LU.txt";
+    // eqs.lu_direct_solver(); //LU decomposition method
+    // let output_file = "LU.txt";
 
     // 2) solve the linear equations of static system using iter method.
-    //eqs.gauss_seidel_iter_solver(0.001);
-    //let output_file = "G-S.txt";
+    // eqs.gauss_seidel_iter_solver(0.001);
+    // let output_file = "G-S.txt";
 
     // 3) or you can solve the problem with a more concise call:
-    // eqs.solve("lu", 0.001); // or eqs.solve("gs", 0.001);
+    eqs.solve(calc_method, calc_accuracy);
 
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
@@ -92,12 +112,14 @@ fn main() {
     //print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype =
-        strain_energy(*part.k(parallel_or_singllel), part.nodes_displacement());
+    let strain_energy: Dtype = strain_energy(
+        *part.k(parallel_or_singllel, CPU_CORES),
+        part.nodes_displacement(),
+    );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
         part.nodes_force(),
         part.nodes_displacement(),
     );
@@ -106,7 +128,7 @@ fn main() {
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
     /*
-    for elem in part.elems.iter() {
+    for elem in triangles.iter() {
         elem.k_printer(E);
         elem.print_strain();
         elem.print_stress();
@@ -114,7 +136,6 @@ fn main() {
     */
 
     // -------- Part 5:  Write clac result into txt file --------
-    /*
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output = format!("{output_path}{element_type}{output_file}");
     part.txt_writer(
@@ -124,7 +145,6 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
-    */
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

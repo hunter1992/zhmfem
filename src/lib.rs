@@ -11,6 +11,7 @@ mod mesh;
 mod node;
 mod part;
 
+pub use atomic_float::{AtomicF32, AtomicF64};
 pub use calc::LinearEqs;
 pub use elem::dim1::{beam::Beam1D2N, rod::Rod1D2N};
 pub use elem::dim2::{
@@ -26,7 +27,11 @@ pub use part::{part1d::Part1D, part2d::Part2D};
 pub use std::collections::HashMap;
 pub use std::io::{BufWriter, Write};
 
-pub type Dtype = f32; // f32 or f64
+pub type Dtype = f32;
+pub type ADtype = AtomicF32;
+//pub type Dtype = f64;
+//pub type ADtype = AtomicF64;
+
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
 /// K trait generate element's stiffness matrix under linear analysis.

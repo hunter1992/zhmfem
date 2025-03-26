@@ -113,6 +113,48 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         }
     }
 
+    // n1 = 0.25*(1-s)(1-t)
+    // n2 = 0.25*(1+s)(1-t)
+    // n3 = 0.25*(1+s)(1+t)
+    // n4 = 0.25*(1-s)(1+t)
+    fn geometry_mat_st(&self, s_t: [Dtype; 3]) -> SMatrix<Dtype, 3, 8> {
+        let s = s_t[0];
+        let t = s_t[1];
+        let dn1_ds = -1. * (1.0 - t);
+        let dn2_ds = 1.0 - t;
+        let dn3_ds = 1.0 + t;
+        let dn4_ds = -1. * (1.0 + t);
+        let dn1_dt = -1. * (1.0 - s);
+        let dn2_dt = -1. * (1.0 + s);
+        let dn3_dt = 1.0 + s;
+        let dn4_dt = 1.0 + s;
+        let dn_st = 0.25
+            * SMatrix::<Dtype, 4, 2>::from([
+                [dn1_ds, dn2_ds, dn3_ds, dn4_ds],
+                [dn1_dt, dn2_dt, dn3_dt, dn4_dt],
+            ])
+            .transpose();
+        let jacobian = SMatrix::<Dtype, 2, 2>::from(self.jacobian(s_t)).transpose();
+        let inverse_jacobian = jacobian.try_inverse().unwrap();
+        let dn_xy = inverse_jacobian * dn_st;
+        let dn1_dx = dn_xy[(0, 0)];
+        let dn2_dx = dn_xy[(0, 1)];
+        let dn3_dx = dn_xy[(0, 2)];
+        let dn4_dx = dn_xy[(0, 3)];
+        let dn1_dy = dn_xy[(1, 0)];
+        let dn2_dy = dn_xy[(1, 1)];
+        let dn3_dy = dn_xy[(1, 2)];
+        let dn4_dy = dn_xy[(1, 3)];
+        SMatrix::<Dtype, 8, 3>::from([
+            [dn1_dx, 0., dn2_dx, 0., dn3_dx, 0., dn4_dx, 0.],
+            [0., dn1_dy, 0., dn2_dy, 0., dn3_dy, 0., dn4_dy],
+            [
+                dn1_dy, dn1_dx, dn2_dy, dn2_dx, dn3_dy, dn3_dx, dn4_dy, dn4_dx,
+            ],
+        ])
+        .transpose()
+    }
+
     /// Get any point's disps vector in quad element
     pub fn point_disp(&self, xi_eta: [Dtype; 3]) -> [Dtype; 2] {
         let s = xi_eta[0];
@@ -257,15 +299,17 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             for col in 0..2 {
                 let j_raw = self.jacobian(int_pts[row][col]);
                 let j = Jacobian2D::from(j_raw);
-                let det_j = j.determinant().abs();
+                let det_j = j.determinant();
 
-                let b_mat = self.geometry_mat(int_pts[row][col]);
+                //let b_mat = self.geometry_mat(int_pts[row][col]);
+                let b_mat = self.geometry_mat_st(int_pts[row][col]);
                 let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
                 k_matrix += core;
             }
         }
 
-        let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
+        //let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
+        let stiffness_matrix: [[Dtype; 8]; 8] = (4.0 * self.thick * k_matrix).into();
         stiffness_matrix
     }
 

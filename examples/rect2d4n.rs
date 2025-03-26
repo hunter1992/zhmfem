@@ -26,6 +26,10 @@ fn main() {
     const E: Dtype = 0.0;
 
     // Construct the solid and mesh it
+    // Manually mesh
+    points :Vec<Vec<Dtype>>=
+
+    // Auto mesh
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
     let (points, grpdnidx) = solid1.mesh_with_rect(R, C);
 
@@ -49,7 +53,7 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Quad2D4N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut quads, &grpdnidx);
-    let parallel_or_singllel = "singllel";
+    let parallel_or_singllel = "s";
     part.k_printer(parallel_or_singllel, E);
 
     // -------- Part 3:  Solve the problem --------
@@ -75,8 +79,8 @@ fn main() {
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), 0.0, "v".to_string());
-    print_1darr("fe", &part.nodes_force(), E, "v".to_string());
+    print_1darr("qe", &part.nodes_displacement(), 0.0, "v");
+    print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype =
@@ -99,6 +103,7 @@ fn main() {
     }
 
     // -------- Part 5:  Write clac result into txt file --------
+    /*
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output = format!("{output_path}{element_type}{output_file}");
     part.txt_writer(
@@ -108,6 +113,7 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+    */
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);
