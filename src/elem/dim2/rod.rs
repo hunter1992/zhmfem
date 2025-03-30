@@ -34,13 +34,13 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
 
     /// Get difference in x-coordinates of rod nodes
     pub fn dx(&self) -> Dtype {
-        let x = self.nodes_xcoords();
+        let x = self.get_nodes_xcoords();
         x[1] - x[0]
     }
 
     /// Get difference in y-coordinates of rod nodes
     pub fn dy(&self) -> Dtype {
-        let y = self.nodes_ycoords();
+        let y = self.get_nodes_ycoords();
         y[1] - y[0]
     }
 
@@ -62,7 +62,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     }
 
     /// Get the x-coords of nodes in Rod1D2N element
-    pub fn nodes_xcoords(&self) -> [Dtype; 2] {
+    pub fn get_nodes_xcoords(&self) -> [Dtype; 2] {
         let mut x_list = [0.0; 2];
         for i in 0..2 {
             x_list[i] = self.nodes[i].coords[0];
@@ -71,7 +71,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     }
 
     /// Get the x-coords of nodes in Rod1D2N element
-    pub fn nodes_ycoords(&self) -> [Dtype; 2] {
+    pub fn get_nodes_ycoords(&self) -> [Dtype; 2] {
         let mut y_list = [0.0; 2];
         for i in 0..2 {
             y_list[i] = self.nodes[i].coords[1];
@@ -88,7 +88,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     }
 
     /// Get nodes' disps vector in Rod1D2N element
-    pub fn nodes_displacement(&self) -> [Dtype; 4] {
+    pub fn get_nodes_displacement(&self) -> [Dtype; 4] {
         let mut disps = [0.0; 4];
         for idx in 0..2 {
             disps[idx * 2] = self.nodes[idx].displs.borrow()[0];
@@ -98,7 +98,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     }
 
     /// Get nodes's force vector in Rod1D2N element
-    pub fn nodes_force(&self) -> [Dtype; 4] {
+    pub fn get_nodes_force(&self) -> [Dtype; 4] {
         let mut forces = [0.0; 4];
         for idx in 0..2 {
             forces[idx * 2] = self.nodes[idx].forces.borrow()[0];
@@ -113,15 +113,14 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     }
 
     /// Get shape matrix element N_i
+    /// The shape mat of rod elem:
+    /// [N1 N2]  which is a 1x2 mat
+    /// N1 = 1 - x/L = 1 - epsilon
+    /// N2 = x/L     =     epsilon
     fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype) -> Dtype {
-        /* The shape mat of rod elem:
-         * [N1 N2]  which is a 1x2 mat
-         * N1 = 1 - x/L = 1 - epsilon
-         * N2 = x/L     = epsilon      */
         let a: [Dtype; 2] = [1.0, 0.0];
         let b: [Dtype; 2] = [-1.0, 1.0];
         let length = self.length();
-        // a[0] + b[0]*epsilon构造出N1,a[1] + b[1]*epsilon构造出N2
         move |x: Dtype| a[ith] + b[ith] * x / length
     }
 
@@ -131,7 +130,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
         let n0 = self.shape_mat_i(0usize)(x);
         let n1 = self.shape_mat_i(1usize)(x);
 
-        let node_disps = self.nodes_displacement();
+        let node_disps = self.get_nodes_displacement();
         let u = n0 * node_disps[0] + n1 * node_disps[1];
         [u]
     }
@@ -156,7 +155,7 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
     fn calc_strain(&self) -> [Dtype; 3] {
         let l = self.length();
         let tmat = self.trans_mat();
-        let disp = self.nodes_displacement();
+        let disp = self.get_nodes_displacement();
         let dvec = SMatrix::<Dtype, 4, 1>::from(disp);
         let bmat = SMatrix::<Dtype, 1, 2>::from([-1.0 / l, 1.0 / l]);
         let strain: [Dtype; 1] = (bmat * tmat * dvec).into();

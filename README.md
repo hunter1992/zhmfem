@@ -257,7 +257,6 @@ fn main() {
     */
 
     // Automatically set coords and grouped nodes index
-    // Auto-mesh generate coords and grouped nodes index
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);

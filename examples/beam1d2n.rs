@@ -22,6 +22,7 @@ fn main() {
     const C: usize = 3; // columns of nodes
     const M: usize = 2; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
+    const CPU_CORES: usize = 2;
 
     //Controls the style of printing numbers in scientific notation
     const E: Dtype = 6.0;
@@ -57,7 +58,7 @@ fn main() {
     let mut part: Part2D<'_, Beam1D2N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut rods, &grpdnidx);
     let parallel_or_singllel = "singllel";
-    part.k_printer(parallel_or_singllel, E);
+    part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -65,7 +66,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -86,12 +87,14 @@ fn main() {
     print_1darr("fe", &part.nodes_force(), 4.0, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype =
-        strain_energy(*part.k(parallel_or_singllel), part.nodes_displacement());
+    let strain_energy: Dtype = strain_energy(
+        *part.k(parallel_or_singllel, CPU_CORES),
+        part.nodes_displacement(),
+    );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
         part.nodes_force(),
         part.nodes_displacement(),
     );

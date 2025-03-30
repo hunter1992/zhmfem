@@ -17,7 +17,7 @@ fn main() {
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
     let output_file = "LU.txt"; // "LU.txt" or "GS.txt"
-    let parallel_or_singllel: &str = "p"; // "s" or "p"
+    let parallel_or_singllel: &str = "s"; // "s" or "p"
 
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
@@ -58,7 +58,7 @@ fn main() {
 
     // Set boundary conditions and external loads automatically
     let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
-    let force_index: Vec<usize> = vec![C * F, (C * R - 1) * F];
+    let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()

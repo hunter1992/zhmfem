@@ -1,5 +1,5 @@
 use super::triangle::Tri2D3N;
-use crate::{node::Node2D, Dtype, Jacobian2D, K};
+use crate::{node::Node2D, Dtype, K};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -90,7 +90,22 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         forces
     }
 
-    /// Get shape matrix element N_i
+    /// Get any point's disps vector in quad element
+    pub fn get_point_displacement(&self, xi_eta: [Dtype; 3]) -> [Dtype; 2] {
+        let s = xi_eta[0];
+        let t = xi_eta[1];
+        let n0 = self.shape_func_st(0usize)(s, t);
+        let n1 = self.shape_func_st(1usize)(s, t);
+        let n2 = self.shape_func_st(2usize)(s, t);
+        let n3 = self.shape_func_st(3usize)(s, t);
+
+        let disps = self.get_nodes_displacement();
+        let u = n0 * disps[0] + n1 * disps[2] + n2 * disps[4] + n3 * disps[6];
+        let v = n0 * disps[1] + n1 * disps[3] + n2 * disps[5] + n3 * disps[7];
+        [u, v]
+    }
+
+    /// Get shape function matrix element N_i
     ///
     /// -------------------
     ///   i  |  xi  |  eta
@@ -102,7 +117,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     /// -------------------
     ///
     /// N_i(xi, eta) = 0.25 * (1 + xi_i * xi) * (1 + eta_i * eta)
-    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
+    fn shape_func_st(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         /* The shape mat of quad elem:
          * |N1   0    N2   0    N3   0    N4   0 |
          * |0    N1   0    N2   0    N3   0    N4|  */
@@ -113,163 +128,64 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         }
     }
 
-    // n1 = 0.25*(1-s)(1-t)
-    // n2 = 0.25*(1+s)(1-t)
-    // n3 = 0.25*(1+s)(1+t)
-    // n4 = 0.25*(1-s)(1+t)
-    fn geometry_mat_st(&self, s_t: [Dtype; 3]) -> SMatrix<Dtype, 3, 8> {
-        let s = s_t[0];
-        let t = s_t[1];
-        let dn1_ds = -1. * (1.0 - t);
-        let dn2_ds = 1.0 - t;
-        let dn3_ds = 1.0 + t;
-        let dn4_ds = -1. * (1.0 + t);
-        let dn1_dt = -1. * (1.0 - s);
-        let dn2_dt = -1. * (1.0 + s);
-        let dn3_dt = 1.0 + s;
-        let dn4_dt = 1.0 + s;
-        let dn_st = 0.25
-            * SMatrix::<Dtype, 4, 2>::from([
-                [dn1_ds, dn2_ds, dn3_ds, dn4_ds],
-                [dn1_dt, dn2_dt, dn3_dt, dn4_dt],
-            ])
-            .transpose();
-        let jacobian = SMatrix::<Dtype, 2, 2>::from(self.jacobian(s_t)).transpose();
-        let inverse_jacobian = jacobian.try_inverse().unwrap();
-        let dn_xy = inverse_jacobian * dn_st;
-        let dn1_dx = dn_xy[(0, 0)];
-        let dn2_dx = dn_xy[(0, 1)];
-        let dn3_dx = dn_xy[(0, 2)];
-        let dn4_dx = dn_xy[(0, 3)];
-        let dn1_dy = dn_xy[(1, 0)];
-        let dn2_dy = dn_xy[(1, 1)];
-        let dn3_dy = dn_xy[(1, 2)];
-        let dn4_dy = dn_xy[(1, 3)];
-        SMatrix::<Dtype, 8, 3>::from([
-            [dn1_dx, 0., dn2_dx, 0., dn3_dx, 0., dn4_dx, 0.],
-            [0., dn1_dy, 0., dn2_dy, 0., dn3_dy, 0., dn4_dy],
-            [
-                dn1_dy, dn1_dx, dn2_dy, dn2_dx, dn3_dy, dn3_dx, dn4_dy, dn4_dx,
-            ],
+    /// Derivatives of shape functions with respect to parametric coordinates
+    /// 形函数对参数坐标的导数
+    ///  | dN/ds |          | dN1/ds  dN1/ds  dN1/ds  dN1/ds |
+    ///  |       |   =      |                                |
+    ///  | dN/dt |          | dN1/dt  dN1/dt  dN1/dt  dN1/dt |
+    ///
+    ///                     | t-1     1-t     1+t     -1-t   |
+    ///              = 0.25 |                                |
+    ///                     | s-1     -1-s    1+s     1-s    |
+    fn diff_shape_mat_st(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 2, 4> {
+        let s: Dtype = xi_eta[0];
+        let t: Dtype = xi_eta[1];
+        0.25 * SMatrix::<Dtype, 4, 2>::from([
+            [t - 1., -t + 1., t + 1., -t - 1.],
+            [s - 1., -s - 1., s + 1., -s + 1.],
         ])
         .transpose()
     }
 
-    /// Get any point's disps vector in quad element
-    pub fn point_disp(&self, xi_eta: [Dtype; 3]) -> [Dtype; 2] {
-        let s = xi_eta[0];
-        let t = xi_eta[1];
-        let n0 = self.shape_mat_i(0usize)(s, t);
-        println!(">>> Called <<<");
-        let n1 = self.shape_mat_i(1usize)(s, t);
-        let n2 = self.shape_mat_i(2usize)(s, t);
-        let n3 = self.shape_mat_i(3usize)(s, t);
-
-        let disps = self.get_nodes_displacement();
-        let u = n0 * disps[0] + n1 * disps[2] + n2 * disps[4] + n3 * disps[6];
-        let v = n0 * disps[1] + n1 * disps[3] + n2 * disps[5] + n3 * disps[7];
-        [u, v]
+    /// Derivatives of shape functions with respect to physical coordinates
+    /// 形函数对物理坐标的导数
+    /// dN/dx = (dN/ds * ds/dx) + (dN/dt * dt/dx)
+    /// dN/dy = (dN/ds * ds/dy) + (dN/dt * dt/dy)
+    /// | dN/ds |        | dx/ds  dy/ds | | dN/dx |          | dN/dx |
+    /// |       |    =   |              |*|       |   =  J * |       |
+    /// | dN/dt |        | dx/dt  dy/dt | | dN/dy |2x4       | dN/dy |2x4
+    ///
+    /// | dN/dx |                 | dN/ds |
+    /// |       |    =   J^(-1) * |       |
+    /// | dN/dy |2x4              | dN/dt |2x4
+    fn diff_shape_mat_xy(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 2, 4> {
+        let diff_shape_mat_st = self.diff_shape_mat_st(xi_eta);
+        let jecobain = self.jacobian(xi_eta);
+        jecobain.try_inverse().unwrap() * diff_shape_mat_st
     }
 
     /// Calculate the Jacobian matrix of quadrilateral
-    fn jacobian(&self, xi_eta: [Dtype; 3]) -> [[Dtype; 2]; 2] {
+    fn jacobian(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 2, 2> {
         let x: [Dtype; 4] = self.get_nodes_xcoords();
         let y: [Dtype; 4] = self.get_nodes_ycoords();
-        let s: Dtype = xi_eta[0];
-        let t: Dtype = xi_eta[1];
-
-        let p_s: Dtype = 1.0 + s; // positive xi
-        let n_s: Dtype = 1.0 - s;
-        let p_t: Dtype = 1.0 + t;
-        let n_t: Dtype = 1.0 - t;
-
-        let dx_ds: Dtype = 0.25 * (-n_t * x[0] + n_t * x[1] + p_t * x[2] - p_t * x[3]);
-        let dy_ds: Dtype = 0.25 * (-n_t * y[0] + n_t * y[1] + p_t * y[2] - p_t * y[3]);
-        let dx_dt: Dtype = 0.25 * (-n_s * x[0] - p_s * x[1] + p_s * x[2] + n_s * x[3]);
-        let dy_dt: Dtype = 0.25 * (-n_s * y[0] - p_s * y[1] + p_s * y[2] + n_s * y[3]);
-        [[dx_ds, dy_ds], [dx_dt, dy_dt]]
+        let dn_st = self.diff_shape_mat_st(xi_eta);
+        let xy = SMatrix::<Dtype, 4, 2>::from([x, y]);
+        dn_st * xy
     }
 
-    /// Calculate H matrix
-    /// The H matrix transforms the strain in the parameter coordinate system to
-    /// the physical coordinate system
-    ///
-    /// epsilon = Du/Dx
-    ///         = Du/Ds * Ds/Dx
-    ///         = J^(-1) * Du/Ds
-    ///         = H * Epsilon
-    ///
-    /// |     du/dx     |        | du/ds |
-    /// |     dv/dy     |  = H * | du/dt |
-    /// | du/dy + dv/dx |        | dv/ds |
-    ///                          | dv/dt |
-    ///
-    /// epsilon: Strain in physical coordinate system
-    /// Epsilon: Strain in parametric coordinate system
-    fn geometry_transform_mat(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 3, 4> {
-        let j_mat = self.jacobian(xi_eta);
-        let det_j: Dtype = j_mat[0][0] * j_mat[1][1] - j_mat[0][1] * j_mat[1][0];
-        if det_j < 0.0 {
-            panic!("!!! Det of Jacobian < 0 !");
-        }
-        let h = SMatrix::<Dtype, 3, 4>::from([
-            [j_mat[1][1], 0.0, -j_mat[1][0]],
-            [-j_mat[0][1], 0.0, j_mat[0][0]],
-            [0.0, -j_mat[1][0], j_mat[1][1]],
-            [0.0, j_mat[0][0], -j_mat[0][1]],
-        ]);
-        h / det_j
-    }
-
-    /// Calculate Q matrix
-    /// Q matrix is the  differentiation of N(s, t):
-    ///
-    /// | du/ds |   | d /ds,   0   |   | u |
-    /// | du/dt | = | d /dt,   0   | * |   |
-    /// | dv/ds |   |   0  , d /ds |   | v |
-    /// | dv/dt |   |   0  , d /dt |   |   |
-    ///                                                                     | u1 |
-    ///             | d /ds,   0   |                                        | v1 |
-    ///           = | d /dt,   0   | * | N1, 0 , N2, 0 , N3, 0 , N4, 0  | * | u2 |
-    ///             |   0  , d /ds |   | 0 , N1, 0 , N2, 0 , N3, 0 , N4 |   | v2 |
-    ///             |   0  , d /dt |                                        | u3 |
-    ///                                                                     | v3 |
-    ///           = Q * [ u1 v1 u2 v2 u3 v3 u4 v4 ]^T                       | u4 |
-    ///
-    /// Q = | d /ds,   0   |
-    ///     | d /dt,   0   | * | N1, 0 , N2, 0 , N3, 0 , N4, 0  |
-    ///     |   0  , d /ds |   | 0 , N1, 0 , N2, 0 , N3, 0 , N4 |
-    ///     |   0  , d /dt |
-    ///
-    ///   = | (1 + eta_1 * eta) * xi_1 ... |
-    ///     | .                            |       *  0.25
-    ///     | .                            |
-    ///     | ...                          |(4x8)
-    fn diff_shape_mat(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 4, 8> {
-        let s: Dtype = xi_eta[0];
-        let t: Dtype = xi_eta[1];
-        let p_s: Dtype = 1.0 + s;
-        let n_s: Dtype = 1.0 - s;
-        let p_t: Dtype = 1.0 + t;
-        let n_t: Dtype = 1.0 - t;
-
-        SMatrix::<Dtype, 4, 8>::from([
-            [-n_t, -n_s, 0.0, 0.0],
-            [0.0, 0.0, -n_t, -n_s],
-            [n_t, -p_s, 0.0, 0.0],
-            [0.0, 0.0, n_t, -p_s],
-            [p_t, p_s, 0.0, 0.0],
-            [0.0, 0.0, p_t, p_s],
-            [-p_t, n_s, 0.0, 0.0],
-            [0.0, 0.0, -p_t, n_s],
-        ]) * 0.25
-    }
-
-    /// Element's B matrix which is the conmbination of diff(N(x,y))
-    fn geometry_mat(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 3, 8> {
-        let h_mat = self.geometry_transform_mat(xi_eta);
-        let q_mat = self.diff_shape_mat(xi_eta);
-        h_mat * q_mat
+    /// Geometry matrix B(xi, eta) 用参数坐标表示物理坐标下的几何矩阵
+    fn geometry_mat_xy(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 3, 8> {
+        let dn_xy = self.diff_shape_mat_xy(xi_eta);
+        SMatrix::<Dtype, 3, 8>::from([
+            [dn_xy[(0, 0)], 0.0, dn_xy[(1, 0)]],
+            [0.0, dn_xy[(1, 0)], dn_xy[(0, 0)]],
+            [dn_xy[(0, 1)], 0.0, dn_xy[(1, 1)]],
+            [0.0, dn_xy[(1, 1)], dn_xy[(0, 1)]],
+            [dn_xy[(0, 2)], 0.0, dn_xy[(1, 2)]],
+            [0.0, dn_xy[(1, 2)], dn_xy[(0, 2)]],
+            [dn_xy[(0, 3)], 0.0, dn_xy[(1, 3)]],
+            [0.0, dn_xy[(1, 3)], dn_xy[(0, 3)]],
+        ])
     }
 
     /// Calculate element stiffness matrix K
@@ -297,25 +213,23 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         // 2x2的4点Gauss积分，4个点权重都是1
         for row in 0..2 {
             for col in 0..2 {
-                let j_raw = self.jacobian(int_pts[row][col]);
-                let j = Jacobian2D::from(j_raw);
+                let j = self.jacobian(int_pts[row][col]);
                 let det_j = j.determinant();
 
-                //let b_mat = self.geometry_mat(int_pts[row][col]);
-                let b_mat = self.geometry_mat_st(int_pts[row][col]);
+                let b_mat = self.geometry_mat_xy(int_pts[row][col]);
                 let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
                 k_matrix += core;
             }
         }
 
         //let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
-        let stiffness_matrix: [[Dtype; 8]; 8] = (4.0 * self.thick * k_matrix).into();
+        let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
         stiffness_matrix
     }
 
     /// Get element's strain vector
     fn calc_strain(&self, xi_eta: [Dtype; 3]) -> [Dtype; 3] {
-        let b_mat = self.geometry_mat(xi_eta);
+        let b_mat = self.geometry_mat_xy(xi_eta);
         let elem_nodes_disps = SMatrix::<Dtype, 8, 1>::from(self.get_nodes_displacement());
         let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
         strain_vector
@@ -333,6 +247,36 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain(xi_eta));
         let stress: [Dtype; 3] = (elasticity_mat * strain).into();
         stress
+    }
+
+    /// Output element's calculation result
+    pub fn calc_result_info(&self, n_exp: Dtype) -> String {
+        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
+        let int_pts: [[[Dtype; 3]; 2]; 2] = [
+            [[-gauss_pt, -gauss_pt, 0.0], [gauss_pt, -gauss_pt, 0.0]],
+            [[gauss_pt, gauss_pt, 0.0], [-gauss_pt, gauss_pt, 0.0]],
+        ];
+        format!("\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
+            self.id,
+            self.area(),
+            self.material.0,
+            self.material.1,
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2],
+            self.nodes[3],
+            self.calc_strain(int_pts[0][0]),
+            self.calc_strain(int_pts[0][1]),
+            self.calc_strain(int_pts[1][0]),
+            self.calc_strain(int_pts[1][1]),
+            self.calc_stress(int_pts[0][0]),
+            self.calc_stress(int_pts[0][1]),
+            self.calc_stress(int_pts[1][0]),
+            self.calc_stress(int_pts[1][1]),
+            self.id(),
+            n_exp,
+            self.k_string(n_exp),
+        )
     }
 
     /// Get element node's stress
@@ -461,32 +405,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
 
     /// Get element's info string
     fn info(&self, n_exp: Dtype) -> String {
-        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
-        let int_pts: [[[Dtype; 3]; 2]; 2] = [
-            [[-gauss_pt, -gauss_pt, 0.0], [gauss_pt, -gauss_pt, 0.0]],
-            [[gauss_pt, gauss_pt, 0.0], [-gauss_pt, gauss_pt, 0.0]],
-        ];
-        format!("\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress:\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
-            self.id,
-            self.area(),
-            self.material.0,
-            self.material.1,
-            self.nodes[0],
-            self.nodes[1],
-            self.nodes[2],
-            self.nodes[3],
-            self.strain(int_pts[0][0]),
-            self.strain(int_pts[0][1]),
-            self.strain(int_pts[1][0]),
-            self.strain(int_pts[1][1]),
-            self.stress(int_pts[0][0]),
-            self.stress(int_pts[0][1]),
-            self.stress(int_pts[1][0]),
-            self.stress(int_pts[1][1]),
-            self.id(),
-            n_exp,
-            self.k_string(n_exp),
-        )
+        self.calc_result_info(n_exp)
     }
 
     /// Get element's id number
@@ -497,9 +416,14 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
 
 impl fmt::Display for Quad2D4N<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
+        let int_pts: [[[Dtype; 3]; 2]; 2] = [
+            [[-gauss_pt, -gauss_pt, 0.0], [gauss_pt, -gauss_pt, 0.0]],
+            [[gauss_pt, gauss_pt, 0.0], [-gauss_pt, gauss_pt, 0.0]],
+        ];
         write!(
             f,
-            "\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}",
+"\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^0)\n{}",
             self.id,
             self.area(),
             self.material.0,
@@ -508,6 +432,16 @@ impl fmt::Display for Quad2D4N<'_> {
             self.nodes[1],
             self.nodes[2],
             self.nodes[3],
+            self.calc_strain(int_pts[0][0]),
+            self.calc_strain(int_pts[0][1]),
+            self.calc_strain(int_pts[1][0]),
+            self.calc_strain(int_pts[1][1]),
+            self.calc_stress(int_pts[0][0]),
+            self.calc_stress(int_pts[0][1]),
+            self.calc_stress(int_pts[1][0]),
+            self.calc_stress(int_pts[1][1]),
+            self.id(),
+            self.k_string(0.0)
         )
     }
 }

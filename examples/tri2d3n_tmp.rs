@@ -1,6 +1,9 @@
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
+/** This example comes from:
+ *  https://cloud.tencent.com/developer/article/1086452
+ */
 use std::time::Instant;
 
 use zhmfem::*;
@@ -18,6 +21,7 @@ fn main() {
     const C: usize = 2; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
+    const CPU_CORES: usize = 2;
 
     //Controls the style of printing numbers in scientific notation
     const E: Dtype = 6.0;
@@ -43,13 +47,13 @@ fn main() {
 
     // Construct Tri2D3N elements vector
     let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
-    let element_type: &str = "Tri2D3N_test_";
+    //let element_type: &str = "Tri2D3N_test_";
 
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
     let parallel_or_singllel: &str = "s";
-    part.k_printer(parallel_or_singllel, E);
+    part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -57,12 +61,12 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
     );
 
     // 1) solve the linear equations of static system using direct method.
     eqs.lu_direct_solver(); //LU decomposition method
-    let output_file = "LU.txt";
+                            //let output_file = "LU.txt";
 
     // 2) solve the linear equations of static system using iter method.
     //eqs.gauss_seidel_iter_solver(0.001);
@@ -71,7 +75,7 @@ fn main() {
     // 3) or you can solve the problem with a more concise call:
     // eqs.solve("lu", 0.001); // or eqs.solve("gs", 0.001);
 
-    let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
+    //let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
     // write the displacement and force result into Node2D's field
     part.write_result(&eqs);
@@ -81,12 +85,14 @@ fn main() {
     print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype =
-        strain_energy(*part.k(parallel_or_singllel), part.nodes_displacement());
+    let strain_energy: Dtype = strain_energy(
+        *part.k(parallel_or_singllel, CPU_CORES),
+        part.nodes_displacement(),
+    );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
         part.nodes_force(),
         part.nodes_displacement(),
     );
@@ -101,6 +107,7 @@ fn main() {
     }
 
     // -------- Part 5:  Write clac result into txt file --------
+    /*
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output = format!("{output_path}{element_type}{output_file}");
     part.txt_writer(
@@ -110,6 +117,7 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+    */
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

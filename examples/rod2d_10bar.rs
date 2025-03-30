@@ -69,7 +69,7 @@ fn main() {
     let mut part: Part2D<'_, Rod2D2N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut rods, &grpdnidx);
     let parallel_or_singllel = "singllel";
-    part.k_printer(parallel_or_singllel, E);
+    part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -77,7 +77,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -98,12 +98,14 @@ fn main() {
     print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype =
-        strain_energy(*part.k(parallel_or_singllel), part.nodes_displacement());
+    let strain_energy: Dtype = strain_energy(
+        *part.k(parallel_or_singllel, CPU_CORES),
+        part.nodes_displacement(),
+    );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
         part.nodes_force(),
         part.nodes_displacement(),
     );
@@ -119,6 +121,7 @@ fn main() {
     }
 
     // -------- Part 5:  Write clac result into txt file --------
+    /*
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output = format!("{output_path}{element_type}{output_file}");
     part.txt_writer(
@@ -128,6 +131,7 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+    */
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

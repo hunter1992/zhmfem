@@ -18,6 +18,7 @@ fn main() {
     const C: usize = 2; // columns of nodes
     const M: usize = 2; // num of nodes in single element
     const F: usize = 1; // num of degree freedom at single node
+    const CPU_CORES: usize = 2;
 
     //Controls the style of printing numbers in scientific notation
     const E: Dtype = 0.0;
@@ -100,7 +101,7 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
-    println!("杆件内力{}", rods[0].get_axial_force());
+    println!("杆件内力{}", rods[0].axial_force());
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

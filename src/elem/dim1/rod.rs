@@ -34,12 +34,12 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
 
     /// Get Rod1D2N element length
     pub fn length(&self) -> Dtype {
-        let x = self.nodes_xcoords();
+        let x = self.get_nodes_xcoords();
         (x[0] - x[1]).abs()
     }
 
     /// Get the x-coords of nodes in Rod1D2N element
-    pub fn nodes_xcoords(&self) -> [Dtype; 2] {
+    pub fn get_nodes_xcoords(&self) -> [Dtype; 2] {
         let mut x_list = [0.0; 2];
         for i in 0..2 {
             x_list[i] = self.nodes[i].coords[0];
@@ -48,7 +48,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 
     /// Get nodes' disps vector in Rod1D2N element
-    pub fn nodes_displacement(&self) -> [Dtype; 2] {
+    pub fn get_nodes_displacement(&self) -> [Dtype; 2] {
         let mut disps = [0.0; 2];
         for idx in 0..2 {
             disps[idx] = self.nodes[idx].displs.borrow()[0];
@@ -57,7 +57,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 
     /// Get nodes's force vector in Rod1D2N element
-    pub fn nodes_force(&self) -> [Dtype; 2] {
+    pub fn get_nodes_force(&self) -> [Dtype; 2] {
         let mut forces = [0.0; 2];
         for idx in 0..2 {
             forces[idx] = self.nodes[idx].forces.borrow()[0];
@@ -89,7 +89,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         let n0 = self.shape_mat_i(0usize)(x);
         let n1 = self.shape_mat_i(1usize)(x);
 
-        let node_disps = self.nodes_displacement();
+        let node_disps = self.get_nodes_displacement();
         let u = n0 * node_disps[0] + n1 * node_disps[1];
         [u]
     }
@@ -111,7 +111,7 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     /// Get element's strain vector, in 1d it's a scale
     fn calc_strain(&self) -> [Dtype; 3] {
         let unit: Dtype = 1.0 / self.length();
-        let node_disps = self.nodes_displacement();
+        let node_disps = self.get_nodes_displacement();
         let strain: [Dtype; 3] = [-unit * node_disps[0] + unit * node_disps[1], 0.0, 0.0];
         strain
     }

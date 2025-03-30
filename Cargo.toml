@@ -8,4 +8,4 @@ edition = "2024"
 [dependencies]
 nalgebra = "0.32.5"
 atomic_float = "1.1.0"
-#vtkio = {version = "0.6", default-features = false}
+vtkio = {version = "0.6", default-features = false}

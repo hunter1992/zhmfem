@@ -14,7 +14,7 @@ where
     pub id: usize,
     pub nodes: &'part2d [Node2D],
     pub elems: &'part2d mut [Elem],
-    pub cplds: &'part2d Vec<Vec<usize>>, //cplds: coupled nodes index
+    pub cplds: &'part2d [Vec<usize>], //cplds: coupled nodes index
     pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
     pub assembly_time_consuming: Option<std::time::Duration>,
 }
@@ -32,7 +32,7 @@ where
         id: usize,
         nodes: &'part2d [Node2D],
         elems: &'part2d mut [Elem],
-        cplds: &'part2d Vec<Vec<usize>>,
+        cplds: &'part2d [Vec<usize>],
     ) -> Self {
         Part2D {
             id,

@@ -19,6 +19,7 @@ fn main() {
     const C: usize = 2; // columns of nodes
     const M: usize = 4; // node num in single element
     const F: usize = 2; // freedom num in single node
+    const CPU_CORES: usize = 2;
 
     //Controls the style of printing numbers in scientific notation
     const E: Dtype = 0.0;
@@ -53,7 +54,7 @@ fn main() {
     let mut part: Part2D<'_, Quad2D4N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut quads, &grpdnidx);
     let parallel_or_singllel = "singllel";
-    part.k_printer(parallel_or_singllel, E);
+    part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -61,7 +62,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
     );
 
     // solve method:
@@ -83,12 +84,14 @@ fn main() {
     print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype =
-        strain_energy(*part.k(parallel_or_singllel), part.nodes_displacement());
+    let strain_energy: Dtype = strain_energy(
+        *part.k(parallel_or_singllel, CPU_CORES),
+        part.nodes_displacement(),
+    );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel),
+        *part.k(parallel_or_singllel, CPU_CORES),
         part.nodes_force(),
         part.nodes_displacement(),
     );

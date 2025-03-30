@@ -149,7 +149,7 @@ impl Rectangle {
 
         // generate the coupled nodes in single element
         /* the result of the mesh is similar to
-         *    4—————3
+         *    3—————4
          *    |     |
          *    |     |
          *    |     |

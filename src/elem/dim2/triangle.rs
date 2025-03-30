@@ -259,6 +259,24 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         stress
     }
 
+    /// Output element's calculation result
+    pub fn calc_result_info(&self, n_exp: Dtype) -> String {
+        format!("\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\tStiffness Matrix K{} =  (*10^{})\n{}",
+            self.id,
+            self.area(),
+            self.material.0,
+            self.material.1,
+            self.nodes[0],
+            self.nodes[1],
+            self.nodes[2],
+            self.calc_strain(),
+            self.calc_stress(),
+            self.id(),
+            n_exp,
+            self.k_string(n_exp),
+        )
+    }
+
     /// Print element's strain value
     pub fn print_strain(&self) {
         let strain = self.calc_strain();
@@ -345,19 +363,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
 
     /// Get element's info string
     fn info(&self, n_exp: Dtype) -> String {
-        format!("\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:>-12.4}\n\tMats: {:>-12.4} (Young's modulus)\n\t      {:>-12.4} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} = \n{}",
-            self.id,
-            self.area(),
-            self.material.0,
-            self.material.1,
-            self.nodes[0],
-            self.nodes[1],
-            self.nodes[2],
-            self.strain([0.0, 0.0, 0.0]),
-            self.stress([0.0, 0.0, 0.0]),
-            self.id(),
-            self.k_string(n_exp),
-        )
+        self.calc_result_info(n_exp)
     }
 
     /// Get element's id number
@@ -370,7 +376,7 @@ impl fmt::Display for Tri2D3N<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:>-12.4}\n\tMats: {:>-12.4} (Young's modulus)\n\t      {:>-12.4} (Poisson's ratio)\n\tNodes:{}{}{}",
+"\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\tStiffness Matrix K{} =  (*10^0)\n{}",
             self.id,
             self.area(),
             self.material.0,
@@ -378,6 +384,10 @@ impl fmt::Display for Tri2D3N<'_> {
             self.nodes[0],
             self.nodes[1],
             self.nodes[2],
+            self.calc_strain(),
+            self.calc_stress(),
+            self.id(),
+            self.k_string(0.0),
         )
     }
 }
