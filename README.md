@@ -236,7 +236,7 @@ fn main() {
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
-    // Manually set coords and grouped nodes index
+    // Manual meshing and adding boundary conditions
     /*
     let points: Vec<Vec<Dtype>> = vec![
         vec![0.0, 0.0],
@@ -256,7 +256,7 @@ fn main() {
         .collect();
     */
 
-    // Automatically set coords and grouped nodes index
+    // Automatic meshing and adding boundary conditions
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
