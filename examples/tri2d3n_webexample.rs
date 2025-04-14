@@ -25,8 +25,8 @@ fn main() {
 
     // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
-    const R: usize = 9; // rows of nodes
-    const C: usize = 9; // columns of nodes
+    const R: usize = 11; // rows of nodes
+    const C: usize = 11; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
@@ -40,7 +40,7 @@ fn main() {
     // Set boundary conditions and external loads automatically
     let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
     let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
-    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+    let force_value: Vec<Dtype> = vec![-500000.0, 500000.0];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
@@ -56,7 +56,7 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-    part.k_printer(parallel_or_singllel, CPU_CORES, E);
+    // part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -75,8 +75,8 @@ fn main() {
     part.write_result(&eqs);
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), E, "v");
-    print_1darr("fe", &part.nodes_force(), E, "v");
+    // print_1darr("qe", &part.nodes_displacement(), E, "v");
+    // print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
