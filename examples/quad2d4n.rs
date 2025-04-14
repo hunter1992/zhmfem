@@ -10,6 +10,14 @@ fn main() {
     let time_start = Instant::now();
 
     // ------ Part 1: Set initial parameters ------
+    const E: Dtype = 0.0; // Exponent in scientific notation to base 10
+    const CPU_CORES: usize = 2;
+
+    let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+    let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
+
+    let parallel_or_singllel: &str = "s"; // "s" or "p"
+
     let thick: Dtype = 0.1; //Thickness of the plate
     let force: Dtype = 10000.0;
     let material: (Dtype, Dtype) = (30.0, 0.3); //Young's modulud & Poisson's ratio

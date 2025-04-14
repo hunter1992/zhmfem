@@ -269,8 +269,8 @@ where
     }
 }
 
-impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Export
-    for Part1D<'a, Elem, N, F, M>
+impl<'part1d, Elem: K, const N: usize, const F: usize, const M: usize> Export
+    for Part1D<'part1d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
 {
@@ -319,7 +319,7 @@ where
         Ok(true)
     }
 
-    fn vtk_writer(&self, _target_file: &str) -> std::io::Result<bool> {
+    fn vtk_writer(&mut self, _target_file: &str, _elem_type: &str) -> std::io::Result<bool> {
         Ok(true)
     }
 }

@@ -34,6 +34,13 @@ pub type ADtype = AtomicF32;
 
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
+#[derive(Copy, Clone)]
+pub enum SS {
+    Dim1([Dtype; 1]),
+    Dim2([Dtype; 3]),
+    Dim3([Dtype; 6]),
+}
+
 /// K trait generate element's stiffness matrix under linear analysis.
 /// Output stress/strain vector at some point in element using Vector,
 /// Kmatrix is the element's stiffness matrix to get.
@@ -46,8 +53,9 @@ pub trait K {
     fn k_printer(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
 
-    fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype>;
-    fn stress(&self, xyz: [Dtype; 3]) -> Vec<Dtype>;
+    fn strain_intpt(&mut self) -> &SS;
+    fn stress_intpt(&mut self) -> &SS;
+
     fn info(&self, n_exp: Dtype) -> String;
     fn id(&self) -> usize;
 }
@@ -62,7 +70,8 @@ pub trait Export {
         n_exp: Dtype,
         energy: (Dtype, Dtype, Dtype),
     ) -> std::io::Result<bool>;
-    fn vtk_writer(&self, target_file: &str) -> std::io::Result<bool>;
+
+    fn vtk_writer(&mut self, target_file: &str, elem_type: &str) -> std::io::Result<bool>;
 }
 
 /// Formatted print 1d array with scientific form
@@ -507,9 +516,6 @@ mod testing {
         let k1 = quad1.k();
         assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
-
-    #[test]
-    fn part_test() {}
 
     #[bench]
     /// benchmark的结果是:393.49 ns +/- 36.23 ns/iter (Intel 8265U 插电) 20241205

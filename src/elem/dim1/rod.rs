@@ -1,4 +1,4 @@
-use crate::{node::Node1D, Dtype, K};
+use crate::{node::Node1D, Dtype, K, SS};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -6,6 +6,8 @@ pub struct Rod1D2N<'rod1d2n> {
     pub id: usize,
     pub cross_sectional_area: Dtype,
     pub nodes: [&'rod1d2n Node1D; 2],
+    pub strain: Option<SS>,
+    pub stress: Option<SS>,
     pub k_matrix: Option<[[Dtype; 2]; 2]>,
     pub material: &'rod1d2n (Dtype, Dtype),
 }
@@ -22,6 +24,8 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
             id,
             cross_sectional_area,
             nodes,
+            strain: None,
+            stress: None,
             k_matrix: None,
             material,
         }
@@ -109,26 +113,26 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 
     /// Get element's strain vector, in 1d it's a scale
-    fn calc_strain(&self) -> [Dtype; 3] {
+    fn calc_strain(&self) -> [Dtype; 1] {
         let unit: Dtype = 1.0 / self.length();
         let node_disps = self.get_nodes_displacement();
-        let strain: [Dtype; 3] = [-unit * node_disps[0] + unit * node_disps[1], 0.0, 0.0];
-        strain
+        let strain: Dtype = -unit * node_disps[0] + unit * node_disps[1];
+        [strain]
     }
 
     /// Get element's stress vector, in 1d it's a scale
-    fn calc_stress(&self) -> [Dtype; 3] {
+    fn calc_stress(&self) -> [Dtype; 1] {
         let ee = self.material.0;
-        let stress: [Dtype; 3] = [ee * self.calc_strain()[0], 0.0, 0.0];
-        stress
+        let stress: Dtype = ee * self.calc_strain()[0];
+        [stress]
     }
 
     /// Print element's strain value
     pub fn print_strain(&self) {
         let strain = self.calc_strain();
         println!(
-            "\nelem[{}] strain:\n\tE_xx = {:-12.6}\n\tE_yy = {:-9.6}\n\tE_xy = {:-9.6}",
-            self.id, strain[0], strain[1], strain[2]
+            "\nelem[{}] strain:\n\tE_xx = {:-12.6}\n\t",
+            self.id, strain[0]
         );
     }
 
@@ -136,8 +140,8 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     pub fn print_stress(&self) {
         let stress = self.calc_stress();
         println!(
-            "\nelem[{}] stress:\n\tS_xx = {:-12.6}\n\tS_yy = {:-9.6}\n\tS_xy = {:-9.6}",
-            self.id, stress[0], stress[1], stress[2]
+            "\nelem[{}] stress:\n\tS_xx = {:-12.6}\n\t",
+            self.id, stress[0]
         );
     }
 }
@@ -216,13 +220,21 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
     }
 
     /// Get the strain at (x,y) inside the element, in linear rod elem, strain is a const
-    fn strain(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_strain().to_vec()
+    fn strain_intpt(&mut self) -> &SS {
+        if self.strain.is_none() {
+            self.strain.get_or_insert(SS::Dim1(self.calc_strain()))
+        } else {
+            self.strain.as_ref().unwrap()
+        }
     }
 
     /// Get the stress at (x,y) inside the element, in linear rod elem, stress is a const
-    fn stress(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_stress().to_vec()
+    fn stress_intpt(&mut self) -> &SS {
+        if self.stress.is_none() {
+            self.stress.get_or_insert(SS::Dim1(self.calc_stress()))
+        } else {
+            self.stress.as_ref().unwrap()
+        }
     }
 
     /// Get element's info string
@@ -235,8 +247,8 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
             self.material.1,
             self.nodes[0],
             self.nodes[1],
-            self.strain([0.0,0.0,0.0]),
-            self.stress([0.0,0.0,0.0]),
+            self.calc_strain(),
+            self.calc_stress(),
             self.id(),
             n_exp,
             self.k_string(n_exp)

@@ -16,7 +16,6 @@ fn main() {
     let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
-    let output_file = "LU.txt"; // "LU.txt" or "GS.txt"
     let parallel_or_singllel: &str = "p"; // "s" or "p"
 
     let thick: Dtype = 1.0; //Thickness of the plate
@@ -24,8 +23,8 @@ fn main() {
 
     // ------ Part 1: Set initial parameters ------
     // Set mesh and freedom parameters
-    const R: usize = 5; // rows of nodes
-    const C: usize = 5; // columns of nodes
+    const R: usize = 2; // rows of nodes
+    const C: usize = 2; // columns of nodes
     const M: usize = 4; // node num in single element
     const F: usize = 2; // freedom num in single node
 
@@ -67,7 +66,6 @@ fn main() {
 
     // Construct Quad2D4N elements vector
     let mut quads = quad2d4n_vec(thick, &nodes, &grpdnidx, &material);
-    let element_type: &str = "Quad2D4N_";
 
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Quad2D4N<'_>, { R * C }, F, M> =
@@ -91,8 +89,8 @@ fn main() {
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), 0.0, "v");
-    print_1darr("fe", &part.nodes_force(), E, "v");
+    //print_1darr("qe", &part.nodes_displacement(), 0.0, "v");
+    //print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
@@ -110,18 +108,32 @@ fn main() {
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
-    //part.elems.iter().map(|elem| println!("{}", elem)).count();
+    part.elems
+        .iter()
+        .map(|elem| println!("{}", elem.info(0.0)))
+        .count();
 
     // -------- Part 5:  Write clac result into txt file --------
+    let problem_type = "stress2D";
+    let element_type = "Quad2D4N";
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
-    let output = format!("{output_path}{element_type}{output_file}");
+    let output_txt = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
+    );
+    let output_vtk = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+    );
+
     part.txt_writer(
-        &output,
+        &output_txt,
         calc_time,
         E,
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+
+    part.vtk_writer(&output_vtk, element_type)
+        .expect("!!! Failed to output vtk file!");
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

@@ -1,3 +1,5 @@
+// This example comes from: https://cloud.tencent.com/developer/article/1086452
+
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -18,35 +20,15 @@ fn main() {
 
     let parallel_or_singllel: &str = "s"; // "s" or "p"
 
-    let thick: Dtype = 1.0; //Thickness of the plate
-    let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
+    let thick: Dtype = 10.0; //Thickness of the plate
+    let material: (Dtype, Dtype) = (206000.0, 0.3); //Young's modulud & Poisson's ratio
 
     // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
-    const R: usize = 2; // rows of nodes
-    const C: usize = 2; // columns of nodes
+    const R: usize = 9; // rows of nodes
+    const C: usize = 9; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
-
-    // Manually set coords and grouped nodes index
-    /*
-    let points: Vec<Vec<Dtype>> = vec![
-        vec![0.0, 0.0],
-        vec![1.0, 0.0],
-        vec![1.0, 1.0],
-        vec![0.0, 1.0],
-    ];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
-
-    // Set boundary conditions and external loads manually
-    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
-    let force_index: Vec<usize> = vec![2, 4];
-    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
-    */
 
     // Automatically set coords and grouped nodes index
     // Auto-mesh generate coords and grouped nodes index
@@ -59,7 +41,6 @@ fn main() {
     let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
     let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
-
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
@@ -86,15 +67,6 @@ fn main() {
         *part.k(parallel_or_singllel, CPU_CORES),
     );
 
-    // 1) solve the linear equations of static system using direct method.
-    // eqs.lu_direct_solver(); //LU decomposition method
-    // let output_file = "LU.txt";
-
-    // 2) solve the linear equations of static system using iter method.
-    // eqs.gauss_seidel_iter_solver(0.001);
-    // let output_file = "G-S.txt";
-
-    // 3) or you can solve the problem with a more concise call:
     eqs.solve(calc_method, calc_accuracy);
 
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
@@ -122,15 +94,17 @@ fn main() {
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
+    /*
     part.elems
         .iter()
         .map(|elem| {
             println!("{}", elem.info(0.0));
         })
         .count();
+    */
 
     // -------- Part 5:  Write clac result into txt file --------
-    let problem_type = "stress2D";
+    let problem_type = "WEBexample";
     let element_type = "Tri2D3N";
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output_txt = format!(
@@ -140,13 +114,14 @@ fn main() {
         "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
     );
 
+    /*
     part.txt_writer(
         &output_txt,
         calc_time,
         E,
         (strain_energy, external_force_work, potential_energy),
     )
-    .expect(">>> !!! Failed to output text result file !!!");
+    .expect(">>> !!! Failed to output text result file !!!");*/
 
     part.vtk_writer(&output_vtk, element_type)
         .expect(">>> !!! Failed to output vtk file!");

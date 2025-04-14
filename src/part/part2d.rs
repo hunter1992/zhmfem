@@ -1,12 +1,14 @@
-use crate::{ADtype, Dtype, Export, LinearEqs, Node2D, K};
+use crate::{ADtype, Dtype, Export, LinearEqs, Node2D, K, SS};
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
+use vtkio::model::*;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
+/// In general, the value of F in a two-dimensional plane is 2
 pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
 where
     [[Dtype; N * F]; N * F]: Sized,
@@ -44,24 +46,98 @@ where
         }
     }
 
+    /// Get nodes coordinates
+    pub fn nodes_coordinate(&self) -> [Dtype; N * F] {
+        let mut coords: [Dtype; N * F] = [0.0; N * F];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            coords[idx * F] = node.coords[0];
+            coords[idx * F + 1] = node.coords[1];
+        }
+        coords
+    }
+
+    /// Get nodes coordinates for vtk files
+    pub fn vtk_nodes_coordinate(&self) -> Vec<Dtype> {
+        let mut coords: Vec<Dtype> = vec![0.0; N * 3];
+        let data = self.nodes_coordinate();
+        for idx in 0..N {
+            coords[idx * 3] = data[idx * 2];
+            coords[idx * 3 + 1] = data[idx * 2 + 1];
+            coords[idx * 3 + 2] = 0.0 as Dtype;
+        }
+        coords
+    }
+
     /// Get displacement of all nodes
     pub fn nodes_displacement(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for (idx, node) in self.nodes.iter().enumerate() {
-            data[idx * 2] = node.displs.borrow()[0];
-            data[idx * 2 + 1] = node.displs.borrow()[1];
+            data[idx * F] = node.displs.borrow()[0];
+            data[idx * F + 1] = node.displs.borrow()[1];
         }
         data
+    }
+
+    /// Get displacement of all nodes for vtk files
+    pub fn vtk_nodes_displacement(&self) -> Vec<Dtype> {
+        let mut displs: Vec<Dtype> = vec![0.0; N * 3];
+        let data = self.nodes_displacement();
+        for idx in 0..N {
+            displs[idx * 3] = data[idx * 2];
+            displs[idx * 3 + 1] = data[idx * 2 + 1];
+            displs[idx * 3 + 2] = 0.0 as Dtype;
+        }
+        displs
     }
 
     /// Get force of all nodes
     pub fn nodes_force(&self) -> [Dtype; N * F] {
         let mut data: [Dtype; N * F] = [0.0; N * F];
         for (idx, node) in self.nodes.iter().enumerate() {
-            data[idx * 2] = node.forces.borrow()[0];
-            data[idx * 2 + 1] = node.forces.borrow()[1];
+            data[idx * F] = node.forces.borrow()[0];
+            data[idx * F + 1] = node.forces.borrow()[1];
         }
         data
+    }
+
+    /// Get force of all nodes for vtk files
+    pub fn vtk_nodes_force(&self) -> Vec<Dtype> {
+        let mut forces: Vec<Dtype> = vec![0.0; N * 3];
+        let data = self.nodes_force();
+        for idx in 0..N {
+            forces[idx * 3] = data[idx * 2];
+            forces[idx * 3 + 1] = data[idx * 2 + 1];
+            forces[idx * 3 + 2] = 0.0 as Dtype;
+        }
+        forces
+    }
+
+    /// Get elements's strain data
+    pub fn elem_strain(&mut self) -> Vec<[Dtype; 3]> {
+        let mut strain: Vec<[Dtype; 3]> = Vec::with_capacity(self.cplds.len());
+        self.elems
+            .iter_mut()
+            .map(|elem| {
+                if let SS::Dim2(e) = *elem.strain_intpt() {
+                    strain.push(e);
+                };
+            })
+            .count();
+        strain
+    }
+
+    /// Get elements's stress data
+    pub fn elem_stress(&mut self) -> Vec<[Dtype; 3]> {
+        let mut stress: Vec<[Dtype; 3]> = Vec::with_capacity(self.cplds.len());
+        self.elems
+            .iter_mut()
+            .map(|elem| {
+                if let SS::Dim2(s) = *elem.stress_intpt() {
+                    stress.push(s);
+                }
+            })
+            .count();
+        stress
     }
 
     /// Calculate part's global stiffness matrix
@@ -78,12 +154,18 @@ where
                 panic!("---> Assembly global K failed!");
             }
 
-            match parallel_or_singllel{
-            "s"=> self.k_singllel(cpu_cores),
-            "p"=> self.k_parallel(cpu_cores),
-            "singllel"=> self.k_singllel(cpu_cores),
-            "parallel"=> self.k_parallel(cpu_cores),
-            _ => panic!("!!! Wrong arg for Part's stiffness matrix calc fun k(), from/src/part/part2d.rs fn k()"),
+            match parallel_or_singllel {
+                "s" => self.k_singllel(cpu_cores),
+                "p" => self.k_parallel(cpu_cores),
+                "singllel" => self.k_singllel(cpu_cores),
+                "parallel" => self.k_parallel(cpu_cores),
+                _ => {
+                    if self.cplds.len() >= 1000 {
+                        self.k_parallel(cpu_cores)
+                    } else {
+                        self.k_singllel(cpu_cores)
+                    }
+                }
             }
         } else {
             self.k_matrix.as_ref().unwrap()
@@ -264,7 +346,7 @@ where
     }
 
     /// Write the disp and force result into nodes
-    pub fn write_result(&mut self, slv: &LinearEqs<{ N * F }>) {
+    pub fn write_result(&self, slv: &LinearEqs<{ N * F }>) {
         let disp = slv.disps;
         let force = slv.external_force.unwrap();
         for (idx, node) in self.nodes.iter().enumerate() {
@@ -274,10 +356,77 @@ where
             node.forces.borrow_mut()[1] = force[idx * 2 + 1];
         }
     }
-}
 
-impl<'a, Elem: K, const N: usize, const F: usize, const M: usize> Export
-    for Part2D<'a, Elem, N, F, M>
+    /// Wtrie triangle elements into vtk file
+    pub fn vtk_tri2d3n_legacy(&mut self, vtk_file_name: &str) -> Vtk {
+        let elem_num: usize = self.cplds.len();
+        let coords = self.vtk_nodes_coordinate();
+        let displs = self.vtk_nodes_displacement();
+        let forces = self.vtk_nodes_force();
+
+        let mut vtk_cpld: Vec<u32> = vec![0; 4 * elem_num];
+        for idx in 0..elem_num {
+            vtk_cpld[idx * 4] = 3;
+            vtk_cpld[idx * 4 + 1] = self.cplds[idx][0] as u32;
+            vtk_cpld[idx * 4 + 2] = self.cplds[idx][1] as u32;
+            vtk_cpld[idx * 4 + 3] = self.cplds[idx][2] as u32;
+        }
+
+        let strain = self.elem_strain();
+        let stress = self.elem_stress();
+
+        let mut cell_e11: Vec<Dtype> = vec![0.0; elem_num];
+        let mut cell_e22: Vec<Dtype> = vec![0.0; elem_num];
+        let mut cell_e12: Vec<Dtype> = vec![0.0; elem_num];
+
+        let mut cell_s11: Vec<Dtype> = vec![0.0; elem_num];
+        let mut cell_s22: Vec<Dtype> = vec![0.0; elem_num];
+        let mut cell_s12: Vec<Dtype> = vec![0.0; elem_num];
+
+        for i in 0..elem_num {
+            cell_e11[i] = strain[i][0];
+            cell_e22[i] = strain[i][1];
+            cell_e12[i] = strain[i][2];
+
+            cell_s11[i] = stress[i][0];
+            cell_s22[i] = stress[i][1];
+            cell_s12[i] = stress[i][2];
+        }
+
+        Vtk {
+            version: Version { major: 4, minor: 2 },
+            title: String::from(vtk_file_name),
+            byte_order: ByteOrder::BigEndian,
+            file_path: None,
+            data: DataSet::inline(UnstructuredGridPiece {
+                points: IOBuffer::F32(coords),
+                cells: Cells {
+                    cell_verts: VertexNumbers::Legacy {
+                        num_cells: elem_num as u32,
+                        vertices: vtk_cpld,
+                    },
+                    types: vec![CellType::Triangle; elem_num],
+                },
+                data: Attributes {
+                    point: vec![
+                        Attribute::vectors("displacement").with_data(displs),
+                        Attribute::vectors("force").with_data(forces),
+                    ],
+                    cell: vec![
+                        Attribute::scalars("e_xx", 1).with_data(cell_e11),
+                        Attribute::scalars("e_yy", 1).with_data(cell_e22),
+                        Attribute::scalars("e_xy", 1).with_data(cell_e12),
+                        Attribute::scalars("s_xx", 1).with_data(cell_s11),
+                        Attribute::scalars("s_yy", 1).with_data(cell_s22),
+                        Attribute::scalars("s_xy", 1).with_data(cell_s12),
+                    ],
+                },
+            }),
+        }
+    }
+}
+impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize> Export
+    for Part2D<'part2d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
 {
@@ -295,19 +444,19 @@ where
         write!(text_writer, ">>> ZHMFEM calculating results:").expect("Write txt file error!");
 
         let (deform, exwork, potential) = energy;
-        write!(text_writer, "\n").expect("Write parts' result into yxy file failed!!!");
+        write!(text_writer, "\n").expect("Write parts' result into txt file failed!!!");
         write!(text_writer, "\n>>> System energy:\n")
-            .expect("Write parts' result into yxy file failed!!!");
+            .expect("Write parts' result into txt file failed!!!");
         write!(text_writer, "\t\t\tE_d: {:-13.6} (deform energy)\n", deform)
-            .expect("Write parts' result into yxy file failed!!!");
+            .expect("Write parts' result into txt file failed!!!");
         write!(text_writer, "\t\t\tW_f: {:-13.6} (exforce works)\n", exwork)
-            .expect("Write parts' result into yxy file failed!!!");
+            .expect("Write parts' result into txt file failed!!!");
         write!(
             text_writer,
             "\t\t\tE_p: {:-13.6} (potential energy)\n",
             potential
         )
-        .expect("Write parts' result into yxy file failed!!!");
+        .expect("Write parts' result into txt file failed!!!");
 
         write!(
             text_writer,
@@ -329,7 +478,26 @@ where
         Ok(true)
     }
 
-    fn vtk_writer(&self, _target_file: &str) -> std::io::Result<bool> {
-        Ok(true)
+    fn vtk_writer(&mut self, target_file: &str, elem_type: &str) -> std::io::Result<bool> {
+        let vtk_file = std::fs::File::create(target_file).unwrap();
+        let mut vtk_writer = BufWriter::new(vtk_file);
+        let mut vtk_string = String::new();
+
+        match elem_type {
+            "Tri2D3N" => {
+                println!("\n>>> Writing calc results into vtk file ......");
+                let vtk_triangle = self.vtk_tri2d3n_legacy(elem_type);
+                vtk_triangle.write_legacy_ascii(&mut vtk_string).expect(
+                    "!!! Construct VTK string for Tri2D3N failed! from zhmfem/src/part/part2d.rs",
+                );
+
+                write!(vtk_writer, "{}", vtk_string.as_str())
+                    .expect("!!! Write .vtk file failed! from zhmfem/src/part/part2d.rs");
+                println!("    Down!");
+
+                Ok(true)
+            }
+            _ => Ok(false),
+        }
     }
 }

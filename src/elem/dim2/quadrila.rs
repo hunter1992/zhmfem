@@ -1,5 +1,5 @@
 use super::triangle::Tri2D3N;
-use crate::{node::Node2D, Dtype, K};
+use crate::{node::Node2D, Dtype, K, SS};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -7,6 +7,8 @@ pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
     pub nodes: [&'quad2d4n Node2D; 4],
+    pub strain: Option<SS>,
+    pub stress: Option<SS>,
     pub k_matrix: Option<[[Dtype; 8]; 8]>,
     pub material: &'quad2d4n (Dtype, Dtype),
 }
@@ -23,6 +25,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             id,
             thick,
             nodes,
+            strain: None,
+            stress: None,
             k_matrix: None,
             material,
         }
@@ -39,6 +43,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             id: 0,
             thick: self.thick,
             nodes: [self.nodes[0], self.nodes[1], self.nodes[2]],
+            strain: None,
+            stress: None,
             k_matrix: None,
             material: self.material,
         };
@@ -46,6 +52,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             id: 1,
             thick: self.thick,
             nodes: [self.nodes[2], self.nodes[3], self.nodes[0]],
+            strain: None,
+            stress: None,
             k_matrix: None,
             material: self.material,
         };
@@ -249,6 +257,56 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         stress
     }
 
+    /// Get element integration points' strain
+    pub fn calc_strain_integration_point(&self) -> [[Dtype; 3]; 4] {
+        let mut epsilon: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
+        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
+        let int_pts: [[Dtype; 3]; 4] = [
+            [-gauss_pt, -gauss_pt, 0.0],
+            [gauss_pt, -gauss_pt, 0.0],
+            [gauss_pt, gauss_pt, 0.0],
+            [-gauss_pt, gauss_pt, 0.0],
+        ];
+        for idx in 0..4 {
+            epsilon[idx] = self.calc_strain(int_pts[idx]);
+        }
+        epsilon
+    }
+
+    /// Get element integration points' stress
+    pub fn calc_stress_integration_point(&self) -> [[Dtype; 3]; 4] {
+        let mut sigma: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
+        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
+        let int_pts: [[Dtype; 3]; 4] = [
+            [-gauss_pt, -gauss_pt, 0.0],
+            [gauss_pt, -gauss_pt, 0.0],
+            [gauss_pt, gauss_pt, 0.0],
+            [-gauss_pt, gauss_pt, 0.0],
+        ];
+        for idx in 0..4 {
+            sigma[idx] = self.calc_stress(int_pts[idx]);
+        }
+        sigma
+    }
+
+    /// Print element's strain value
+    pub fn print_strain(&self, xi_eta: [Dtype; 3]) {
+        let strain = self.calc_strain(xi_eta);
+        println!(
+            "\nelem[{}] strain:\n\tE_xx = {:-16.6}\n\tE_yy = {:-16.6}\n\tE_xy = {:-16.6}",
+            self.id, strain[0], strain[1], strain[2]
+        );
+    }
+
+    /// Print element's stress value
+    pub fn print_stress(&self, xi_eta: [Dtype; 3]) {
+        let stress = self.calc_stress(xi_eta);
+        println!(
+            "\nelem[{}] stress:\n\tS_xx = {:-16.6}\n\tS_yy = {:-16.6}\n\tS_xy = {:-16.6}",
+            self.id, stress[0], stress[1], stress[2]
+        );
+    }
+
     /// Output element's calculation result
     pub fn calc_result_info(&self, n_exp: Dtype) -> String {
         let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
@@ -277,39 +335,6 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             n_exp,
             self.k_string(n_exp),
         )
-    }
-
-    /// Get element node's stress
-    pub fn nodes_stress(&self) -> [[Dtype; 3]; 4] {
-        let mut sigma: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
-        let nodes_coords: [[Dtype; 3]; 4] = [
-            [1.0, 1.0, 0.0],
-            [-1.0, 1.0, 0.0],
-            [-1.0, -1.0, 0.0],
-            [1.0, -1.0, 0.0],
-        ];
-        for idx in 0..4 {
-            sigma[idx] = self.calc_stress(nodes_coords[idx]);
-        }
-        sigma
-    }
-
-    /// Print element's strain value
-    pub fn print_strain(&self, xi_eta: [Dtype; 3]) {
-        let strain = self.calc_strain(xi_eta);
-        println!(
-            "\nelem[{}] strain:\n\tE_xx = {:-16.6}\n\tE_yy = {:-16.6}\n\tE_xy = {:-16.6}",
-            self.id, strain[0], strain[1], strain[2]
-        );
-    }
-
-    /// Print element's stress value
-    pub fn print_stress(&self, xi_eta: [Dtype; 3]) {
-        let stress = self.calc_stress(xi_eta);
-        println!(
-            "\nelem[{}] stress:\n\tS_xx = {:-16.6}\n\tS_yy = {:-16.6}\n\tS_xy = {:-16.6}",
-            self.id, stress[0], stress[1], stress[2]
-        );
     }
 }
 
@@ -394,13 +419,23 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     }
 
     /// Get the strain at (xi, eta) inside the element
-    fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_strain(xyz).to_vec()
+    fn strain_intpt(&mut self) -> &SS {
+        if self.strain.is_none() {
+            self.strain
+                .get_or_insert(SS::Dim2(self.calc_strain([0.0, 0.0, 0.0])))
+        } else {
+            self.strain.as_ref().unwrap()
+        }
     }
 
     /// Get the stress at (xi, eta) inside the element
-    fn stress(&self, xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_stress(xyz).to_vec()
+    fn stress_intpt(&mut self) -> &SS {
+        if self.stress.is_none() {
+            self.stress
+                .get_or_insert(SS::Dim2(self.calc_stress([0.0, 0.0, 0.0])))
+        } else {
+            self.stress.as_ref().unwrap()
+        }
     }
 
     /// Get element's info string

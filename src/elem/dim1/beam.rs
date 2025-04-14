@@ -1,4 +1,4 @@
-use crate::{node::Node2D, Dtype, K};
+use crate::{node::Node2D, Dtype, K, SS};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -13,6 +13,8 @@ pub struct Beam1D2N<'beam1d2n> {
     pub moment_of_inertia: Dtype,
     pub cross_sectional_area: Dtype,
     pub nodes: [&'beam1d2n Node2D; 2],
+    pub strain: Option<SS>,
+    pub stress: Option<SS>,
     pub k_matrix: Option<[[Dtype; 4]; 4]>,
     pub material: &'beam1d2n (Dtype, Dtype),
 }
@@ -31,6 +33,8 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
             moment_of_inertia,
             cross_sectional_area,
             nodes,
+            strain: None,
+            stress: None,
             k_matrix: None,
             material,
         }
@@ -105,7 +109,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     /// N2 = L*(0 + 1*\xi - 2*\xi^2 + 1*\xi^3)
     /// N3 = 1*(0 + 0*\xi + 3*\xi^2 - 2*\xi^3)
     /// N4 = L*(0 + 0*\xi - 1*\xi^2 + 1*\xi^3)
-    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype) -> Dtype {
+    fn shape_func_st(&self, ith: usize) -> impl Fn(Dtype) -> Dtype {
         let l1 = self.length();
         let l2 = l1 * l1;
         let l3 = l1 * l1 * l1;
@@ -122,10 +126,10 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     /// Return a 1x2 matrix: [deflection, rotation]
     pub fn point_disp(&self, point_coord: [Dtype; 1]) -> [Dtype; 2] {
         let x = point_coord[0];
-        let n0 = self.shape_mat_i(0usize)(x);
-        let n1 = self.shape_mat_i(1usize)(x);
-        let n2 = self.shape_mat_i(2usize)(x);
-        let n3 = self.shape_mat_i(3usize)(x);
+        let n0 = self.shape_func_st(0usize)(x);
+        let n1 = self.shape_func_st(1usize)(x);
+        let n2 = self.shape_func_st(2usize)(x);
+        let n3 = self.shape_func_st(3usize)(x);
 
         let disps = self.get_nodes_displacement();
         let v = n0 * disps[0] + n2 * disps[2];
@@ -169,20 +173,42 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     }
 
     /// Get the strain at point (x) inside the element
-    fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
+    fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 1] {
         let x = xyz[0];
         let y = xyz[1];
         let xi = x / self.length();
         let b_mat = self.geometry_mat(xi);
         let elem_nodes_disps = SMatrix::<Dtype, 4, 1>::from(self.get_nodes_displacement());
         let strain: [Dtype; 1] = (-y * b_mat * elem_nodes_disps).into();
-        [strain[0], 0.0, 0.0]
+        strain
     }
 
     /// Get element's stress vector, the stress in CST elem is a const
-    fn calc_stress(&self, xyz: [Dtype; 3]) -> [Dtype; 3] {
+    fn calc_stress(&self, xyz: [Dtype; 3]) -> [Dtype; 1] {
         let ee = self.material.0;
-        [ee * self.calc_strain(xyz)[0], 0.0, 0.0]
+        [ee * self.calc_strain(xyz)[0]]
+    }
+
+    /// Get the strain at integration point
+    fn calc_strain_integration_point(&self) -> [[Dtype; 1]; 2] {
+        let mut epsilon: [[Dtype; 1]; 2] = [[0.0; 1]; 2];
+        let gauss_pt: Dtype = (3.0_f32).sqrt() / 6.0;
+        let int_pts: [Dtype; 2] = [0.5 - gauss_pt, 0.5 + gauss_pt];
+        for idx in 0..2 {
+            epsilon[idx] = self.calc_strain([int_pts[idx], 0.0, 0.0]);
+        }
+        epsilon
+    }
+
+    /// Get the stress at integration point
+    fn calc_stress_integration_point(&self) -> [[Dtype; 1]; 2] {
+        let mut sigma: [[Dtype; 1]; 2] = [[0.0; 1]; 2];
+        let gauss_pt: Dtype = (3.0_f32).sqrt() / 6.0;
+        let int_pts: [Dtype; 2] = [0.5 - gauss_pt, 0.5 + gauss_pt];
+        for idx in 0..2 {
+            sigma[idx] = self.calc_strain([int_pts[idx], 0.0, 0.0]);
+        }
+        sigma
     }
 
     /// Print element's strain value
@@ -190,7 +216,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
         let strain = self.calc_strain(xyz);
         println!(
             "\nelem[{}] strain:\n\tE_xx = {:-16.6}\n\tE_yy = {:-16.6}\n\tE_xy = {:-16.6}",
-            self.id, strain[0], strain[1], strain[2]
+            self.id, strain[0], 0.0, 0.0
         );
     }
 
@@ -199,7 +225,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
         let stress = self.calc_stress(xyz);
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-16.6}\n\tS_yy = {:-16.6}\n\tS_xy = {:-16.6}",
-            self.id, stress[0], stress[1], stress[2]
+            self.id, stress[0], 0.0, 0.0
         );
     }
 }
@@ -278,13 +304,23 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
     }
 
     /// Get the strain at (x,y) inside the element
-    fn strain(&self, xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_strain(xyz).to_vec()
+    fn strain_intpt(&mut self) -> &SS {
+        if self.strain.is_none() {
+            self.strain
+                .get_or_insert(SS::Dim1(self.calc_strain([0.5, 0.0, 0.0])))
+        } else {
+            self.strain.as_ref().unwrap()
+        }
     }
 
     /// Get the stress at (x,y) inside the element
-    fn stress(&self, xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_stress(xyz).to_vec()
+    fn stress_intpt(&mut self) -> &SS {
+        if self.stress.is_none() {
+            self.stress
+                .get_or_insert(SS::Dim1(self.calc_stress([0.5, 0.0, 0.0])))
+        } else {
+            self.stress.as_ref().unwrap()
+        }
     }
 
     /// Get element's info string

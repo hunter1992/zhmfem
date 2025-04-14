@@ -1,4 +1,4 @@
-use crate::{node::Node2D, print_2darr, Dtype, Jacobian2D, K};
+use crate::{node::Node2D, print_2darr, Dtype, Jacobian2D, K, SS};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -8,6 +8,8 @@ pub struct Tri2D3N<'tri2d3n> {
     pub id: usize,
     pub thick: Dtype,
     pub nodes: [&'tri2d3n Node2D; 3],
+    pub strain: Option<SS>,
+    pub stress: Option<SS>,
     pub k_matrix: Option<[[Dtype; 6]; 6]>,
     pub material: &'tri2d3n (Dtype, Dtype),
 }
@@ -24,6 +26,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
             id,
             thick,
             nodes,
+            strain: None,
+            stress: None,
             k_matrix: None,
             material,
         }
@@ -81,6 +85,21 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
             displacement[2 * idx + 1] = node.displs.borrow()[1];
         }
         displacement
+    }
+
+    /// Get any point's disps vector in tri element
+    pub fn get_point_displacement(&self, area_coords: [Dtype; 2]) -> [Dtype; 2] {
+        let xy = self.coords_transform_ltox(area_coords);
+        let x = xy[0];
+        let y = xy[1];
+        let n0 = self.shape_func_xy(0usize)(x, y);
+        let n1 = self.shape_func_xy(1usize)(x, y);
+        let n2 = self.shape_func_xy(2usize)(x, y);
+
+        let disps = self.get_nodes_displacement();
+        let u = n0 * disps[0] + n1 * disps[2] + n2 * disps[4];
+        let v = n0 * disps[1] + n1 * disps[3] + n2 * disps[5];
+        [u, v]
     }
 
     /// Get nodes's force vector in tri element
@@ -151,7 +170,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// |0   N1  0   N2  0   N3|
     /// Ni = (1/2A) * (ai + bi * x + ci * y) (i -> j -> m)
     /// 这里的A是三角形单元的面积
-    fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
+    fn shape_func_xy(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         let area = self.area();
         let a = self.coef_a(ith);
         let b = self.coef_b(ith);
@@ -159,63 +178,58 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         move |x: Dtype, y: Dtype| 0.5 * (a + x * b + y * c) / area
     }
 
-    /// Get any point's disps vector in tri element
-    pub fn point_disp(&self, area_coords: [Dtype; 2]) -> [Dtype; 2] {
-        let xy = self.coords_transform_ltox(area_coords);
-        let x = xy[0];
-        let y = xy[1];
-        let n0 = self.shape_mat_i(0usize)(x, y);
-        let n1 = self.shape_mat_i(1usize)(x, y);
-        let n2 = self.shape_mat_i(2usize)(x, y);
+    /// Derivatives of shape functions with respect to physical coordinates
+    /// 形函数对物理坐标的导数
+    /// dN/dx = (dN/ds * ds/dx) + (dN/dt * dt/dx)
+    /// dN/dy = (dN/ds * ds/dy) + (dN/dt * dt/dy)
+    /// | dN/ds |        | dx/ds  dy/ds | | dN/dx |          | dN/dx |
+    /// |       |    =   |              |*|       |   =  J * |       |
+    /// | dN/dt |        | dx/dt  dy/dt | | dN/dy |2x3       | dN/dy |2x3
+    ///
+    /// | dN/dx |                 | dN/ds |
+    /// |       |    =   J^(-1) * |       |
+    /// | dN/dy |2x3              | dN/dt |2x3
+    #[inline]
+    fn diff_shape_mat_xy(&self) -> SMatrix<Dtype, 2, 3> {
+        let diff_shape_mat_st =
+            SMatrix::<Dtype, 2, 3>::from([[-1.0, -1.0], [1.0, 0.0], [0.0, 1.0]]);
+        let jecobian = self.jacobian();
+        jecobian.try_inverse().unwrap() * diff_shape_mat_st
+    }
 
-        let disps = self.get_nodes_displacement();
-        let u = n0 * disps[0] + n1 * disps[2] + n2 * disps[4];
-        let v = n0 * disps[1] + n1 * disps[3] + n2 * disps[5];
-        [u, v]
+    /// B(s,t) for Tri2D3N which is a 3x6 mat
+    #[inline]
+    fn geometry_mat_xy(&self) -> SMatrix<Dtype, 3, 6> {
+        let dn_xy = self.diff_shape_mat_xy();
+        SMatrix::<Dtype, 3, 6>::from([
+            [dn_xy[(0, 0)], 0.0, dn_xy[(1, 0)]],
+            [0.0, dn_xy[(1, 0)], dn_xy[(0, 0)]],
+            [dn_xy[(0, 1)], 0.0, dn_xy[(1, 1)]],
+            [0.0, dn_xy[(1, 1)], dn_xy[(0, 1)]],
+            [dn_xy[(0, 2)], 0.0, dn_xy[(1, 2)]],
+            [0.0, dn_xy[(1, 2)], dn_xy[(0, 2)]],
+        ])
     }
 
     /// Calculate the Jacobian matrix of tri2d3n element
     /// J = [[dx/ds, dy/ds]
     ///      [dx/dt, dy/dt]]
-    fn jacobian(&self) -> [[Dtype; 2]; 2] {
+    #[inline]
+    fn jacobian(&self) -> Jacobian2D {
         let xs: [Dtype; 3] = self.get_nodes_xcoords();
         let ys: [Dtype; 3] = self.get_nodes_ycoords();
         let dx_21 = xs[1] - xs[0];
         let dx_31 = xs[2] - xs[0];
         let dy_21 = ys[1] - ys[0];
         let dy_31 = ys[2] - ys[0];
-        [[dx_21, dy_21], [dx_31, dy_31]]
-    }
-
-    /// Calculate the equivalent transformation of the
-    /// geometric matrix B(x, y) in st coordinates.
-    /// 注意：dN(s, t)在标准三角形下为：(此时std三角形的形函数为[1-s-t, s, t])
-    ///       dN(s, t) = [[-1, 1, 0]
-    ///                   [-1, 0, 1]]
-    ///       dN(x, y) = inv(J) * dN(s, t)
-    fn geometry_mat_st(&self) -> SMatrix<Dtype, 3, 6> {
-        let dn_st = SMatrix::<Dtype, 3, 2>::from([[-1., 1., 0.], [-1., 0., 1.]]).transpose();
-        let jacobian = SMatrix::<Dtype, 2, 2>::from(self.jacobian()).transpose();
-        let inverse_jacobian = jacobian.try_inverse().unwrap();
-        let dn_xy = inverse_jacobian * dn_st;
-        let dn1_dx = dn_xy[(0, 0)];
-        let dn2_dx = dn_xy[(0, 1)];
-        let dn3_dx = dn_xy[(0, 2)];
-        let dn1_dy = dn_xy[(1, 0)];
-        let dn2_dy = dn_xy[(1, 1)];
-        let dn3_dy = dn_xy[(1, 2)];
-        SMatrix::<Dtype, 6, 3>::from([
-            [dn1_dx, 0.0, dn2_dx, 0.0, dn3_dx, 0.0],
-            [0.0, dn1_dy, 0.0, dn2_dy, 0.0, dn3_dy],
-            [dn1_dy, dn1_dx, dn2_dy, dn2_dx, dn3_dy, dn3_dx],
-        ])
-        .transpose()
+        Jacobian2D::from([[dx_21, dy_21], [dx_31, dy_31]]).transpose()
     }
 
     /// Return a 6x6 matrix, elements are Dtype
     /// K(x, y) = thick * INT[ B(x, y)' * D * B(x, y) ] dA
     ///         = thick * INT[ B(s, t)' * D * B(s, t) * det(J) ] dsdt
-    ///         = thick * B(s, t)' * D * B(s, t) * det(J) * 0.5 这里的0.5是标准是三角形单元的面积
+    ///         = thick * B(s, t)' * D * B(s, t) * det(J) * Area
+    ///         = thick * B(s, t)' * D * B(s, t) * det(J) * 0.5 //标准三角形面积为0.5
     fn calc_k(&self) -> [[Dtype; 6]; 6] {
         println!(
             "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
@@ -229,9 +243,9 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
                 [0.0, 0.0, 0.5 * (1.0 - nu)],
             ])
             .transpose());
-        let det_j = Jacobian2D::from(self.jacobian()).transpose().determinant();
+        let det_j = self.jacobian().determinant();
 
-        let b_mat = self.geometry_mat_st();
+        let b_mat = self.geometry_mat_xy();
         let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
         let stiffness_matrix: [[Dtype; 6]; 6] = (0.5 * self.thick * core).into();
         stiffness_matrix
@@ -239,10 +253,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Get element's strain vector, the strain in CST elem is a const
     fn calc_strain(&self) -> [Dtype; 3] {
-        let b_mat = self.geometry_mat_st();
+        let b_mat = self.geometry_mat_xy();
         let elem_nodes_disps = SMatrix::<Dtype, 6, 1>::from(self.get_nodes_displacement());
-        let strain_vector: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
-        strain_vector
+        let epsilon: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
+        epsilon
     }
 
     /// Get element's stress vector, the stress in CST elem is a const
@@ -254,14 +268,14 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
             [0.0, 0.0, 0.5 * (1.0 - nu)],
         ]) * (ee / (1.0 - nu * nu));
 
-        let strain = SMatrix::<Dtype, 3, 1>::from(self.calc_strain());
-        let stress: [Dtype; 3] = (elasticity_mat * strain).into();
-        stress
+        let epsilon = SMatrix::<Dtype, 3, 1>::from(self.calc_strain());
+        let sigma: [Dtype; 3] = (elasticity_mat * epsilon).into();
+        sigma
     }
 
     /// Output element's calculation result
     pub fn calc_result_info(&self, n_exp: Dtype) -> String {
-        format!("\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\tStiffness Matrix K{} =  (*10^{})\n{}",
+        format!("\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
             self.id,
             self.area(),
             self.material.0,
@@ -349,16 +363,22 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
         k_matrix
     }
 
-    /// Get the strain at (x,y) inside the element
-    /// In linear triangle elem, strain is a const
-    fn strain(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_strain().to_vec()
+    /// Get the strain at integration point
+    fn strain_intpt(&mut self) -> &SS {
+        if self.strain.is_none() {
+            self.strain.get_or_insert(SS::Dim2(self.calc_strain()))
+        } else {
+            self.strain.as_ref().unwrap()
+        }
     }
 
-    /// Get the stress at (x,y) inside the element
-    /// In linear triangle elem, stress is a const
-    fn stress(&self, _xyz: [Dtype; 3]) -> Vec<Dtype> {
-        self.calc_stress().to_vec()
+    /// Get the stress at integration point
+    fn stress_intpt(&mut self) -> &SS {
+        if self.stress.is_none() {
+            self.stress.get_or_insert(SS::Dim2(self.calc_stress()))
+        } else {
+            self.stress.as_ref().unwrap()
+        }
     }
 
     /// Get element's info string
@@ -572,7 +592,7 @@ impl<'tri2d6n> Tri2D6N<'tri2d6n> {
     }
 
     /// point displacement inner tri2d6n
-    pub fn point_disp(&self, point_coord_local: [Dtype; 3]) -> [Dtype; 2] {
+    pub fn get_point_displacement(&self, point_coord_local: [Dtype; 3]) -> [Dtype; 2] {
         let [l1, l2, l3] = self.coords_transform_xtol(point_coord_local);
         let n0 = self.shape_mat_i(0usize)(l1, l2, l3);
         let n1 = self.shape_mat_i(1usize)(l1, l2, l3);
