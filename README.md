@@ -223,8 +223,7 @@ fn main() {
     let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
-    let output_file = "LU.txt"; // "LU.txt" or "GS.txt"
-    let parallel_or_singllel: &str = "p"; // "s" or "p"
+    let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
 
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
@@ -236,7 +235,7 @@ fn main() {
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
-    // Manual meshing and adding boundary conditions
+    // Manually set coords and grouped nodes index
     /*
     let points: Vec<Vec<Dtype>> = vec![
         vec![0.0, 0.0],
@@ -256,7 +255,8 @@ fn main() {
         .collect();
     */
 
-    // Automatic meshing and adding boundary conditions
+    // Automatically set coords and grouped nodes index
+    // Auto-mesh generate coords and grouped nodes index
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
@@ -264,8 +264,9 @@ fn main() {
 
     // Set boundary conditions and external loads automatically
     let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
-    let force_index: Vec<usize> = vec![C * F, (C * R - 1) * F];
+    let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()
         .zip(force_value.into_iter())
@@ -276,7 +277,6 @@ fn main() {
     let nodes = nodes2d_vec(&points, &force_data);
 
     // Construct Tri2D3N elements vector
-    let element_type: &str = "Tri2D3N_";
     let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
 
     // Construct 2D part & assembly global stiffness matrix
@@ -337,15 +337,28 @@ fn main() {
         .count();
 
     // -------- Part 5:  Write clac result into txt file --------
-    let output_path = "path/to/results/";
-    let output = format!("{output_path}{element_type}{output_file}");
+    let problem_type = "stress2D";
+    let element_type = "Tri2D3N";
+    let output_path = "/path/to/output/result/";
+    let output_txt = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
+    );
+    let output_vtk = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+    );
+
+    // Output Calculation result into txt file
     part.txt_writer(
-        &output,
+        &output_txt,
         calc_time,
         E,
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+
+    // Output Calculation result into vtk file
+    part.vtk_writer(&output_vtk, element_type)
+        .expect(">>> !!! Failed to output vtk file!");
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);
@@ -372,14 +385,14 @@ cargo run -j 8 --release --example rect2d4n
 After compiling and running the tri2d3n.rs file, the following results are displayed in the Shell:
 
 ```
->>> Assembling Part2D(#1)'s stiffness matrix K1 in 2 threads ......
+>>> Assembling Part2D(#1)'s stiffness matrix K1 in single thread ......
 
 >>> Calculating Tri2D3N(#0)'s local stiffness matrix k0 ......
 
 >>> Calculating Tri2D3N(#1)'s local stiffness matrix k1 ......
 
 >>> Assembly Down!
-        time consuming: 224.373µs
+        time consuming: 6.693µs
 
 Part #1  K =  (* 10^0)
 [[      0.733333       0.333333      -0.533333      -0.200000      -0.200000      -0.133333       0.000000       0.000000 ]
@@ -393,26 +406,26 @@ Part #1  K =  (* 10^0)
 
 
 >>> LU decomposition method down!
-        time consuming = 1.286µs
+        time consuming = 18.356µs
 
 qe = (10^0 *)
 [[
            0.000000 
            0.000000 
-           0.140625 
-          -0.468750 
+          -1.718750 
+          -0.937500 
            0.000000 
-           0.140625 
-           1.859375 
-          -1.109375 
+           0.781250 
+           1.718750 
+          -1.718750 
 ]]
 
 
 fe = (10^0 *)
 [[
+           1.000000 
            0.000000 
-           0.000000 
-           0.000000 
+          -1.000000 
            0.000000 
           -1.000000 
            0.000000 
@@ -422,42 +435,41 @@ fe = (10^0 *)
 
 
 >>> System energy:
-        E_d:  0.929688 (deform energy)
-        W_f:  1.859375 (exforce works)
-        E_p: -0.929688 (potential energy)
+        E_d:  1.718750 (deform energy)
+        W_f:  3.437500 (exforce works)
+        E_p: -1.718750 (potential energy)
 
 -----------------------------------------------------------------------------
 Elem_Tri2D3N:
         Id:     0
-        Area:       0.5000
-        Mats:       1.0000 (Young's modulus)
-                    0.2500 (Poisson's ratio)
+        Area:     0.500000
+        Mats:     1.000000 (Young's modulus)
+                  0.250000 (Poisson's ratio)
         Nodes:
                 Node_2D:
                         Id: 0
                         Coords: [    0.0000,     0.0000]
                         Displs: [    0.0000,     0.0000]
-                        Forces: [    0.0000,     0.0000]
+                        Forces: [    1.0000,     0.0000]
 
                 Node_2D:
                         Id: 1
                         Coords: [    1.0000,     0.0000]
-                        Displs: [    0.1406,    -0.4688]
-                        Forces: [    0.0000,     0.0000]
+                        Displs: [   -1.7188,    -0.9375]
+                        Forces: [   -1.0000,     0.0000]
 
                 Node_2D:
                         Id: 2
                         Coords: [    0.0000,     1.0000]
-                        Displs: [    0.0000,     0.1406]
+                        Displs: [    0.0000,     0.7812]
                         Forces: [   -1.0000,     0.0000]
 
         Strain:
-                [    0.140625,     0.140625,    -0.468750]
-
+                [   -1.718750,     0.781250,    -0.937500]
         Stress:
-                [    0.187500,     0.187500,    -0.187500]
+                [   -1.625000,     0.375000,    -0.375000]
 
-        Stiffness Matrix K0 = 
+        Stiffness Matrix K0 =  (*10^0)
 [[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
  [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
  [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
@@ -468,35 +480,34 @@ Elem_Tri2D3N:
 -----------------------------------------------------------------------------
 Elem_Tri2D3N:
         Id:     1
-        Area:       0.5000
-        Mats:       1.0000 (Young's modulus)
-                    0.2500 (Poisson's ratio)
+        Area:     0.500000
+        Mats:     1.000000 (Young's modulus)
+                  0.250000 (Poisson's ratio)
         Nodes:
                 Node_2D:
                         Id: 3
                         Coords: [    1.0000,     1.0000]
-                        Displs: [    1.8594,    -1.1094]
+                        Displs: [    1.7188,    -1.7188]
                         Forces: [    1.0000,     0.0000]
 
                 Node_2D:
                         Id: 2
                         Coords: [    0.0000,     1.0000]
-                        Displs: [    0.0000,     0.1406]
+                        Displs: [    0.0000,     0.7812]
                         Forces: [   -1.0000,     0.0000]
 
                 Node_2D:
                         Id: 1
                         Coords: [    1.0000,     0.0000]
-                        Displs: [    0.1406,    -0.4688]
-                        Forces: [    0.0000,     0.0000]
+                        Displs: [   -1.7188,    -0.9375]
+                        Forces: [   -1.0000,     0.0000]
 
         Strain:
-                [    1.859375,    -0.640625,     0.468750]
-
+                [    1.718750,    -0.781250,     0.937500]
         Stress:
-                [    1.812500,    -0.187500,     0.187500]
+                [    1.625000,    -0.375000,     0.375000]
 
-        Stiffness Matrix K1 = 
+        Stiffness Matrix K1 =  (*10^0)
 [[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
  [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
  [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
@@ -507,7 +518,10 @@ Elem_Tri2D3N:
 >>> Writing calc results into txt file ......
     Down!
 
->>> Total time consuming: 529.045µs
+>>> Writing calc results into vtk file ......
+    Down!
+
+>>> Total time consuming: 771.936µs
 
 ```
 
@@ -591,8 +605,8 @@ and outputting the resulting files are clearly marked with comments in each samp
 <!-- ROADMAP -->
 ## Roadmap
 
+- [✔] Add output .vtk file
 - [ ] Add Tri2D6N element
-- [ ] Add output .vtk file
 - [ ] Add non-linear rod element
 - [ ] Add Tri2D6N elements
 - [ ] Add document

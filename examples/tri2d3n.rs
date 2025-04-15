@@ -16,7 +16,7 @@ fn main() {
     let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
-    let parallel_or_singllel: &str = "s"; // "s" or "p"
+    let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
 
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
@@ -140,6 +140,7 @@ fn main() {
         "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
     );
 
+    // Output Calculation result into txt file
     part.txt_writer(
         &output_txt,
         calc_time,
@@ -148,6 +149,7 @@ fn main() {
     )
     .expect(">>> !!! Failed to output text result file !!!");
 
+    // Output Calculation result into vtk file
     part.vtk_writer(&output_vtk, element_type)
         .expect(">>> !!! Failed to output vtk file!");
 
