@@ -1,4 +1,4 @@
-use crate::Dtype;
+use crate::{CompressedMatrix, Dtype};
 use na::{DMatrix, DVector, SMatrix, SVector};
 use std::collections::HashSet;
 use std::time::Instant;
@@ -8,7 +8,7 @@ pub struct LinearEqs<const D: usize> {
     pub disps: [Dtype; D],
     pub loads: [Dtype; D],
     pub disps_0_idx: Vec<usize>,
-    pub static_kmat: [[Dtype; D]; D],
+    pub static_kmat: CompressedMatrix,
     pub external_force: Option<[Dtype; D]>,
     pub solver_time_consuming: Option<std::time::Duration>,
 }
@@ -18,7 +18,7 @@ impl<const D: usize> LinearEqs<D> {
         disps: [Dtype; D],
         loads: [Dtype; D],
         disps_0_idx: Vec<usize>,
-        static_kmat: [[Dtype; D]; D],
+        static_kmat: CompressedMatrix,
     ) -> Self {
         LinearEqs {
             state: false,
@@ -35,6 +35,7 @@ impl<const D: usize> LinearEqs<D> {
     pub fn solve(&mut self, solve_method: &str, calc_error: Dtype) {
         match solve_method {
             "lu" => self.lu_direct_solver(),
+            "cholesky" => self.cholesky_direct_solver(),
             "gs" => self.gauss_seidel_iter_solver(calc_error),
             _ => panic!("!!! The provided algorithm is currently not supported!"),
         }
@@ -45,7 +46,7 @@ impl<const D: usize> LinearEqs<D> {
     pub fn lu_direct_solver(&mut self) {
         if self.state == false {
             // pre-process
-            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat).transpose();
+            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover()).transpose();
             let loads = SVector::from(self.loads);
 
             let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
@@ -78,6 +79,42 @@ impl<const D: usize> LinearEqs<D> {
         }
     }
 
+    pub fn cholesky_direct_solver(&mut self) {
+        if self.state == false {
+            // pre-process
+            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover()).transpose();
+            let loads = SVector::from(self.loads);
+
+            let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
+            let force_known = loads.select_rows(disps_unknown_idx.iter());
+            let kmat_eff = kmat
+                .select_columns(disps_unknown_idx.iter())
+                .select_rows(disps_unknown_idx.iter());
+
+            let time_lu = Instant::now();
+            // solve the K.q = F by LU decomposition
+            let disps_unknown_rlt: Vec<Dtype> =
+                kmat_eff.cholesky().unwrap().solve(&force_known).data.into();
+            let duration_lu = time_lu.elapsed();
+            println!(
+                "\n>>> Cholesky decomposition method down!\n\ttime consuming = {:?}",
+                duration_lu
+            );
+
+            // write result into fields
+            let _: Vec<_> = disps_unknown_idx
+                .iter()
+                .enumerate()
+                .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
+                .collect();
+            self.external_force = Some((kmat * SVector::from(self.disps)).into());
+            self.solver_time_consuming = Some(duration_lu);
+            self.state = true;
+        } else {
+            return;
+        }
+    }
+
     /// 使用Guass-Seidel迭代求解线性方程组(数值方法)
     /// solve "A*x = F" using Gauss-Seidel iterator:
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
@@ -89,7 +126,7 @@ impl<const D: usize> LinearEqs<D> {
             let loads = SVector::from(self.loads);
             let f_eff = loads.select_rows(disps_unknown_idx.iter());
 
-            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat).transpose();
+            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover()).transpose();
             let kmat_eff = kmat
                 .select_columns(disps_unknown_idx.iter())
                 .select_rows(disps_unknown_idx.iter());

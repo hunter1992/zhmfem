@@ -1,4 +1,4 @@
-use crate::{node::Node1D, Dtype, K, SS};
+use crate::{compress_matrix, node::Node1D, CompressedMatrix, Data, Dtype, K};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -6,9 +6,9 @@ pub struct Rod1D2N<'rod1d2n> {
     pub id: usize,
     pub cross_sectional_area: Dtype,
     pub nodes: [&'rod1d2n Node1D; 2],
-    pub strain: Option<SS>,
-    pub stress: Option<SS>,
-    pub k_matrix: Option<[[Dtype; 2]; 2]>,
+    pub strain: Option<[Dtype; 1]>,
+    pub stress: Option<[Dtype; 1]>,
+    pub k_matrix: Option<CompressedMatrix>,
     pub material: &'rod1d2n (Dtype, Dtype),
 }
 
@@ -148,15 +148,10 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
 
 /// Implement zhm::K trait for Rod1D2N element
 impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
-    type Kmatrix = [[Dtype; 2]; 2];
-
     /// Cache stiffness matrix for rod element
-    fn k(&mut self) -> &Self::Kmatrix
-    where
-        Self::Kmatrix: std::ops::Index<usize>,
-    {
+    fn k(&mut self) -> &CompressedMatrix {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k())
+            self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
@@ -181,7 +176,7 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
             for col in 0..2 {
                 print!(
                     " {:>-12.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    self.calc_k()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == 1 {
@@ -196,6 +191,7 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
     /// Return Rod1D2N elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
+        let elem_stiffness_mat = self.calc_k();
         for row in 0..2 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -206,7 +202,7 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
                 write!(
                     k_matrix,
                     " {:>-12.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    elem_stiffness_mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("!!! Write tri k_mat failed!");
             }
@@ -220,21 +216,19 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
     }
 
     /// Get the strain at (x,y) inside the element, in linear rod elem, strain is a const
-    fn strain_intpt(&mut self) -> &SS {
+    fn strain_intpt(&mut self) -> Data {
         if self.strain.is_none() {
-            self.strain.get_or_insert(SS::Dim1(self.calc_strain()))
-        } else {
-            self.strain.as_ref().unwrap()
+            self.strain.get_or_insert(self.calc_strain());
         }
+        Data::Dim1(vec![self.strain.unwrap()])
     }
 
-    /// Get the stress at (x,y) inside the element, in linear rod elem, stress is a const
-    fn stress_intpt(&mut self) -> &SS {
+    /// Get the stress at (x,y) insDatae the element, in linear rod elem, stress is a const
+    fn stress_intpt(&mut self) -> Data {
         if self.stress.is_none() {
-            self.stress.get_or_insert(SS::Dim1(self.calc_stress()))
-        } else {
-            self.stress.as_ref().unwrap()
+            self.stress.get_or_insert(self.calc_stress());
         }
+        Data::Dim1(vec![self.stress.unwrap()])
     }
 
     /// Get element's info string

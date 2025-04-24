@@ -13,7 +13,10 @@ fn main() {
     const E: Dtype = 0.0; // Exponent in scientific notation to base 10
     const CPU_CORES: usize = 2;
 
-    let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+    // "lu" for LU decomposition algorithm or
+    // "cholesky" fo Cholesky decomposition algorithm or
+    // "gs" for gauss-seidel iteration method or
+    let calc_method: &str = "cholesky";
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
     let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
@@ -29,7 +32,6 @@ fn main() {
     const F: usize = 2; // num of degree freedom at single node
 
     // Manually set coords and grouped nodes index
-    /*
     let points: Vec<Vec<Dtype>> = vec![
         vec![0.0, 0.0],
         vec![1.0, 0.0],
@@ -46,10 +48,10 @@ fn main() {
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
-    */
 
     // Automatically set coords and grouped nodes index
     // Auto-mesh generate coords and grouped nodes index
+    /*
     const W: Dtype = 1.0; // width
     const H: Dtype = 1.0; // height
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
@@ -64,6 +66,7 @@ fn main() {
         .into_iter()
         .zip(force_value.into_iter())
         .collect();
+    */
 
     // -------- Part 2:  Construct nodes, elements and parts --------
     // Construct 2D nodes vector
@@ -83,7 +86,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -108,13 +111,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );

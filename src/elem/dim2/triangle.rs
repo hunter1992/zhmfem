@@ -1,4 +1,6 @@
-use crate::{node::Node2D, print_2darr, Dtype, Jacobian2D, K, SS};
+use crate::{
+    compress_matrix, node::Node2D, print_2darr, CompressedMatrix, Data, Dtype, Jacobian2D, K,
+};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -8,9 +10,9 @@ pub struct Tri2D3N<'tri2d3n> {
     pub id: usize,
     pub thick: Dtype,
     pub nodes: [&'tri2d3n Node2D; 3],
-    pub strain: Option<SS>,
-    pub stress: Option<SS>,
-    pub k_matrix: Option<[[Dtype; 6]; 6]>,
+    pub strain: Option<[Dtype; 3]>,
+    pub stress: Option<[Dtype; 3]>,
+    pub k_matrix: Option<CompressedMatrix>,
     pub material: &'tri2d3n (Dtype, Dtype),
 }
 
@@ -255,8 +257,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     fn calc_strain(&self) -> [Dtype; 3] {
         let b_mat = self.geometry_mat_xy();
         let elem_nodes_disps = SMatrix::<Dtype, 6, 1>::from(self.get_nodes_displacement());
-        let epsilon: [Dtype; 3] = (b_mat * elem_nodes_disps).into();
-        epsilon
+        (b_mat * elem_nodes_disps).into()
     }
 
     /// Get element's stress vector, the stress in CST elem is a const
@@ -269,8 +270,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         ]) * (ee / (1.0 - nu * nu));
 
         let epsilon = SMatrix::<Dtype, 3, 1>::from(self.calc_strain());
-        let sigma: [Dtype; 3] = (elasticity_mat * epsilon).into();
-        sigma
+        (elasticity_mat * epsilon).into()
     }
 
     /// Output element's calculation result
@@ -293,7 +293,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Print element's strain value
     pub fn print_strain(&self) {
-        let strain = self.calc_strain();
+        let strain = self.strain.unwrap();
         println!(
             "\nelem[{}] strain:\n\tE_xx = {:-16.6}\n\tE_yy = {:-16.6}\n\tE_xy = {:-16.6}",
             self.id, strain[0], strain[1], strain[2]
@@ -302,7 +302,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Print element's stress value
     pub fn print_stress(&self) {
-        let stress = self.calc_stress();
+        let stress = self.stress.unwrap();
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-16.6}\n\tS_yy = {:-16.6}\n\tS_xy = {:-16.6}",
             self.id, stress[0], stress[1], stress[2]
@@ -312,15 +312,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
 /// Implement zhm::K trait for triangle element
 impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
-    type Kmatrix = [[Dtype; 6]; 6];
-
     /// Cache stiffness matrix for triangle element
-    fn k(&mut self) -> &Self::Kmatrix
-    where
-        Self::Kmatrix: std::ops::Index<usize>,
-    {
+    fn k(&mut self) -> &CompressedMatrix {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k())
+            self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
@@ -334,12 +329,13 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
                 self.id
             );
         }
-        print_2darr("\nTri2D3N k", self.id(), &self.k_matrix.unwrap(), n_exp);
+        print_2darr("\nTri2D3N k", self.id(), &self.calc_k(), n_exp);
     }
 
     /// Return triangle elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
+        let elem_stiness_mat = self.calc_k();
         for row in 0..6 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -350,7 +346,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
                 write!(
                     k_matrix,
                     " {:>-12.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    elem_stiness_mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("!!! Write tri k_mat failed!");
             }
@@ -364,21 +360,19 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     }
 
     /// Get the strain at integration point
-    fn strain_intpt(&mut self) -> &SS {
+    fn strain_intpt(&mut self) -> Data {
         if self.strain.is_none() {
-            self.strain.get_or_insert(SS::Dim2(self.calc_strain()))
-        } else {
-            self.strain.as_ref().unwrap()
+            self.strain.get_or_insert(self.calc_strain());
         }
+        Data::Dim2(vec![self.strain.unwrap()])
     }
 
-    /// Get the stress at integration point
-    fn stress_intpt(&mut self) -> &SS {
+    /// Get the stress at integratiData point
+    fn stress_intpt(&mut self) -> Data {
         if self.stress.is_none() {
-            self.stress.get_or_insert(SS::Dim2(self.calc_stress()))
-        } else {
-            self.stress.as_ref().unwrap()
+            self.stress.get_or_insert(self.calc_stress());
         }
+        Data::Dim2(vec![self.stress.unwrap()])
     }
 
     /// Get element's info string
@@ -404,8 +398,8 @@ impl fmt::Display for Tri2D3N<'_> {
             self.nodes[0],
             self.nodes[1],
             self.nodes[2],
-            self.calc_strain(),
-            self.calc_stress(),
+            self.strain,
+            self.stress,
             self.id(),
             self.k_string(0.0),
         )

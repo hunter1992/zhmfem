@@ -1,5 +1,5 @@
 use super::triangle::Tri2D3N;
-use crate::{node::Node2D, Dtype, K, SS};
+use crate::{compress_matrix, node::Node2D, CompressedMatrix, Data, Dtype, K};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -7,9 +7,9 @@ pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
     pub nodes: [&'quad2d4n Node2D; 4],
-    pub strain: Option<SS>,
-    pub stress: Option<SS>,
-    pub k_matrix: Option<[[Dtype; 8]; 8]>,
+    pub strain: Option<[[Dtype; 3]; 4]>,
+    pub stress: Option<[[Dtype; 3]; 4]>,
+    pub k_matrix: Option<CompressedMatrix>,
     pub material: &'quad2d4n (Dtype, Dtype),
 }
 
@@ -340,15 +340,10 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
 
 /// Implement zhm::K trait for quadrilateral element
 impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
-    type Kmatrix = [[Dtype; 8]; 8];
-
     /// Cache stiffness matrix for quad element
-    fn k(&mut self) -> &Self::Kmatrix
-    where
-        Self::Kmatrix: std::ops::Index<usize>,
-    {
+    fn k(&mut self) -> &CompressedMatrix {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k())
+            self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
@@ -364,6 +359,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
         }
 
         print!("\nQuad2D4N k{} =  (* 10^{})\n[", self.id, n_exp as i32);
+        let elem_stiffness_mat = self.calc_k();
         for row in 0..8 {
             if row == 0 {
                 print!("[");
@@ -373,7 +369,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
             for col in 0..8 {
                 print!(
                     " {:>-12.6}",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    elem_stiffness_mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == 7 {
@@ -395,6 +391,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
         }
 
         let mut k_matrix = String::new();
+        let elem_stiffness_mat = self.calc_k();
         for row in 0..8 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -405,7 +402,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
                 write!(
                     k_matrix,
                     " {:>-12.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    elem_stiffness_mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("!!! Write tri k_mat failed!");
             }
@@ -419,23 +416,29 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     }
 
     /// Get the strain at (xi, eta) inside the element
-    fn strain_intpt(&mut self) -> &SS {
+    fn strain_intpt(&mut self) -> Data {
         if self.strain.is_none() {
             self.strain
-                .get_or_insert(SS::Dim2(self.calc_strain([0.0, 0.0, 0.0])))
-        } else {
-            self.strain.as_ref().unwrap()
+                .get_or_insert(self.calc_strain_integration_point());
         }
+        let mut data: Vec<[Dtype; 3]> = Vec::with_capacity(4);
+        for idx in 0..4 {
+            data.push(self.strain.unwrap()[idx]);
+        }
+        Data::Dim2(data)
     }
 
     /// Get the stress at (xi, eta) inside the element
-    fn stress_intpt(&mut self) -> &SS {
+    fn stress_intpt(&mut self) -> Data {
         if self.stress.is_none() {
             self.stress
-                .get_or_insert(SS::Dim2(self.calc_stress([0.0, 0.0, 0.0])))
-        } else {
-            self.stress.as_ref().unwrap()
+                .get_or_insert(self.calc_stress_integration_point());
         }
+        let mut data: Vec<[Dtype; 3]> = Vec::with_capacity(4);
+        for idx in 0..4 {
+            data.push(self.stress.unwrap()[idx]);
+        }
+        Data::Dim2(data)
     }
 
     /// Get element's info string

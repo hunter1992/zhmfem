@@ -1,4 +1,4 @@
-use crate::{node::Node2D, Dtype, K, SS};
+use crate::{compress_matrix, node::Node2D, CompressedMatrix, Data, Dtype, K};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -13,9 +13,9 @@ pub struct Beam1D2N<'beam1d2n> {
     pub moment_of_inertia: Dtype,
     pub cross_sectional_area: Dtype,
     pub nodes: [&'beam1d2n Node2D; 2],
-    pub strain: Option<SS>,
-    pub stress: Option<SS>,
-    pub k_matrix: Option<[[Dtype; 4]; 4]>,
+    pub strain: Option<[[Dtype; 1]; 2]>,
+    pub stress: Option<[[Dtype; 1]; 2]>,
+    pub k_matrix: Option<CompressedMatrix>,
     pub material: &'beam1d2n (Dtype, Dtype),
 }
 
@@ -232,15 +232,10 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
 
 /// Implement zhm::K trait for triangle element
 impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
-    type Kmatrix = [[Dtype; 4]; 4];
-
     /// Cache stiffness matrix for triangle element
-    fn k(&mut self) -> &Self::Kmatrix
-    where
-        Self::Kmatrix: std::ops::Index<usize>,
-    {
+    fn k(&mut self) -> &CompressedMatrix {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(self.calc_k())
+            self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
@@ -265,7 +260,7 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
             for col in 0..4 {
                 print!(
                     " {:>-12.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    self.calc_k()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == 3 {
@@ -280,6 +275,7 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
     /// Return triangle elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
+        let elem_stiffness_mat = self.calc_k();
         for row in 0..4 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -290,7 +286,7 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
                 write!(
                     k_matrix,
                     " {:>-12.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    elem_stiffness_mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("!!! Write tri k_mat failed!");
             }
@@ -304,23 +300,29 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
     }
 
     /// Get the strain at (x,y) inside the element
-    fn strain_intpt(&mut self) -> &SS {
+    fn strain_intpt(&mut self) -> Data {
         if self.strain.is_none() {
             self.strain
-                .get_or_insert(SS::Dim1(self.calc_strain([0.5, 0.0, 0.0])))
-        } else {
-            self.strain.as_ref().unwrap()
+                .get_or_insert(self.calc_strain_integration_point());
         }
+        let mut data: Vec<[Dtype; 1]> = Vec::with_capacity(2);
+        for idx in 0..2 {
+            data.push(self.strain.unwrap()[idx]);
+        }
+        Data::Dim1(data)
     }
 
     /// Get the stress at (x,y) inside the element
-    fn stress_intpt(&mut self) -> &SS {
+    fn stress_intpt(&mut self) -> Data {
         if self.stress.is_none() {
             self.stress
-                .get_or_insert(SS::Dim1(self.calc_stress([0.5, 0.0, 0.0])))
-        } else {
-            self.stress.as_ref().unwrap()
+                .get_or_insert(self.calc_stress_integration_point());
         }
+        let mut data: Vec<[Dtype; 1]> = Vec::with_capacity(2);
+        for idx in 0..2 {
+            data.push(self.stress.unwrap()[idx]);
+        }
+        Data::Dim1(data)
     }
 
     /// Get element's info string

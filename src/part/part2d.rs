@@ -1,4 +1,4 @@
-use crate::{ADtype, Dtype, Export, LinearEqs, Node2D, K, SS};
+use crate::{compress_matrix, ADtype, CompressedMatrix, Data, Dtype, Export, LinearEqs, Node2D, K};
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
@@ -12,12 +12,13 @@ use vtkio::model::*;
 pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
 where
     [[Dtype; N * F]; N * F]: Sized,
+    [[Dtype; M * F]; M * F]: Sized,
 {
     pub id: usize,
     pub nodes: &'part2d [Node2D],
     pub elems: &'part2d mut [Elem],
     pub cplds: &'part2d [Vec<usize>], //cplds: coupled nodes index
-    pub k_matrix: Option<[[Dtype; N * F]; N * F]>,
+    pub k_matrix: Option<CompressedMatrix>,
     pub assembly_time_consuming: Option<std::time::Duration>,
 }
 
@@ -25,6 +26,7 @@ impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
     Part2D<'part2d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
+    [[Dtype; M * F]; M * F]: Sized,
 {
     /// Construct a Part2D
     /// Args: nodes --- Vec ptr to all 2D nodes
@@ -113,29 +115,21 @@ where
     }
 
     /// Get elements's strain data
-    pub fn elem_strain(&mut self) -> Vec<[Dtype; 3]> {
-        let mut strain: Vec<[Dtype; 3]> = Vec::with_capacity(self.cplds.len());
+    pub fn elem_strain(&mut self) -> Vec<Data> {
+        let mut strain: Vec<Data> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| {
-                if let SS::Dim2(e) = *elem.strain_intpt() {
-                    strain.push(e);
-                };
-            })
+            .map(|elem| strain.push(elem.strain_intpt()))
             .count();
         strain
     }
 
     /// Get elements's stress data
-    pub fn elem_stress(&mut self) -> Vec<[Dtype; 3]> {
-        let mut stress: Vec<[Dtype; 3]> = Vec::with_capacity(self.cplds.len());
+    pub fn elem_stress(&mut self) -> Vec<Data> {
+        let mut stress: Vec<Data> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| {
-                if let SS::Dim2(s) = *elem.stress_intpt() {
-                    stress.push(s);
-                }
-            })
+            .map(|elem| stress.push(elem.stress_intpt()))
             .count();
         stress
     }
@@ -143,10 +137,7 @@ where
     /// Calculate part's global stiffness matrix
     /// The value of arg parallel_or_singllel can be:
     /// "parallel" or "p" or "singllel" or "s"
-    pub fn k(&mut self, parallel_or_singllel: &str, cpu_cores: usize) -> &[[Dtype; N * F]; N * F]
-    where
-        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]> + Sync,
-    {
+    pub fn k(&mut self, parallel_or_singllel: &str, cpu_cores: usize) -> &CompressedMatrix {
         if self.k_matrix.is_none() {
             if self.cplds.len() != self.elems.len() {
                 println!("\n---> Error! From Part2D.k_singllel func.");
@@ -155,34 +146,31 @@ where
             }
 
             match parallel_or_singllel {
-                "s" => self.k_singllel(cpu_cores),
-                "p" => self.k_parallel(cpu_cores),
-                "singllel" => self.k_singllel(cpu_cores),
-                "parallel" => self.k_parallel(cpu_cores),
+                "s" => {
+                    self.k_matrix = Some(self.k_singllel(cpu_cores));
+                }
+                "p" => self.k_matrix = Some(self.k_parallel(cpu_cores)),
+                "singllel" => self.k_matrix = Some(self.k_singllel(cpu_cores)),
+                "parallel" => self.k_matrix = Some(self.k_parallel(cpu_cores)),
                 _ => {
                     if self.cplds.len() >= 1000 {
-                        self.k_parallel(cpu_cores)
+                        self.k_matrix = Some(self.k_parallel(cpu_cores))
                     } else {
-                        self.k_singllel(cpu_cores)
+                        self.k_matrix = Some(self.k_singllel(cpu_cores))
                     }
                 }
             }
-        } else {
-            self.k_matrix.as_ref().unwrap()
         }
+        self.k_matrix.as_ref().unwrap()
     }
 
-    fn k_singllel(&mut self, _cpu_cores: usize) -> &[[Dtype; N * F]; N * F]
-    where
-        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]>,
-    {
+    fn k_singllel(&mut self, _cpu_cores: usize) -> CompressedMatrix {
         println!(
             "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} in single thread ......",
             self.id, self.id
         );
 
-        let elems: Vec<&<Elem as K>::Kmatrix> =
-            self.elems.iter_mut().map(|elem| elem.k()).collect();
+        let elems: Vec<_> = self.elems.iter_mut().map(|elem| elem.k()).collect();
 
         let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
 
@@ -192,12 +180,13 @@ where
             .iter()
             .zip(elems.iter())
             .map(|(cpld, &elem)| {
+                let elem_stiffness_mat = elem.recover::<{ M * F }>();
                 for idx in 0..M {
                     for idy in 0..M {
                         for row in 0..F {
                             for col in 0..F {
                                 part_stiffness_mat[cpld[idx] * F + row][cpld[idy] * F + col] +=
-                                    elem[idx * F + row][idy * F + col];
+                                    elem_stiffness_mat[idx * F + row][idy * F + col];
                             }
                         }
                     }
@@ -211,20 +200,17 @@ where
             time_consuming
         );
         self.assembly_time_consuming = Some(time_consuming);
-        self.k_matrix.get_or_insert(part_stiffness_mat)
+
+        compress_matrix(part_stiffness_mat)
     }
 
-    fn k_parallel(&mut self, cpu_cores: usize) -> &[[Dtype; N * F]; N * F]
-    where
-        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]> + Sync,
-    {
+    fn k_parallel(&mut self, cpu_cores: usize) -> CompressedMatrix {
         println!(
             "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} in {} threads ......",
             self.id, self.id, cpu_cores
         );
 
-        let elems: Vec<&<Elem as K>::Kmatrix> =
-            self.elems.iter_mut().map(|elem| elem.k()).collect();
+        let elems: Vec<_> = self.elems.iter_mut().map(|elem| elem.k()).collect();
         let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
         let mat: Arc<Vec<Vec<ADtype>>> = Arc::new(
             (0..F * N)
@@ -252,9 +238,11 @@ where
                                 for idy in 0..M {
                                     for row in 0..F {
                                         for col in 0..F {
+                                            let elem_stiffness_mat = elem.recover::<{ M * F }>();
                                             mat_clone[cpld[idx] * F + row][cpld[idy] * F + col]
                                                 .fetch_add(
-                                                    elem[idx * F + row][idy * F + col],
+                                                    elem_stiffness_mat[idx * F + row]
+                                                        [idy * F + col],
                                                     Ordering::Relaxed,
                                                 );
                                         }
@@ -278,18 +266,16 @@ where
                 part_stiffness_mat[x][y] = mat[x][y].load(Ordering::Relaxed);
             }
         }
-        self.k_matrix.get_or_insert(part_stiffness_mat)
+        compress_matrix(part_stiffness_mat)
     }
 
     /// Print part's global stiffness matrix
-    pub fn k_printer(&mut self, parallel_or_singllel: &str, cpu_cores: usize, n_exp: Dtype)
-    where
-        <Elem as K>::Kmatrix: std::ops::Index<usize, Output = [Dtype; M * F]> + Sync,
-    {
+    pub fn k_printer(&mut self, parallel_or_singllel: &str, cpu_cores: usize, n_exp: Dtype) {
         if self.k_matrix.is_none() {
             self.k(parallel_or_singllel, cpu_cores);
         }
 
+        let k_matrix = self.k_matrix.clone().unwrap().recover::<{ N * F }>();
         print!("\nPart #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
         for row in 0..(N * F) {
             if row == 0 {
@@ -300,7 +286,7 @@ where
             for col in 0..(N * F) {
                 print!(
                     " {:>-13.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    k_matrix[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 );
             }
             if row == (N * F - 1) {
@@ -321,6 +307,8 @@ where
             self.id, n_exp as u8
         )
         .expect("Write Part2D Stiffness Matrix Failed!");
+
+        let k = self.k_matrix.clone().unwrap().recover::<{ N * F }>();
         for row in 0..(N * F) {
             if row == 0 {
                 write!(k_matrix, "[[").expect("Write Part2D Stiffness Matrix Failed!");
@@ -331,7 +319,7 @@ where
                 write!(
                     k_matrix,
                     " {:>-13.6} ",
-                    self.k_matrix.unwrap()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
+                    k[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
                 )
                 .expect("Write Part2D Stiffness Matrix Failed!");
             }
@@ -383,14 +371,17 @@ where
         let mut cell_s22: Vec<Dtype> = vec![0.0; elem_num];
         let mut cell_s12: Vec<Dtype> = vec![0.0; elem_num];
 
-        for i in 0..elem_num {
-            cell_e11[i] = strain[i][0];
-            cell_e22[i] = strain[i][1];
-            cell_e12[i] = strain[i][2];
-
-            cell_s11[i] = stress[i][0];
-            cell_s22[i] = stress[i][1];
-            cell_s12[i] = stress[i][2];
+        for idx in 0..elem_num {
+            if let Data::Dim2(epsilon) = strain[idx].clone() {
+                cell_e11[idx] = epsilon[0][0];
+                cell_e22[idx] = epsilon[0][1];
+                cell_e12[idx] = epsilon[0][2];
+            }
+            if let Data::Dim2(sigma) = stress[idx].clone() {
+                cell_s11[idx] = sigma[0][0];
+                cell_s22[idx] = sigma[0][1];
+                cell_s12[idx] = sigma[0][2];
+            }
         }
 
         Vtk {
@@ -424,11 +415,55 @@ where
             }),
         }
     }
+
+    pub fn vtk_quad2d4n_legacy(&mut self, vtk_file_name: &str) -> Vtk {
+        let elem_num: usize = self.cplds.len();
+        let coords = self.vtk_nodes_coordinate();
+        let displs = self.vtk_nodes_displacement();
+        let forces = self.vtk_nodes_force();
+
+        let mut vtk_cpld: Vec<u32> = vec![0; 5 * elem_num];
+        for idx in 0..elem_num {
+            vtk_cpld[idx * 5] = 4;
+            vtk_cpld[idx * 5 + 1] = self.cplds[idx][0] as u32;
+            vtk_cpld[idx * 5 + 2] = self.cplds[idx][1] as u32;
+            vtk_cpld[idx * 5 + 3] = self.cplds[idx][2] as u32;
+            vtk_cpld[idx * 5 + 4] = self.cplds[idx][3] as u32;
+        }
+
+        let strain = self.elem_strain();
+        let stress = self.elem_stress();
+
+        Vtk {
+            version: Version { major: 4, minor: 2 },
+            title: String::from(vtk_file_name),
+            byte_order: ByteOrder::BigEndian,
+            file_path: None,
+            data: DataSet::inline(UnstructuredGridPiece {
+                points: IOBuffer::F32(coords),
+                cells: Cells {
+                    cell_verts: VertexNumbers::Legacy {
+                        num_cells: elem_num as u32,
+                        vertices: vtk_cpld,
+                    },
+                    types: vec![CellType::Quad; elem_num],
+                },
+                data: Attributes {
+                    point: vec![
+                        Attribute::vectors("displacement").with_data(displs),
+                        Attribute::vectors("force").with_data(forces),
+                    ],
+                    cell: vec![],
+                },
+            }),
+        }
+    }
 }
 impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize> Export
     for Part2D<'part2d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
+    [[Dtype; M * F]; M * F]: Sized,
 {
     fn txt_writer(
         &self,
@@ -488,6 +523,21 @@ where
                 println!("\n>>> Writing calc results into vtk file ......");
                 let vtk_triangle = self.vtk_tri2d3n_legacy(elem_type);
                 vtk_triangle.write_legacy_ascii(&mut vtk_string).expect(
+                    "!!! Construct VTK string for Tri2D3N failed! from zhmfem/src/part/part2d.rs",
+                );
+
+                write!(vtk_writer, "{}", vtk_string.as_str())
+                    .expect("!!! Write .vtk file failed! from zhmfem/src/part/part2d.rs");
+                println!("    Down!");
+
+                Ok(true)
+            }
+            "Quad2D4N" => {
+                println!("\n>>> Writing calc results into vtk file ......");
+                let vtk_quadrilateral = self.vtk_tri2d3n_legacy(elem_type);
+                vtk_quadrilateral
+                    .write_legacy_ascii(&mut vtk_string)
+                    .expect(
                     "!!! Construct VTK string for Tri2D3N failed! from zhmfem/src/part/part2d.rs",
                 );
 

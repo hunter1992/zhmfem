@@ -29,32 +29,27 @@ pub use std::io::{BufWriter, Write};
 
 pub type Dtype = f32;
 pub type ADtype = AtomicF32;
-//pub type Dtype = f64;
-//pub type ADtype = AtomicF64;
 
 pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
 
-#[derive(Copy, Clone)]
-pub enum SS {
-    Dim1([Dtype; 1]),
-    Dim2([Dtype; 3]),
-    Dim3([Dtype; 6]),
+/// Store strain or stress data
+#[derive(Clone)]
+pub enum Data {
+    Dim1(Vec<[Dtype; 1]>),
+    Dim2(Vec<[Dtype; 3]>),
+    Dim3(Vec<[Dtype; 6]>),
 }
 
 /// K trait generate element's stiffness matrix under linear analysis.
 /// Output stress/strain vector at some point in element using Vector,
 /// Kmatrix is the element's stiffness matrix to get.
 pub trait K {
-    type Kmatrix;
-
-    fn k(&mut self) -> &Self::Kmatrix
-    where
-        Self::Kmatrix: std::ops::Index<usize>;
+    fn k(&mut self) -> &CompressedMatrix;
     fn k_printer(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
 
-    fn strain_intpt(&mut self) -> &SS;
-    fn stress_intpt(&mut self) -> &SS;
+    fn strain_intpt(&mut self) -> Data;
+    fn stress_intpt(&mut self) -> Data;
 
     fn info(&self, n_exp: Dtype) -> String;
     fn id(&self) -> usize;
@@ -72,6 +67,64 @@ pub trait Export {
     ) -> std::io::Result<bool>;
 
     fn vtk_writer(&mut self, target_file: &str, elem_type: &str) -> std::io::Result<bool>;
+}
+
+#[derive(Clone)]
+pub struct CompressedMatrix {
+    value: Vec<Dtype>,
+    ptr: Vec<usize>,
+}
+
+impl CompressedMatrix {
+    pub fn new(value: Vec<f32>, ptr: Vec<usize>) -> Self {
+        CompressedMatrix { value, ptr }
+    }
+
+    pub fn recover<const D: usize>(&self) -> [[f32; D]; D] {
+        let mut arr: [[f32; D]; D] = [[0.0; D]; D];
+        for idx in 0..D {
+            let len = self.ptr[idx + 1] - self.ptr[idx];
+            for jump in 0..len {
+                arr[idx][idx - jump] = self.value[self.ptr[idx] + len - jump - 1];
+                arr[idx - jump][idx] = self.value[self.ptr[idx] + len - jump - 1];
+            }
+        }
+        arr
+    }
+}
+
+pub fn compress_matrix<const D: usize>(mat: [[f32; D]; D]) -> CompressedMatrix {
+    let mut value: Vec<f32> = vec![];
+    let mut ptr: Vec<usize> = vec![];
+
+    let mut flag: bool = true;
+    let mut counter: usize = 0;
+    for idx in 0..D {
+        ptr.push(counter);
+        for idy in 0..=idx {
+            if mat[idx][idy] == 0.0 {
+                if flag == false {
+                    // 正定矩阵必满秩，下面处理全零行(或列)的分支暂时注释掉
+                    /*if idy == idx {
+                        value.push(mat[idx][idy]);
+                        counter += 1;
+                    }*/
+                    continue;
+                } else {
+                    value.push(mat[idx][idy]);
+                    counter += 1;
+                    continue;
+                }
+            }
+            value.push(mat[idx][idy]);
+            counter += 1;
+            flag = true;
+        }
+        flag = false;
+    }
+    ptr.push(value.len());
+
+    CompressedMatrix { value, ptr }
 }
 
 /// Formatted print 1d array with scientific form
@@ -230,11 +283,11 @@ pub fn nodes3d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec
 
 /// calculate part's deform energy
 pub fn strain_energy<const D: usize>(
-    stiffness_matrix: [[Dtype; D]; D],
+    stiffness_matrix: CompressedMatrix,
     displacement: [Dtype; D],
 ) -> Dtype {
     let disp = SMatrix::<Dtype, D, 1>::from(displacement);
-    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix);
+    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix.recover());
     let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
     strain_energy[0][0]
 }
@@ -252,7 +305,7 @@ pub fn external_force_work<const D: usize>(
 
 /// calculate part's potential energy
 pub fn potential_energy<const D: usize>(
-    stiffness_matrix: [[Dtype; D]; D],
+    stiffness_matrix: CompressedMatrix,
     external_force: [Dtype; D],
     displacement: [Dtype; D],
 ) -> Dtype {
