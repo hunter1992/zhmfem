@@ -27,10 +27,6 @@ fn main() {
     const C: usize = 2; // columns of nodes
     const M: usize = 4; // node num in single element
     const F: usize = 2; // freedom num in single node
-    const CPU_CORES: usize = 2;
-
-    //Controls the style of printing numbers in scientific notation
-    const E: Dtype = 0.0;
 
     // Manually set coords and grouped nodes index
     let points: Vec<Vec<Dtype>> = vec![
@@ -70,7 +66,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
     // solve method:
@@ -93,13 +89,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );

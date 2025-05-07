@@ -1,6 +1,7 @@
-use crate::{
-    compress_matrix, node::Node2D, print_2darr, CompressedMatrix, Data, Dtype, Jacobian2D, K,
-};
+use crate::data::{CompressedMatrix, Data, Dtype, Jacobian2D};
+use crate::node::Node2D;
+use crate::port::K;
+use crate::tool::{compress_matrix, print_2darr};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -233,10 +234,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * Area
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * 0.5 //标准三角形面积为0.5
     fn calc_k(&self) -> [[Dtype; 6]; 6] {
-        println!(
-            "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
-            self.id, self.id
-        );
+        //println!(
+        //    "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
+        //    self.id, self.id
+        //);
         let (ee, nu) = *self.material;
         let elasticity_mat = (ee / (1.0 - nu * nu))
             * (SMatrix::<Dtype, 3, 3>::from([
@@ -254,14 +255,14 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// Get element's strain vector, the strain in CST elem is a const
-    fn calc_strain(&self) -> [Dtype; 3] {
+    pub fn calc_strain(&self) -> [Dtype; 3] {
         let b_mat = self.geometry_mat_xy();
         let elem_nodes_disps = SMatrix::<Dtype, 6, 1>::from(self.get_nodes_displacement());
         (b_mat * elem_nodes_disps).into()
     }
 
     /// Get element's stress vector, the stress in CST elem is a const
-    fn calc_stress(&self) -> [Dtype; 3] {
+    pub fn calc_stress(&self) -> [Dtype; 3] {
         let (ee, nu) = *self.material;
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
@@ -335,7 +336,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     /// Return triangle elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
-        let elem_stiness_mat = self.calc_k();
+        let elem_stiness_mat: [[Dtype; 6]; 6] = self.calc_k();
         for row in 0..6 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -360,7 +361,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     }
 
     /// Get the strain at integration point
-    fn strain_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Data {
         if self.strain.is_none() {
             self.strain.get_or_insert(self.calc_strain());
         }
@@ -368,7 +369,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     }
 
     /// Get the stress at integratiData point
-    fn stress_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Data {
         if self.stress.is_none() {
             self.stress.get_or_insert(self.calc_stress());
         }

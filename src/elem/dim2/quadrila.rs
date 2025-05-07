@@ -1,5 +1,8 @@
 use super::triangle::Tri2D3N;
-use crate::{compress_matrix, node::Node2D, CompressedMatrix, Data, Dtype, K};
+use crate::data::{CompressedMatrix, Data, Dtype, Jacobian2D};
+use crate::node::Node2D;
+use crate::port::K;
+use crate::tool::compress_matrix;
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -173,7 +176,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     }
 
     /// Calculate the Jacobian matrix of quadrilateral
-    fn jacobian(&self, xi_eta: [Dtype; 3]) -> SMatrix<Dtype, 2, 2> {
+    fn jacobian(&self, xi_eta: [Dtype; 3]) -> Jacobian2D {
         let x: [Dtype; 4] = self.get_nodes_xcoords();
         let y: [Dtype; 4] = self.get_nodes_ycoords();
         let dn_st = self.diff_shape_mat_st(xi_eta);
@@ -211,8 +214,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         ]) * (ee / (1.0 - nu * nu));
 
         // 4 point Gauss integration, area of standard rectangle is 4.0
-        let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
-        let int_pts = [
+        let gauss_pt: Dtype = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
+        let int_pts: [[[Dtype; 3]; 2]; 2] = [
             [[-gauss_pt, -gauss_pt, 0.0], [gauss_pt, -gauss_pt, 0.0]],
             [[gauss_pt, gauss_pt, 0.0], [-gauss_pt, gauss_pt, 0.0]],
         ];
@@ -221,8 +224,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         // 2x2的4点Gauss积分，4个点权重都是1
         for row in 0..2 {
             for col in 0..2 {
-                let j = self.jacobian(int_pts[row][col]);
-                let det_j = j.determinant();
+                let j: Jacobian2D = self.jacobian(int_pts[row][col]);
+                let det_j: Dtype = j.determinant();
 
                 let b_mat = self.geometry_mat_xy(int_pts[row][col]);
                 let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
@@ -416,7 +419,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     }
 
     /// Get the strain at (xi, eta) inside the element
-    fn strain_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Data {
         if self.strain.is_none() {
             self.strain
                 .get_or_insert(self.calc_strain_integration_point());
@@ -429,7 +432,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     }
 
     /// Get the stress at (xi, eta) inside the element
-    fn stress_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Data {
         if self.stress.is_none() {
             self.stress
                 .get_or_insert(self.calc_stress_integration_point());

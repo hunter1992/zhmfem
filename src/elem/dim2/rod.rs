@@ -1,4 +1,7 @@
-use crate::{compress_matrix, node::Node2D, CompressedMatrix, Data, Dtype, K};
+use crate::data::{CompressedMatrix, Data, Dtype};
+use crate::node::Node2D;
+use crate::port::K;
+use crate::tool::{compress_matrix, print_2darr};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -173,6 +176,23 @@ impl<'rod2d2n> Rod2D2N<'rod2d2n> {
         [ee * strain]
     }
 
+    /// Output element's calculation result
+    pub fn calc_result_info(&self, n_exp: Dtype) -> String {
+        format!("\n-----------------------------------------------------------------------------\nElem_Rod2d2N:\n\tId:\t{}\n\tSection Area: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
+            self.id,
+            self.cross_sectional_area,
+            self.material.0,
+            self.material.1,
+            self.nodes[0],
+            self.nodes[1],
+            self.calc_strain(),
+            self.calc_stress(),
+            self.id(),
+            n_exp,
+            self.k_string(n_exp),
+        )
+    }
+
     /// Print element's strain value
     pub fn print_strain(&self) {
         let strain = self.calc_strain();
@@ -208,33 +228,13 @@ impl<'rod2d2n> K for Rod2D2N<'rod2d2n> {
                 self.id
             );
         }
-
-        print!("\nRod1D2N k{} =  (* 10^{})\n[", self.id, n_exp as u8);
-        for row in 0..4 {
-            if row == 0 {
-                print!("[");
-            } else {
-                print!(" [");
-            }
-            for col in 0..4 {
-                print!(
-                    " {:>-12.6} ",
-                    self.calc_k()[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
-                );
-            }
-            if row == 3 {
-                println!("]]");
-            } else {
-                println!("]");
-            }
-        }
-        print!("\n");
+        print_2darr("\nRod2d2N k", self.id(), &self.calc_k(), n_exp);
     }
 
     /// Return Rod1D2N elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
-        let elem_stiffness_mat = self.calc_k();
+        let elem_stiffness_mat: [[Dtype; 4]; 4] = self.calc_k();
         for row in 0..4 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -259,7 +259,7 @@ impl<'rod2d2n> K for Rod2D2N<'rod2d2n> {
     }
 
     /// Get the strain at (x,y) inside the element, in linear rod elem, strain is a const
-    fn strain_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Data {
         if self.strain.is_none() {
             self.strain.get_or_insert(self.calc_strain());
         }
@@ -267,7 +267,7 @@ impl<'rod2d2n> K for Rod2D2N<'rod2d2n> {
     }
 
     /// Get the stress at (x,y) insDatae the element, in linear rod elem, stress is a const
-    fn stress_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Data {
         if self.stress.is_none() {
             self.stress.get_or_insert(self.calc_stress());
         }
@@ -276,20 +276,7 @@ impl<'rod2d2n> K for Rod2D2N<'rod2d2n> {
 
     /// Get element's info string
     fn info(&self, n_exp: Dtype) -> String {
-        format!("\n-----------------------------------------------------------------------------\nElem_Rod2d2N:\n\tId:\t{}\n\tArea: {:-12.4} (cross sectional area)\n\tLen : {:-12.4}\n\tMats: {:-12.4} (Young's modulus)\n\t      {:-12.4} (Poisson's ratio)\n\tNodes:{}{}\n\tStrain:\n\t\t{:-12.6?}\n\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{}) \n{}",
-            self.id,
-            self.cross_sectional_area,
-            self.length(),
-            self.material.0,
-            self.material.1,
-            self.nodes[0],
-            self.nodes[1],
-            self.calc_strain(),
-            self.calc_stress(),
-            self.id(),
-            n_exp,
-            self.k_string(n_exp)
-        )
+        self.calc_result_info(n_exp)
     }
 
     /// Get element's id number

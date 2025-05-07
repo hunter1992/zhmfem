@@ -1,4 +1,4 @@
-use crate::{CompressedMatrix, Dtype};
+use crate::data::{CompressedMatrix, Dtype};
 use na::{DMatrix, DVector, SMatrix, SVector};
 use std::collections::HashSet;
 use std::time::Instant;

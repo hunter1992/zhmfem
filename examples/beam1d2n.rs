@@ -66,7 +66,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -88,13 +88,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );

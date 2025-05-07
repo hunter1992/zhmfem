@@ -25,6 +25,7 @@ fn main() {
 
     //Controls the style of printing numbers in scientific notation
     const E: Dtype = 4.0;
+    const CPU_CORES: usize = 2;
 
     // Manually set coords and grouped nodes index
     let points: Vec<Vec<Dtype>> = vec![
@@ -77,7 +78,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -99,13 +100,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );
@@ -114,6 +115,7 @@ fn main() {
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
     for elem in part.elems.iter() {
+        print!("------------------------------------------------------------");
         elem.k_printer(E);
         elem.print_strain();
         elem.print_stress();
@@ -121,9 +123,9 @@ fn main() {
     }
 
     // -------- Part 5:  Write clac result into txt file --------
-    /*
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output = format!("{output_path}{element_type}{output_file}");
+    /*
     part.txt_writer(
         &output,
         calc_time,

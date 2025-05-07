@@ -1,4 +1,4 @@
-use crate::{Data, Dtype};
+use crate::data::Dtype;
 use std::cell::RefCell;
 use std::fmt;
 
@@ -31,7 +31,6 @@ pub struct Node2D {
     pub coords: [Dtype; 2],
     pub displs: RefCell<[Dtype; 2]>,
     pub forces: RefCell<[Dtype; 2]>,
-    pub stress: Vec<[Dtype; 3]>,
 }
 
 impl Node2D {
@@ -39,9 +38,8 @@ impl Node2D {
         Node2D {
             id,
             coords,
-            displs: RefCell::new([0.0, 0.0]),
-            forces: RefCell::new([0.0, 0.0]),
-            stress: Vec::with_capacity(6),
+            displs: RefCell::new([0.0; 2]),
+            forces: RefCell::new([0.0; 2]),
         }
     }
 }

@@ -13,10 +13,10 @@ fn main() {
     const E: Dtype = 0.0; // Exponent in scientific notation to base 10
     const CPU_CORES: usize = 2;
 
-    let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+    let calc_method: &str = "cholesky"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
-    let parallel_or_singllel: &str = "p"; // "s" or "p"
+    let parallel_or_singllel: &str = "s"; // "s" or "p"
 
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
@@ -78,7 +78,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
     eqs.solve(calc_method, calc_accuracy);
@@ -94,13 +94,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );

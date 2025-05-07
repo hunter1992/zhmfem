@@ -6,6 +6,6 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-nalgebra = "0.32.5"
+nalgebra = "0.33.2"
 atomic_float = "1.1.0"
 vtkio = {version = "0.6", default-features = false}

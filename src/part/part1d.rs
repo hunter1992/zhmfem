@@ -1,4 +1,8 @@
-use crate::{compress_matrix, ADtype, CompressedMatrix, Dtype, Export, LinearEqs, Node1D, K};
+use crate::calc::LinearEqs;
+use crate::data::{ADtype, CompressedMatrix, Dtype};
+use crate::node::Node1D;
+use crate::port::{Export, K};
+use crate::tool::compress_matrix;
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;

@@ -1,4 +1,7 @@
-use crate::{compress_matrix, node::Node2D, CompressedMatrix, Data, Dtype, K};
+use crate::data::{CompressedMatrix, Data, Dtype};
+use crate::node::Node2D;
+use crate::port::K;
+use crate::tool::compress_matrix;
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -300,7 +303,7 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
     }
 
     /// Get the strain at (x,y) inside the element
-    fn strain_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Data {
         if self.strain.is_none() {
             self.strain
                 .get_or_insert(self.calc_strain_integration_point());
@@ -313,7 +316,7 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
     }
 
     /// Get the stress at (x,y) inside the element
-    fn stress_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Data {
         if self.stress.is_none() {
             self.stress
                 .get_or_insert(self.calc_stress_integration_point());

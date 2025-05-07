@@ -35,14 +35,14 @@ fn main() {
     let points: Vec<Vec<Dtype>> = vec![
         vec![0.0, 0.0],
         vec![1.0, 0.0],
-        vec![1.0, 1.0],
         vec![0.0, 1.0],
+        vec![1.0, 1.0],
     ];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2], vec![3, 2, 1]];
 
     // Set boundary conditions and external loads manually
-    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
-    let force_index: Vec<usize> = vec![2, 4];
+    let zero_disp_index: Vec<usize> = vec![0, 1, 4];
+    let force_index: Vec<usize> = vec![2, 6];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
     let force_data: HashMap<usize, Dtype> = force_index
         .into_iter()

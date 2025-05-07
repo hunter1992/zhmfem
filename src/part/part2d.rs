@@ -1,4 +1,8 @@
-use crate::{compress_matrix, ADtype, CompressedMatrix, Data, Dtype, Export, LinearEqs, Node2D, K};
+use crate::calc::LinearEqs;
+use crate::data::{ADtype, CompressedMatrix, Data, Dtype};
+use crate::node::Node2D;
+use crate::port::{Export, K};
+use crate::tool::compress_matrix;
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
@@ -119,7 +123,7 @@ where
         let mut strain: Vec<Data> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| strain.push(elem.strain_intpt()))
+            .map(|elem| strain.push(elem.strain_at_intpt()))
             .count();
         strain
     }
@@ -129,7 +133,7 @@ where
         let mut stress: Vec<Data> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| stress.push(elem.stress_intpt()))
+            .map(|elem| stress.push(elem.stress_at_intpt()))
             .count();
         stress
     }
@@ -308,7 +312,7 @@ where
         )
         .expect("Write Part2D Stiffness Matrix Failed!");
 
-        let k = self.k_matrix.clone().unwrap().recover::<{ N * F }>();
+        let k: [[Dtype; N * F]; N * F] = self.k_matrix.clone().unwrap().recover();
         for row in 0..(N * F) {
             if row == 0 {
                 write!(k_matrix, "[[").expect("Write Part2D Stiffness Matrix Failed!");
@@ -430,9 +434,6 @@ where
             vtk_cpld[idx * 5 + 3] = self.cplds[idx][2] as u32;
             vtk_cpld[idx * 5 + 4] = self.cplds[idx][3] as u32;
         }
-
-        let strain = self.elem_strain();
-        let stress = self.elem_stress();
 
         Vtk {
             version: Version { major: 4, minor: 2 },

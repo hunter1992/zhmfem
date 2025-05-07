@@ -47,7 +47,7 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part1D<'_, Rod1D2N<'_>, { R * C }, F, M> =
         Part1D::new(1, &nodes, &mut rods, &grpdnidx);
-    part.k_printer(E);
+    part.k_printer("s", 4, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -55,7 +55,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(),
+        part.k("s", 4).clone(),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -76,11 +76,14 @@ fn main() {
     print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
-    let strain_energy: Dtype = strain_energy(*part.k(), part.nodes_displacement());
+    let strain_energy: Dtype = strain_energy(part.k("s", 4).clone(), part.nodes_displacement());
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
-    let potential_energy: Dtype =
-        potential_energy(*part.k(), part.nodes_force(), part.nodes_displacement());
+    let potential_energy: Dtype = potential_energy(
+        part.k("s", 4).clone(),
+        part.nodes_force(),
+        part.nodes_displacement(),
+    );
     println!("\tE_d: {:-9.6} (deform energy)", strain_energy);
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
@@ -94,6 +97,7 @@ fn main() {
     // -------- Part 5:  Write clac result into txt file --------
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output = format!("{output_path}{element_type}{output_file}");
+    /*
     part.txt_writer(
         &output,
         calc_time,
@@ -101,6 +105,7 @@ fn main() {
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+    */
     println!("杆件内力{}", rods[0].axial_force());
 
     let total_time = time_start.elapsed();
