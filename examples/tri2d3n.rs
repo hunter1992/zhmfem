@@ -14,8 +14,8 @@ fn main() {
     const CPU_CORES: usize = 2;
 
     // "lu" for LU decomposition algorithm or
-    // "cholesky" fo Cholesky decomposition algorithm or
-    // "gs" for gauss-seidel iteration method or
+    // "cholesky" for Cholesky Decomposition algorithm or
+    // "gs"       for gauss-seidel iteration algorithm
     let calc_method: &str = "cholesky";
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 

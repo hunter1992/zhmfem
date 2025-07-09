@@ -41,6 +41,38 @@ pub fn compress_matrix<const D: usize>(mat: [[Dtype; D]; D]) -> CompressedMatrix
     CompressedMatrix { value, ptr }
 }
 
+/// calculate part's deform energy
+pub fn strain_energy<const D: usize>(
+    stiffness_matrix: CompressedMatrix,
+    displacement: [Dtype; D],
+) -> Dtype {
+    let disp = SMatrix::<Dtype, D, 1>::from(displacement);
+    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix.recover());
+    let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
+    strain_energy[0][0]
+}
+
+/// calculate external forces' work
+pub fn external_force_work<const D: usize>(
+    external_force: [Dtype; D],
+    displacement: [Dtype; D],
+) -> Dtype {
+    let disp = SMatrix::<Dtype, D, 1>::from(displacement);
+    let external_force = SMatrix::<Dtype, D, 1>::from(external_force);
+    let strain_energy: [[Dtype; 1]; 1] = (external_force.transpose() * disp).into();
+    strain_energy[0][0]
+}
+
+/// calculate part's potential energy
+pub fn potential_energy<const D: usize>(
+    stiffness_matrix: CompressedMatrix,
+    external_force: [Dtype; D],
+    displacement: [Dtype; D],
+) -> Dtype {
+    strain_energy(stiffness_matrix, displacement)
+        - external_force_work(external_force, displacement)
+}
+
 // Formatted print 1d array with scientific form
 pub fn print_1darr<const C: usize>(name: &str, arr: &[Dtype; C], n_exp: Dtype, h_or_v: &str) {
     println!("\n{} = (10^{} *)", name, n_exp);
@@ -193,38 +225,6 @@ pub fn nodes3d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec
         nodes[idx / 3].forces.borrow_mut()[idx % 3] = f;
     }
     nodes
-}
-
-/// calculate part's deform energy
-pub fn strain_energy<const D: usize>(
-    stiffness_matrix: CompressedMatrix,
-    displacement: [Dtype; D],
-) -> Dtype {
-    let disp = SMatrix::<Dtype, D, 1>::from(displacement);
-    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix.recover());
-    let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
-    strain_energy[0][0]
-}
-
-/// calculate external forces' work
-pub fn external_force_work<const D: usize>(
-    external_force: [Dtype; D],
-    displacement: [Dtype; D],
-) -> Dtype {
-    let disp = SMatrix::<Dtype, D, 1>::from(displacement);
-    let external_force = SMatrix::<Dtype, D, 1>::from(external_force);
-    let strain_energy: [[Dtype; 1]; 1] = (external_force.transpose() * disp).into();
-    strain_energy[0][0]
-}
-
-/// calculate part's potential energy
-pub fn potential_energy<const D: usize>(
-    stiffness_matrix: CompressedMatrix,
-    external_force: [Dtype; D],
-    displacement: [Dtype; D],
-) -> Dtype {
-    strain_energy(stiffness_matrix, displacement)
-        - external_force_work(external_force, displacement)
 }
 
 /// Constructe a rod1d2n elements vector

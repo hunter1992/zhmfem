@@ -159,8 +159,8 @@ mod testing {
         let mut tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node4], &material);
         let mut tri2 = Tri2D3N::new(2, thick, [&node3, &node4, &node2], &material);
 
-        let k1 = tri1.k();
-        let k2 = tri2.k();
+        let k1: [[Dtype; 6]; 6] = tri1.k().recover();
+        let k2: [[Dtype; 6]; 6] = tri2.k().recover();
 
         assert_eq!(k1, k2);
     }
@@ -177,7 +177,7 @@ mod testing {
 
         let mut quad1 = Quad2D4N::new(1, thick, [&node1, &node2, &node3, &node4], &material);
 
-        let k1 = quad1.k();
+        let k1: [[Dtype; 8]; 8] = quad1.k().recover();
         assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
 
