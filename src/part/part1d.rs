@@ -1,5 +1,8 @@
 use crate::calc::LinearEqs;
-use crate::data::{ADtype, CompressedMatrix, Dtype};
+use crate::dtty::{
+    basic::{ADtype, Dtype},
+    matrix::CompressedMatrix,
+};
 use crate::node::Node1D;
 use crate::port::{Export, K};
 use crate::tool::compress_matrix;

@@ -1,4 +1,7 @@
-use crate::data::{CompressedMatrix, Data, Dtype, Jacobian2D};
+use crate::dtty::{
+    basic::{Dtype, Jacobian2D},
+    matrix::CompressedMatrix,
+};
 use crate::node::Node2D;
 use crate::port::K;
 use crate::tool::{compress_matrix, print_2darr};
@@ -361,19 +364,20 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     }
 
     /// Get the strain at integration point
-    fn strain_at_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
         if self.strain.is_none() {
-            self.strain.get_or_insert(self.calc_strain());
+            self.strain = Some(self.calc_strain());
         }
-        Data::Dim2(vec![self.strain.unwrap()])
+        vec![self.strain.unwrap().to_vec()]
     }
 
     /// Get the stress at integratiData point
-    fn stress_at_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
         if self.stress.is_none() {
-            self.stress.get_or_insert(self.calc_stress());
+            let cst_stress = self.calc_stress();
+            self.stress = Some(cst_stress);
         }
-        Data::Dim2(vec![self.stress.unwrap()])
+        vec![self.stress.unwrap().to_vec()]
     }
 
     /// Get element's info string
@@ -389,6 +393,8 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
 
 impl fmt::Display for Tri2D3N<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let strain = self.strain.unwrap();
+        let stress = self.stress.unwrap();
         write!(
             f,
 "\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\tStiffness Matrix K{} =  (*10^0)\n{}",
@@ -399,8 +405,8 @@ impl fmt::Display for Tri2D3N<'_> {
             self.nodes[0],
             self.nodes[1],
             self.nodes[2],
-            self.strain,
-            self.stress,
+            strain,
+            stress,
             self.id(),
             self.k_string(0.0),
         )

@@ -1,4 +1,4 @@
-use crate::data::{CompressedMatrix, Data, Dtype};
+use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
 use crate::node::Node2D;
 use crate::port::K;
 use crate::tool::compress_matrix;
@@ -16,8 +16,8 @@ pub struct Beam1D2N<'beam1d2n> {
     pub moment_of_inertia: Dtype,
     pub cross_sectional_area: Dtype,
     pub nodes: [&'beam1d2n Node2D; 2],
-    pub strain: Option<[[Dtype; 1]; 2]>,
-    pub stress: Option<[[Dtype; 1]; 2]>,
+    pub strain: Option<[Dtype; 2]>,
+    pub stress: Option<[Dtype; 2]>,
     pub k_matrix: Option<CompressedMatrix>,
     pub material: &'beam1d2n (Dtype, Dtype),
 }
@@ -176,25 +176,25 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     }
 
     /// Get the strain at point (x) inside the element
-    fn calc_strain(&self, xyz: [Dtype; 3]) -> [Dtype; 1] {
+    fn calc_strain(&self, xyz: [Dtype; 3]) -> Dtype {
         let x = xyz[0];
         let y = xyz[1];
         let xi = x / self.length();
         let b_mat = self.geometry_mat(xi);
         let elem_nodes_disps = SMatrix::<Dtype, 4, 1>::from(self.get_nodes_displacement());
-        let strain: [Dtype; 1] = (-y * b_mat * elem_nodes_disps).into();
+        let strain = (-y * b_mat * elem_nodes_disps)[(0, 0)];
         strain
     }
 
     /// Get element's stress vector, the stress in CST elem is a const
-    fn calc_stress(&self, xyz: [Dtype; 3]) -> [Dtype; 1] {
+    fn calc_stress(&self, xyz: [Dtype; 3]) -> Dtype {
         let ee = self.material.0;
-        [ee * self.calc_strain(xyz)[0]]
+        ee * self.calc_strain(xyz)
     }
 
     /// Get the strain at integration point
-    fn calc_strain_integration_point(&self) -> [[Dtype; 1]; 2] {
-        let mut epsilon: [[Dtype; 1]; 2] = [[0.0; 1]; 2];
+    fn calc_strain_integration_point(&self) -> [Dtype; 2] {
+        let mut epsilon: [Dtype; 2] = [0.0; 2];
         let gauss_pt: Dtype = (3.0_f32).sqrt() / 6.0;
         let int_pts: [Dtype; 2] = [0.5 - gauss_pt, 0.5 + gauss_pt];
         for idx in 0..2 {
@@ -204,8 +204,8 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
     }
 
     /// Get the stress at integration point
-    fn calc_stress_integration_point(&self) -> [[Dtype; 1]; 2] {
-        let mut sigma: [[Dtype; 1]; 2] = [[0.0; 1]; 2];
+    fn calc_stress_integration_point(&self) -> [Dtype; 2] {
+        let mut sigma: [Dtype; 2] = [0.0; 2];
         let gauss_pt: Dtype = (3.0_f32).sqrt() / 6.0;
         let int_pts: [Dtype; 2] = [0.5 - gauss_pt, 0.5 + gauss_pt];
         for idx in 0..2 {
@@ -219,7 +219,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
         let strain = self.calc_strain(xyz);
         println!(
             "\nelem[{}] strain:\n\tE_xx = {:-16.6}\n\tE_yy = {:-16.6}\n\tE_xy = {:-16.6}",
-            self.id, strain[0], 0.0, 0.0
+            self.id, strain, 0.0, 0.0
         );
     }
 
@@ -228,7 +228,7 @@ impl<'beam1d2n> Beam1D2N<'beam1d2n> {
         let stress = self.calc_stress(xyz);
         println!(
             "\nelem[{}] stress:\n\tS_xx = {:-16.6}\n\tS_yy = {:-16.6}\n\tS_xy = {:-16.6}",
-            self.id, stress[0], 0.0, 0.0
+            self.id, stress, 0.0, 0.0
         );
     }
 }
@@ -303,29 +303,19 @@ impl<'beam2d2n> K for Beam1D2N<'beam2d2n> {
     }
 
     /// Get the strain at (x,y) inside the element
-    fn strain_at_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
         if self.strain.is_none() {
-            self.strain
-                .get_or_insert(self.calc_strain_integration_point());
+            self.strain = Some(self.calc_strain_integration_point());
         }
-        let mut data: Vec<[Dtype; 1]> = Vec::with_capacity(2);
-        for idx in 0..2 {
-            data.push(self.strain.unwrap()[idx]);
-        }
-        Data::Dim1(data)
+        vec![self.strain.unwrap().to_vec()]
     }
 
     /// Get the stress at (x,y) inside the element
-    fn stress_at_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
         if self.stress.is_none() {
-            self.stress
-                .get_or_insert(self.calc_stress_integration_point());
+            self.stress = Some(self.calc_stress_integration_point());
         }
-        let mut data: Vec<[Dtype; 1]> = Vec::with_capacity(2);
-        for idx in 0..2 {
-            data.push(self.stress.unwrap()[idx]);
-        }
-        Data::Dim1(data)
+        vec![self.strain.unwrap().to_vec()]
     }
 
     /// Get element's info string

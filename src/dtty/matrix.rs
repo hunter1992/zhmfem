@@ -1,20 +1,4 @@
-/// This file define all kinds of data structure of ZHMFEM
-use atomic_float::{AtomicF32, AtomicF64};
-use na::SMatrix;
-
-pub type Dtype = f32;
-pub type ADtype = AtomicF32;
-
-pub type Jacobian2D = SMatrix<Dtype, 2, 2>;
-pub type Jacobian3D = SMatrix<Dtype, 3, 3>;
-
-/// Store strain or stress data
-#[derive(Clone)]
-pub enum Data {
-    Dim1(Vec<[Dtype; 1]>),
-    Dim2(Vec<[Dtype; 3]>),
-    Dim3(Vec<[Dtype; 6]>),
-}
+use crate::dtty::basic::Dtype;
 
 /// Symmetric Skyline method to storage element and part stiffness matrix
 #[derive(Clone)]

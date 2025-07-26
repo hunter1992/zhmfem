@@ -6,7 +6,7 @@ extern crate nalgebra as na;
 extern crate test;
 
 mod calc;
-mod data;
+mod dtty;
 mod elem;
 mod mesh;
 mod node;
@@ -15,7 +15,11 @@ mod port;
 mod tool;
 
 pub use calc::LinearEqs;
-pub use data::{ADtype, CompressedMatrix, Data, Dtype, Jacobian2D, Jacobian3D};
+pub use dtty::{
+    basic::{ADtype, Dtype, Jacobian2D, Jacobian3D},
+    matrix::CompressedMatrix,
+    sdata::Sdata,
+};
 pub use elem::{
     dim1::{beam::Beam1D2N, rod::Rod1D2N},
     dim2::{

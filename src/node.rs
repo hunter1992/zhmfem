@@ -1,4 +1,4 @@
-use crate::data::Dtype;
+use crate::dtty::basic::Dtype;
 use std::cell::RefCell;
 use std::fmt;
 

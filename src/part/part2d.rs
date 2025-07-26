@@ -1,5 +1,9 @@
 use crate::calc::LinearEqs;
-use crate::data::{ADtype, CompressedMatrix, Data, Dtype};
+use crate::dtty::{
+    basic::{ADtype, Dtype},
+    matrix::CompressedMatrix,
+    sdata::Sdata,
+};
 use crate::node::Node2D;
 use crate::port::{Export, K};
 use crate::tool::compress_matrix;
@@ -116,26 +120,6 @@ where
             forces[idx * 3 + 2] = 0.0 as Dtype;
         }
         forces
-    }
-
-    /// Get elements's strain data
-    pub fn elem_strain(&mut self) -> Vec<Data> {
-        let mut strain: Vec<Data> = Vec::with_capacity(self.cplds.len());
-        self.elems
-            .iter_mut()
-            .map(|elem| strain.push(elem.strain_at_intpt()))
-            .count();
-        strain
-    }
-
-    /// Get elements's stress data
-    pub fn elem_stress(&mut self) -> Vec<Data> {
-        let mut stress: Vec<Data> = Vec::with_capacity(self.cplds.len());
-        self.elems
-            .iter_mut()
-            .map(|elem| stress.push(elem.stress_at_intpt()))
-            .count();
-        stress
     }
 
     /// Calculate part's global stiffness matrix
@@ -349,6 +333,28 @@ where
         }
     }
 
+    /// Returns the strain value for each constant strain element
+    pub fn elem_strain(&mut self) -> Vec<Vec<Dtype>> {
+        let mut strain: Vec<Vec<Dtype>> = Vec::with_capacity(self.cplds.len());
+        self.elems
+            .iter_mut()
+            .map(|elem| strain.push(elem.strain_at_intpt().remove(0)))
+            .count();
+        crate::tool::print_2dvec("strain", &strain, 0.);
+        strain
+    }
+
+    /// Returns the stress value for each constant strain element
+    pub fn elem_stress(&mut self) -> Vec<Vec<Dtype>> {
+        let mut stress: Vec<Vec<Dtype>> = Vec::with_capacity(self.cplds.len());
+        self.elems
+            .iter_mut()
+            .map(|elem| stress.push(elem.stress_at_intpt().remove(0)))
+            .count();
+        crate::tool::print_2dvec("stress", &stress, 0.);
+        stress
+    }
+
     /// Wtrie triangle elements into vtk file
     pub fn vtk_tri2d3n_legacy(&mut self, vtk_file_name: &str) -> Vtk {
         let elem_num: usize = self.cplds.len();
@@ -376,16 +382,12 @@ where
         let mut cell_s12: Vec<Dtype> = vec![0.0; elem_num];
 
         for idx in 0..elem_num {
-            if let Data::Dim2(epsilon) = strain[idx].clone() {
-                cell_e11[idx] = epsilon[0][0];
-                cell_e22[idx] = epsilon[0][1];
-                cell_e12[idx] = epsilon[0][2];
-            }
-            if let Data::Dim2(sigma) = stress[idx].clone() {
-                cell_s11[idx] = sigma[0][0];
-                cell_s22[idx] = sigma[0][1];
-                cell_s12[idx] = sigma[0][2];
-            }
+            cell_e11[idx] = strain[idx][0];
+            cell_e22[idx] = strain[idx][1];
+            cell_e12[idx] = strain[idx][2];
+            cell_s11[idx] = stress[idx][0];
+            cell_s22[idx] = stress[idx][1];
+            cell_s12[idx] = stress[idx][2];
         }
 
         Vtk {

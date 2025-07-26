@@ -1,4 +1,4 @@
-use crate::data::Dtype;
+use crate::dtty::basic::Dtype;
 
 type Points = Vec<Vec<Dtype>>;
 type Coupls = Vec<Vec<usize>>;

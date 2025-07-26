@@ -1,4 +1,4 @@
-use crate::data::{CompressedMatrix, Data, Dtype};
+use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
 use crate::node::Node1D;
 use crate::port::K;
 use crate::tool::compress_matrix;
@@ -219,19 +219,19 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
     }
 
     /// Get the strain at (x,y) inside the element, in linear rod elem, strain is a const
-    fn strain_at_intpt(&mut self) -> Data {
+    fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
         if self.strain.is_none() {
-            self.strain.get_or_insert(self.calc_strain());
+            self.strain = Some(self.calc_strain());
         }
-        Data::Dim1(vec![self.strain.unwrap()])
+        vec![self.strain.unwrap().to_vec()]
     }
 
     /// Get the stress at (x,y) insDatae the element, in linear rod elem, stress is a const
-    fn stress_at_intpt(&mut self) -> Data {
+    fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
         if self.stress.is_none() {
-            self.stress.get_or_insert(self.calc_stress());
+            self.stress = Some(self.calc_stress());
         }
-        Data::Dim1(vec![self.stress.unwrap()])
+        vec![self.stress.unwrap().to_vec()]
     }
 
     /// Get element's info string

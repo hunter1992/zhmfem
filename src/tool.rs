@@ -1,4 +1,4 @@
-use crate::data::{CompressedMatrix, Dtype};
+use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
 use crate::elem::{
     dim1::{beam::Beam1D2N, rod::Rod1D2N},
     dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N},
@@ -7,6 +7,7 @@ use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
 use std::collections::HashMap;
 
+/// Return a matrix compressed by Skyline symmetry algorithm
 pub fn compress_matrix<const D: usize>(mat: [[Dtype; D]; D]) -> CompressedMatrix {
     let mut value: Vec<Dtype> = vec![];
     let mut ptr: Vec<usize> = vec![];
