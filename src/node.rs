@@ -1,5 +1,6 @@
 use crate::dtty::basic::Dtype;
 use std::cell::RefCell;
+use std::default::Default;
 use std::fmt;
 
 pub struct Node1D {
@@ -28,25 +29,50 @@ impl fmt::Display for Node1D {
 
 pub struct Node2D {
     pub id: usize,
-    pub coords: [Dtype; 2],
-    pub displs: RefCell<[Dtype; 2]>,
-    pub forces: RefCell<[Dtype; 2]>,
+    pub coords: Box<RefCell<[Dtype; 2]>>,
+    pub displs: Box<RefCell<[Dtype; 2]>>,
+    pub forces: Box<RefCell<[Dtype; 2]>>,
 }
 
 impl Node2D {
     pub fn new(id: usize, coords: [Dtype; 2]) -> Node2D {
         Node2D {
             id,
-            coords,
-            displs: RefCell::new([0.0; 2]),
-            forces: RefCell::new([0.0; 2]),
+            coords: Box::new(RefCell::new(coords)),
+            displs: Box::new(RefCell::new([0.0; 2])),
+            forces: Box::new(RefCell::new([0.0; 2])),
+        }
+    }
+}
+
+impl Default for Node2D {
+    fn default() -> Self {
+        Node2D {
+            id: 0,
+            coords: Box::new(RefCell::new([0.0; 2])),
+            displs: Box::new(RefCell::new([0.0; 2])),
+            forces: Box::new(RefCell::new([0.0; 2])),
         }
     }
 }
 
 impl fmt::Display for Node2D {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f,"\n\t\tNode_2D:\n\t\t\tId: {}\n\t\t\tCoords: [{:-10.4}, {:-10.4}]\n\t\t\tDispls: [{:-10.4}, {:-10.4}]\n\t\t\tForces: [{:-10.4}, {:-10.4}]\n", self.id, self.coords[0], self.coords[1], self.displs.borrow()[0], self.displs.borrow()[1], self.forces.borrow()[0], self.forces.borrow()[1])
+        write!(
+            f,
+            "\n\t\tNode_2D:
+\t\t\tId: {}
+\t\t\tCoords: [{:-10.4}, {:-10.4}]
+\t\t\tDispls: [{:-10.4}, {:-10.4}]
+\t\t\tForces: [{:-10.4}, {:-10.4}]\n",
+            self.id,
+            self.coords.borrow()[0],
+            self.coords.borrow()[1],
+            self.displs.borrow()[0],
+            self.displs.borrow()[1],
+            self.forces.borrow()[0],
+            self.forces.borrow()[1]
+        )
     }
 }
 

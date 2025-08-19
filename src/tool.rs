@@ -1,23 +1,26 @@
 use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
 use crate::elem::{
-    dim1::{beam::Beam1D2N, rod::Rod1D2N},
-    dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N},
+    //dim1::{beam::Beam1D2N, rod::Rod1D2N},
+    dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
 };
 use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
+use std::boxed::Box;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::default::Default;
 
 /// Return a matrix compressed by Skyline symmetry algorithm
-pub fn compress_matrix<const D: usize>(mat: [[Dtype; D]; D]) -> CompressedMatrix {
-    let mut value: Vec<Dtype> = vec![];
-    let mut ptr: Vec<usize> = vec![];
+pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> CompressedMatrix {
+    let mut values: Vec<Dtype> = vec![];
+    let mut pointer: Vec<usize> = vec![];
 
-    let mut flag: bool = true;
-    let mut counter: usize = 0;
-    for idx in 0..D {
-        ptr.push(counter);
-        for idy in 0..=idx {
-            if mat[idx][idy] == 0.0 {
+    let mut flag: bool = true; //当前行是否需要处理
+    let mut col_idx_in_single_row: usize = 0;
+    for row_idx in 0..DIM {
+        pointer.push(col_idx_in_single_row);
+        for col_idx in 0..=row_idx {
+            if mat[row_idx][col_idx] == 0.0 {
                 if flag == false {
                     // 正定矩阵必满秩，下面处理全零行(或列)的分支暂时注释掉
                     /*if idy == idx {
@@ -26,20 +29,23 @@ pub fn compress_matrix<const D: usize>(mat: [[Dtype; D]; D]) -> CompressedMatrix
                     }*/
                     continue;
                 } else {
-                    value.push(mat[idx][idy]);
-                    counter += 1;
+                    values.push(mat[row_idx][col_idx]);
+                    col_idx_in_single_row += 1;
                     continue;
                 }
             }
-            value.push(mat[idx][idy]);
-            counter += 1;
+            values.push(mat[row_idx][col_idx]);
+            col_idx_in_single_row += 1;
             flag = true;
         }
         flag = false;
     }
-    ptr.push(value.len());
+    pointer.push(values.len());
 
-    CompressedMatrix { value, ptr }
+    CompressedMatrix {
+        values: Box::new(values),
+        pointr: Box::new(pointer),
+    }
 }
 
 /// calculate part's deform energy
@@ -48,7 +54,7 @@ pub fn strain_energy<const D: usize>(
     displacement: [Dtype; D],
 ) -> Dtype {
     let disp = SMatrix::<Dtype, D, 1>::from(displacement);
-    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix.recover());
+    let k_matrix = SMatrix::<Dtype, D, D>::from(*stiffness_matrix.recover());
     let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
     strain_energy[0][0]
 }
@@ -205,13 +211,22 @@ pub fn convert_to_3d_points<'zhmfem>(
 }
 
 /// Constructe a 2D nodes vector
-pub fn nodes2d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec<Node2D> {
-    let mut nodes: Vec<Node2D> = Vec::with_capacity(coords.len());
+pub fn nodes2d_vec(
+    coords: &Vec<[Dtype; 2]>,
+    force_idx: &[usize],
+    force_value: &[Dtype],
+) -> Vec<Node2D> {
+    let num_nodes: usize = coords.len();
+    let mut nodes: Vec<Node2D> = Vec::with_capacity(num_nodes);
     for (idx, coord) in coords.iter().enumerate() {
-        nodes.push(Node2D::new(idx, [coord[0], coord[1]]));
+        nodes.push(Node2D {
+            id: idx,
+            coords: Box::new(RefCell::new([coord[0], coord[1]])),
+            ..Default::default()
+        });
     }
-    for (idx, &f) in forces {
-        nodes[idx / 2].forces.borrow_mut()[idx % 2] = f;
+    for (idx, &f) in force_idx.iter().zip(force_value.iter()) {
+        nodes[idx / 2].forces.get_mut()[idx % 2] = f;
     }
     nodes
 }
@@ -228,6 +243,7 @@ pub fn nodes3d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec
     nodes
 }
 
+/*
 /// Constructe a rod1d2n elements vector
 /// every rod with same cross sectional area
 pub fn rod1d2n_vec<'rod1d2n>(
@@ -248,7 +264,9 @@ pub fn rod1d2n_vec<'rod1d2n>(
     }
     rod1d2n
 }
+*/
 
+/*
 /// Constructe a rod2d2n elements vector
 /// every rod with same cross sectional area
 pub fn rod2d2n_vec<'rod2d2n>(
@@ -268,7 +286,9 @@ pub fn rod2d2n_vec<'rod2d2n>(
     }
     rod2d2n
 }
+*/
 
+/*
 /// Constructe a beam1d2n elements vector
 /// every beam with same cross sectional area
 pub fn beam1d2n_vec<'beam1d2n>(
@@ -290,23 +310,25 @@ pub fn beam1d2n_vec<'beam1d2n>(
     }
     beam1d2n
 }
+*/
 
 /// Constructe a tri2d3n elements vector
 /// every element with same thick
 pub fn tri2d3n_vec<'tri2d3n>(
     thick: Dtype,
     nodes: &'tri2d3n [Node2D],
-    coupled_nodes_idx: &[Vec<usize>],
-    material: &'tri2d3n (Dtype, Dtype),
+    coupled_nodes_id: &[Vec<usize>],
+    material: [Dtype; 2],
 ) -> Vec<Tri2D3N<'tri2d3n>> {
-    let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes_idx.len());
-    for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
-        tri2d3n.push(Tri2D3N::new(
-            ele_idx,
+    let mut tri2d3n: Vec<Tri2D3N> = Vec::with_capacity(coupled_nodes_id.len());
+    for (id, cpld) in coupled_nodes_id.iter().enumerate() {
+        tri2d3n.push(Tri2D3N {
+            id,
             thick,
-            [&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]],
+            nodes: Box::new([&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]]),
+            k_matrix: None,
             material,
-        ))
+        })
     }
     tri2d3n
 }
@@ -315,23 +337,24 @@ pub fn tri2d3n_vec<'tri2d3n>(
 /// every element with same thick
 pub fn quad2d4n_vec<'quad2d4n>(
     thick: Dtype,
-    nodes: &'quad2d4n Vec<Node2D>,
-    coupled_nodes: &[Vec<usize>],
-    material: &'quad2d4n (Dtype, Dtype),
+    nodes: &'quad2d4n [Node2D],
+    coupled_nodes: &[&[usize]],
+    material: [Dtype; 2],
 ) -> Vec<Quad2D4N<'quad2d4n>> {
     let mut quad2d4n: Vec<Quad2D4N> = Vec::with_capacity(coupled_nodes.len());
-    for (ele_idx, cpld) in coupled_nodes.iter().enumerate() {
-        quad2d4n.push(Quad2D4N::new(
-            ele_idx,
+    for (id, cpld) in coupled_nodes.iter().enumerate() {
+        quad2d4n.push(Quad2D4N {
+            id,
             thick,
-            [
+            nodes: Box::new([
                 &nodes[cpld[0]],
                 &nodes[cpld[1]],
                 &nodes[cpld[2]],
                 &nodes[cpld[3]],
-            ],
+            ]),
+            k_matrix: None,
             material,
-        ))
+        })
     }
     quad2d4n
 }

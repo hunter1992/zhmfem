@@ -24,16 +24,15 @@ A finite element calculation command line software based on Rust
 
 <!-- PROJECT LOGO -->
 <br />
-<div align="center">
+<div>
   <a href="https://github.com/hunter1992/zhmfem">
     <img src="imgs/zfem.png" alt="Logo" width="1000" height="391">
-
   </a>
 
 <h3 align="center">ZFEM</h3>
 
   <p align="center">
-    A finite element calculation command line software based on Rust
+    A lightweight, fast finite element calculation software based on Rust
     <br />
     <a href="https://github.com/hunter1992/zhmfem"><strong>Explore the docs »</strong></a>
     <br />
@@ -81,18 +80,19 @@ A finite element calculation command line software based on Rust
 
 ![FEM](imgs/FEM.jpg "FEM application")
 
-After several years of research on the theoretical analysis and application of finite element methods, ZHM initiated this open source project out of interest upon his PhD graduation.
-
 The main goals of this open source project are: 
-* to efficiently implement classical finite element algorithms using the Rust language, and to be able to perform engineering calculations with the required efficiency and precision; 
-* Explore the application of new finite element algorithms (such as virtual element method, peridynamics method, etc.) in practical problems.
+* Efficiently implement classical finite element algorithms using the Rust language, and
+to be able to perform engineering calculations with the required efficiency and precision; 
+* Explore the application of new finite element algorithms (such as virtual element method,
+peridynamics method, etc.) in practical problems.
 
-The answers to some basic questions about this project are as follows:
+The answers to some basic questions about this project:
 * Why Rust? -- Performance, Reliability and Productivity. [(About Rust Language)](https://www.rust-lang.org/)
-* pre/post processing module? -- ZHMFEM is in the early stages of core function development and there are currently no plans for pre/post processing modules. The nodes, cells, loads and boundary conditions required for pre-processing can be set by code; Post-processing is implemented in ParaView after the calculation result is output to vtk file.
-
-
-ZHMFEM is currently in the early stages of development, and the authors look forward to receiving suggestions from various user groups, and will accept good suggestions after full consideration and discussion.
+* pre/post processing module? -- The ZHMFEM project is currently in the early stages of core 
+functionality development. The author's toolchain currently uses gmsh for preprocessing and 
+ParaView for postprocessing the results of ZHMFEM calculations. These two tools work effectively 
+and reliably with ZHMFEM to perform complete finite element calculation experiments. Therefore, 
+at the current stage of development, there are no plans to redevelop new pre/post-processing modules.
 
 <p align="right">
 (<a href="#readme-top">back to top</a>)</p>
@@ -113,71 +113,81 @@ ZHMFEM is currently in the early stages of development, and the authors look for
 The author developed the original version of ZHMFEM using the Manjaro Linux system. Currently in the early stages of core functionality development, the compiled version of ZHMFEM is __not__ compatible with MacOS and Windows (you can fix this by compiling the source code yourself on your system). The operating system information used by the author is as follows:
 ```
  ██████████████████  ████████     zhm@zhm
- ██████████████████  ████████     OS: Manjaro 24.2.1 Yonada
- ██████████████████  ████████     Kernel: x86_64 Linux 6.1.119-1-MANJARO
- ██████████████████  ████████     Uptime: 2h 26m
- ████████            ████████     Packages: 1600
+ ██████████████████  ████████     OS: Manjaro 25.0.6 Zetar
+ ██████████████████  ████████     Kernel: x86_64 Linux 6.12.39-1-MANJARO
+ ██████████████████  ████████     Uptime: 2d 33m
+ ████████            ████████     Packages: 1450
  ████████  ████████  ████████     Shell: zsh 5.9
- ████████  ████████  ████████     Resolution: 1920x1080
+ ████████  ████████  ████████     Resolution: 2560x1440
  ████████  ████████  ████████     DE: KDE
  ████████  ████████  ████████     WM: KWin
- ████████  ████████  ████████     GTK Theme: Breath [GTK2/3]
+ ████████  ████████  ████████     GTK Theme: Breeze [GTK2/3]
  ████████  ████████  ████████     Icon Theme: breeze
- ████████  ████████  ████████     Disk: 199G / 326G (65%)
- ████████  ████████  ████████     CPU: Intel Core i5-8265U @ 8x 3.9GHz [35.0°C]
+ ████████  ████████  ████████     Disk: 173G / 989G (19%)
+ ████████  ████████  ████████     CPU: Intel Core i5-8265U @ 8x 3.9GHz [55.0°C]
  ████████  ████████  ████████     GPU: NVIDIA GeForce MX250
-                                  RAM: 4701MiB / 7699MiB
 ```
 
 #### 2. Rust version
 
-ZHMFEM was developed using the neightly version of the Rust language, and the latest version of Rust that currently makes ZHMFEM run is:
+The Rust toolchain information used in the latest version of ZHMFEM is as follows:
 ```
-rustc 1.85.0-nightly (7c002ff9a 2024-12-25)
+rustc 1.90.0-nightly (adcb3d3b4 2025-07-31)
 binary: rustc
-commit-date: 2024-12-25
+commit-hash: adcb3d3b4cd3b7c4cde642f3ed537037f293738e
+commit-date: 2025-07-31
 host: x86_64-unknown-linux-gnu
-release: 1.85.0-nightly
-LLVM version: 19.1.6
+release: 1.90.0-nightly
+LLVM version: 20.1.8
 ```
 
-### Installation and use
+[install Rust now](https://www.rust-lang.org/tools/install) 🌞
 
-1. Install the Rust language environment on your operating system. [install Rust now](https://www.rust-lang.org/tools/install)
-2. Clone or download the ZHMFEM repository to local
+### Install ZHMFEM and use
+
+1. Clone ZHMFEM:
    ```
    git clone https://github.com/hunter1992/zhmfem.git
    ```
-3. Check out the FEM calculation examples located in the 'zhmfem/examples/' path. 
-   Run an example with the following command:
+
+2. View the finite element calculation examples included with ZHMFEM in the 'zhmfem/examples/' path. 
+   You can run an example with the following command in shell:
    ```
    cargo run --examples <example-name>
    ```
-   Or you can compile and run the examples more quickly using the following command:
+   Or you can compile and run the examples in release mod:
    ```
-   cargo run -j 8 --release --example <example-name>
+   cargo run -j 4 --release --example <example-name>
    ```
+
+   Here the <example-name> means the file name without ".rs" .
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-<!-- USAGE EXAMPLES -->
-## Tutorial
+<!-- Case study using ZHMFEM -->
+## Case study using ZHMFEM
 
-The using of ZHMFEM is introduced through modeling, calculation and output results of a practical example question.
+In this study, ZHMFEM is employed to calculate the plane stress problem of a square thin plate.
+Subsequently, the calculation results obtained from ZHMFEM are rigorously verified.
+
+### Calculation case description
+
 This example question comes from 
-__[Fundamentals of Finite Element Analysis](http://www.caemotion.com/pdf/Fundamentals%20of%20Finite%20Element%20Analysis.pdf)__
-(Page105) written by Zeng Pan. 
+__[Finite Element Basics Tutorial](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d)__
+( Page114 ) written by Zeng Pan. 
 
-(in Chinese: [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80) (清华大学)《有限元基础教程》北京：高等教育出版社，2009.7（2012.11重印）).
+( in Chinese: [《有限元基础教程》](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d)/ [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)编著
+北京：高等教育出版社，2009.7（2022.5 重印） ISBN 978-7-04-025841-7 ).
 
-If you are interested in learning FEM, here is a great 
-[lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
-by Prof. Zeng Pan.
+If you are interested in learning FEM, here is a 
+[great lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
+by Prof. Zeng Pan (Tsinghua University).
 
-The sample question is:
+The example question is:
 For the plane stress problem shown in the figure below, the given material parameters are:
-E = 1 (Young's modulus), $\nu$ = 0.25 (Poisson's ratio). The thickness of the sheet is $1$. 
+E = 209GPa (Young's modulus), $\nu$ = 0.269 (Poisson's ratio). 
+The square steel plate has a side length of 1000 mm and a thickness of 10 mm. 
 
 + Known displacement boundary conditions: 
 
@@ -187,24 +197,36 @@ E = 1 (Young's modulus), $\nu$ = 0.25 (Poisson's ratio). The thickness of the sh
   
   $$p_{Bx}=-1,\quad p_{By}=0,\quad p_{Cx}=1,\quad p_{Cy}=0,\quad p_{Dy}=0$$
 
+![Plane stress problem 平面应力问题](imgs/CST.png "plane stress problem")
 
-Problems to be solved:
+### Aim  
 
-The linear triangular element (CST) and rectangular element are used to solve this problem respectively. The displacement, strain, stress, support reaction force at the nodes; strain energy, external force work and total potential energy of the system need to be calculated. Through the calculation results of the two schemes, the difference in calculation accuracy of the two elements for the same problem is compared.
+Use the two-dimensional plane elements (Tri2D3N and Quad2D4N elements) in ZHMFEM to
+calculate the plane stress problem of a square thin plate. Obtain node displacement,
+integral point stress, and thin plate deformation.
 
 Triangular elements and rectangular elements are used to mesh square thin plates, as shown in Figure 4-8(a) and 4-8(b).
 
-![Plane stress problem 平面应力问题](imgs/CST.png "plane stress problem")
+### Solution A: triangular element
 
-### Solution
+After cloning ZHMFEM, you can find the *tri2d3n.rs* file in the “zhmfem/examples/” path, 
+which contains the calculation code for this case.
 
-1. **Solution of linear triangular element**
+1. #### Computational code programming
 
-You can find the tri2d3n.rs file under 'zhmfem/examples/', 
-which shows all the steps of setting material and size parameters, 
-constructing nodes and cells, setting boundary conditions and external loads, calculating problems, output result files, etc.
+The code includes node and element construction, as well as processes such as
+applying boundary conditions, submitting calculations, and writing results to txt and vtk files.
+The code is accompanied by detailed explanatory comments.
 
-```
+The code in *tri2d3n.rs* under “zhmfem/examples/”:
+
+<details>
+
+<summary><span  style="font-size: medium; color: orange; ">tri2d3n.rs</span></summary>
+
+```rust
+// tri2d3n.rs
+
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -220,7 +242,10 @@ fn main() {
     const E: Dtype = 0.0; // Exponent in scientific notation to base 10
     const CPU_CORES: usize = 2;
 
-    let calc_method: &str = "lu"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+    // "lu" for LU decomposition algorithm or
+    // "cholesky" for Cholesky Decomposition algorithm or
+    // "gs"       for gauss-seidel iteration algorithm
+    let calc_method: &str = "cholesky";
     let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
     let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
@@ -236,45 +261,36 @@ fn main() {
     const F: usize = 2; // num of degree freedom at single node
 
     // Manually set coords and grouped nodes index
-    /*
-    let points: Vec<Vec<Dtype>> = vec![
-        vec![0.0, 0.0],
-        vec![1.0, 0.0],
-        vec![1.0, 1.0],
-        vec![0.0, 1.0],
-    ];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
+    let points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2], vec![3, 2, 1]];
 
     // Set boundary conditions and external loads manually
-    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
-    let force_index: Vec<usize> = vec![2, 4];
+    let zero_disp_index: Vec<usize> = vec![0, 1, 4];
+    let force_index: Vec<usize> = vec![2, 6];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
-    */
 
     // Automatically set coords and grouped nodes index
     // Auto-mesh generate coords and grouped nodes index
-    const W: Dtype = 1.0; // width
-    const H: Dtype = 1.0; // height
-    let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
-    let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
+    /*
+        const W: Dtype = 1.0; // width
+        const H: Dtype = 1.0; // height
+        let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
+        let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
 
-    // Set boundary conditions and external loads automatically
-    let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
-    let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
-    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+        // Set boundary conditions and external loads automatically
+        let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
+        let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
+        let force_value: Vec<Dtype> = vec![-1.0, 1.0];
 
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
+        let force_data: HashMap<usize, Dtype> = force_index
+            .into_iter()
+            .zip(force_value.into_iter())
+            .collect();
+    */
 
     // -------- Part 2:  Construct nodes, elements and parts --------
     // Construct 2D nodes vector
-    let nodes = nodes2d_vec(&points, &force_data);
+    let nodes = nodes2d_vec(&points, &force_index, &force_value);
 
     // Construct Tri2D3N elements vector
     let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
@@ -290,7 +306,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -315,13 +331,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        *part.k(parallel_or_singllel, CPU_CORES),
+        part.k(parallel_or_singllel, CPU_CORES).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );
@@ -339,7 +355,7 @@ fn main() {
     // -------- Part 5:  Write clac result into txt file --------
     let problem_type = "stress2D";
     let element_type = "Tri2D3N";
-    let output_path = "/path/to/output/result/";
+    let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output_txt = format!(
         "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
     );
@@ -364,225 +380,22 @@ fn main() {
     println!("\n>>> Total time consuming: {:?}", total_time);
 }
 ```
-    
-  The rect2d4n.rs file under 'zhmfem/examples/' shows the steps to solve the example problem with linear rectangular elements. 
-  Open the file to explore for more details.
+</details>
 
-2. **Build & Run**
+2. #### Build & Run
 
 Open Shell in the zhmfem root directory and use the following command
 to compile and run the tri2d3n.rs file and rect2d4n.rs file:
 ```
-cargo run -j 8 --release --example tri2d3n
+cargo run -j 4 --release --example tri2d3n
 ```
 
-```
-cargo run -j 8 --release --example rect2d4n
-```
+3. #### Check the results
 
-3. **Check the results**
-
-After compiling and running the tri2d3n.rs file, the following results are displayed in the Shell:
-
-```
->>> Assembling Part2D(#1)'s stiffness matrix K1 in single thread ......
-
->>> Calculating Tri2D3N(#0)'s local stiffness matrix k0 ......
-
->>> Calculating Tri2D3N(#1)'s local stiffness matrix k1 ......
-
->>> Assembly Down!
-        time consuming: 6.693µs
-
-Part #1  K =  (* 10^0)
-[[      0.733333       0.333333      -0.533333      -0.200000      -0.200000      -0.133333       0.000000       0.000000 ]
- [      0.333333       0.733333      -0.133333      -0.200000      -0.200000      -0.533333       0.000000       0.000000 ]
- [     -0.533333      -0.133333       0.733333       0.000000       0.000000       0.333333      -0.200000      -0.200000 ]
- [     -0.200000      -0.200000       0.000000       0.733333       0.333333       0.000000      -0.133333      -0.533333 ]
- [     -0.200000      -0.200000       0.000000       0.333333       0.733333       0.000000      -0.533333      -0.133333 ]
- [     -0.133333      -0.533333       0.333333       0.000000       0.000000       0.733333      -0.200000      -0.200000 ]
- [      0.000000       0.000000      -0.200000      -0.133333      -0.533333      -0.200000       0.733333       0.333333 ]
- [      0.000000       0.000000      -0.200000      -0.533333      -0.133333      -0.200000       0.333333       0.733333 ]]
-
-
->>> LU decomposition method down!
-        time consuming = 18.356µs
-
-qe = (10^0 *)
-[[
-           0.000000 
-           0.000000 
-          -1.718750 
-          -0.937500 
-           0.000000 
-           0.781250 
-           1.718750 
-          -1.718750 
-]]
-
-
-fe = (10^0 *)
-[[
-           1.000000 
-           0.000000 
-          -1.000000 
-           0.000000 
-          -1.000000 
-           0.000000 
-           1.000000 
-           0.000000 
-]]
-
-
->>> System energy:
-        E_d:  1.718750 (deform energy)
-        W_f:  3.437500 (exforce works)
-        E_p: -1.718750 (potential energy)
-
------------------------------------------------------------------------------
-Elem_Tri2D3N:
-        Id:     0
-        Area:     0.500000
-        Mats:     1.000000 (Young's modulus)
-                  0.250000 (Poisson's ratio)
-        Nodes:
-                Node_2D:
-                        Id: 0
-                        Coords: [    0.0000,     0.0000]
-                        Displs: [    0.0000,     0.0000]
-                        Forces: [    1.0000,     0.0000]
-
-                Node_2D:
-                        Id: 1
-                        Coords: [    1.0000,     0.0000]
-                        Displs: [   -1.7188,    -0.9375]
-                        Forces: [   -1.0000,     0.0000]
-
-                Node_2D:
-                        Id: 2
-                        Coords: [    0.0000,     1.0000]
-                        Displs: [    0.0000,     0.7812]
-                        Forces: [   -1.0000,     0.0000]
-
-        Strain:
-                [   -1.718750,     0.781250,    -0.937500]
-        Stress:
-                [   -1.625000,     0.375000,    -0.375000]
-
-        Stiffness Matrix K0 =  (*10^0)
-[[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
- [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
- [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
- [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
- [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
- [    -0.133333     -0.533333      0.133333      0.000000      0.000000      0.533333 ]]
-
------------------------------------------------------------------------------
-Elem_Tri2D3N:
-        Id:     1
-        Area:     0.500000
-        Mats:     1.000000 (Young's modulus)
-                  0.250000 (Poisson's ratio)
-        Nodes:
-                Node_2D:
-                        Id: 3
-                        Coords: [    1.0000,     1.0000]
-                        Displs: [    1.7188,    -1.7188]
-                        Forces: [    1.0000,     0.0000]
-
-                Node_2D:
-                        Id: 2
-                        Coords: [    0.0000,     1.0000]
-                        Displs: [    0.0000,     0.7812]
-                        Forces: [   -1.0000,     0.0000]
-
-                Node_2D:
-                        Id: 1
-                        Coords: [    1.0000,     0.0000]
-                        Displs: [   -1.7188,    -0.9375]
-                        Forces: [   -1.0000,     0.0000]
-
-        Strain:
-                [    1.718750,    -0.781250,     0.937500]
-        Stress:
-                [    1.625000,    -0.375000,     0.375000]
-
-        Stiffness Matrix K1 =  (*10^0)
-[[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
- [     0.333333      0.733333     -0.133333     -0.200000     -0.200000     -0.533333 ]
- [    -0.533333     -0.133333      0.533333      0.000000      0.000000      0.133333 ]
- [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
- [    -0.200000     -0.200000      0.000000      0.200000      0.200000      0.000000 ]
- [    -0.133333     -0.533333      0.133333      0.000000      0.000000      0.533333 ]]
-
->>> Writing calc results into txt file ......
-    Down!
-
->>> Writing calc results into vtk file ......
-    Down!
-
->>> Total time consuming: 771.936µs
-
-```
-
-After compiling and running the rect2d4n.rs file, the following results are displayed in the Shell:
-```
->>> Assembling Part2D(#1)'s global stiffness matrix K1 ......
-
->>> Calculating Quad2D4N(#0)'s stiffness matrix k0 ......
-
-Part #1  K =  (* 10^0)
-[[     0.488889      0.166667     -0.288889     -0.033333      0.044444      0.033333     -0.244444     -0.166667 ]
-[     0.166667      0.488889      0.033333      0.044444     -0.033333     -0.288889     -0.166667     -0.244444 ]
-[    -0.288889      0.033333      0.488889     -0.166667     -0.244444      0.166667      0.044444     -0.033333 ]
-[    -0.033333      0.044444     -0.166667      0.488889      0.166667     -0.244444      0.033333     -0.288889 ]
-[     0.044444     -0.033333     -0.244444      0.166667      0.488889     -0.166667     -0.288889      0.033333 ]
-[     0.033333     -0.288889      0.166667     -0.244444     -0.166667      0.488889     -0.033333      0.044444 ]
-[    -0.244444     -0.166667      0.044444      0.033333     -0.288889     -0.033333      0.488889      0.166667 ]
-[    -0.166667     -0.244444     -0.033333     -0.288889      0.033333      0.044444      0.166667      0.488889 ]]
-
-
->>> LU decomposition method down!
-        time consuming = 2.172µs
-
-qe = (10^0 *)
-[[      0.000000       0.000000      -4.090909      -4.090909       0.000000      -0.000001       4.090909      -4.090909 ]]
-
-
-fe = (10^0 *)
-[[      1.000000       0.000000      -1.000000       0.000000      -1.000000      -0.000000       1.000000       0.000000 ]]
-
-
->>> System energy:
-        E_d:  4.090909 (deform energy)
-        W_f:  8.181817 (exforce works)
-        E_p: -4.090909 (potential energy)
-Quad2D4N k0 =  (* 10^0)
-[[     0.488889     0.166667    -0.288889    -0.033333    -0.244444    -0.166667     0.044444     0.033333]
-[     0.166667     0.488889     0.033333     0.044444    -0.166667    -0.244444    -0.033333    -0.288889]
-[    -0.288889     0.033333     0.488889    -0.166667     0.044444    -0.033333    -0.244444     0.166667]
-[    -0.033333     0.044444    -0.166667     0.488889     0.033333    -0.288889     0.166667    -0.244444]
-[    -0.244444    -0.166667     0.044444     0.033333     0.488889     0.166667    -0.288889    -0.033333]
-[    -0.166667    -0.244444    -0.033333    -0.288889     0.166667     0.488889     0.033333     0.044444]
-[     0.044444    -0.033333    -0.244444     0.166667    -0.288889     0.033333     0.488889    -0.166667]
-[     0.033333    -0.288889     0.166667    -0.244444    -0.033333     0.044444    -0.166667     0.488889]]
-
-
-elem[0] strain:
-        E_xx =        -4.090909
-        E_yy =        -0.000001
-        E_xy =        -4.090909
-
-elem[0] stress:
-        S_xx =        -4.363636
-        S_yy =        -1.090910
-        S_xy =        -1.636364
-
->>> Writing calc results into txt file ......
-    Down!
-
->>> Total time consuming: 446.086µs
-```
+ZHMFEM currently provides two types of output: one is a txt text file containing
+detailed information on all physical quantities at components, elements, and nodes;
+the other is a vtk file that can be used with ParaView software to display post-processing
+content such as meshes, physical quantities, deformation diagrams, and stress distributions.
    
 The calculation results of two kinds of elements for the same problem shows that:
 

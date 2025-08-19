@@ -22,7 +22,7 @@ fn main() {
     let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
 
     let thick: Dtype = 1.0; //Thickness of the plate
-    let material: (Dtype, Dtype) = (1.0, 0.25); //Young's modulud & Poisson's ratio
+    let material: [Dtype; 2] = [1.0, 0.25]; //Young's modulud & Poisson's ratio
 
     // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
@@ -32,48 +32,39 @@ fn main() {
     const F: usize = 2; // num of degree freedom at single node
 
     // Manually set coords and grouped nodes index
-    let points: Vec<Vec<Dtype>> = vec![
-        vec![0.0, 0.0],
-        vec![1.0, 0.0],
-        vec![0.0, 1.0],
-        vec![1.0, 1.0],
-    ];
+    let points = vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
     let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2], vec![3, 2, 1]];
 
     // Set boundary conditions and external loads manually
     let zero_disp_index: Vec<usize> = vec![0, 1, 4];
     let force_index: Vec<usize> = vec![2, 6];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
 
     // Automatically set coords and grouped nodes index
     // Auto-mesh generate coords and grouped nodes index
     /*
-    const W: Dtype = 1.0; // width
-    const H: Dtype = 1.0; // height
-    let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
-    let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
+        const W: Dtype = 1.0; // width
+        const H: Dtype = 1.0; // height
+        let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
+        let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
 
-    // Set boundary conditions and external loads automatically
-    let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
-    let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
-    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+        // Set boundary conditions and external loads automatically
+        let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
+        let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
+        let force_value: Vec<Dtype> = vec![-1.0, 1.0];
 
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
+        let force_data: HashMap<usize, Dtype> = force_index
+            .into_iter()
+            .zip(force_value.into_iter())
+            .collect();
     */
 
     // -------- Part 2:  Construct nodes, elements and parts --------
     // Construct 2D nodes vector
-    let nodes = nodes2d_vec(&points, &force_data);
+    let nodes = nodes2d_vec(&points, &force_index, &force_value);
 
     // Construct Tri2D3N elements vector
-    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, material);
 
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =

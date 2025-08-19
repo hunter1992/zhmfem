@@ -4,7 +4,7 @@ use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
 /// Output stress/strain vector at some point in element.
 pub trait K {
     fn k(&mut self) -> &CompressedMatrix;
-    fn k_printer(&self, n_exp: Dtype);
+    fn k_printr(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
 
     fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>>;

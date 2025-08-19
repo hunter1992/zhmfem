@@ -20,38 +20,34 @@ fn main() {
 
     let parallel_or_singllel: &str = "s"; // "s" or "p"
 
-    let thick: Dtype = 1.0; //Thickness of the plate
-    let material: (Dtype, Dtype) = (206000.0, 0.25); //Young's modulud & Poisson's ratio
+    let thick: Dtype = 10.0; //Thickness of the plate
+    let material: [Dtype; 2] = [209000.0, 0.269]; //Young's modulud & Poisson's ratio
 
     // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
-    const R: usize = 19; // rows of nodes
-    const C: usize = 19; // columns of nodes
+    const R: usize = 20; // rows of nodes
+    const C: usize = 20; // columns of nodes
     const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
     // Automatically set coords and grouped nodes index
     // Auto-mesh generate coords and grouped nodes index
-    const W: Dtype = 10.0; // width
-    const H: Dtype = 10.0; // height
+    const W: Dtype = 1000.0; // width
+    const H: Dtype = 1000.0; // height
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
     let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
 
     // Set boundary conditions and external loads automatically
     let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
     let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
-    let force_value: Vec<Dtype> = vec![-50000.0, 50000.0];
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
+    let force_value: Vec<Dtype> = vec![-100000000.0, 100000000.0];
 
     // -------- Part 2:  Construct nodes, elements and parts --------
     // Construct 2D nodes vector
-    let nodes = nodes2d_vec(&points, &force_data);
+    let nodes = nodes2d_vec(&points, &force_index, &force_value);
 
     // Construct Tri2D3N elements vector
-    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, &material);
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, material);
 
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =

@@ -1,22 +1,19 @@
-use super::triangle::Tri2D3N;
 use crate::dtty::{
     basic::{Dtype, Jacobian2D},
     matrix::CompressedMatrix,
 };
 use crate::node::Node2D;
 use crate::port::K;
-use crate::tool::{compress_matrix, print_1darr};
+use crate::tool::{compress_matrix, print_1darr, print_2darr};
 use na::{SMatrix, SVector};
 use std::fmt::{self, Write};
 
 pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: [&'quad2d4n Node2D; 4],
-    pub strain: Option<[[Dtype; 3]; 4]>,
-    pub stress: Option<[[Dtype; 3]; 4]>,
+    pub nodes: Box<[&'quad2d4n Node2D; 4]>,
     pub k_matrix: Option<CompressedMatrix>,
-    pub material: &'quad2d4n (Dtype, Dtype),
+    pub material: [Dtype; 2],
 }
 
 impl<'quad2d4n> Quad2D4N<'quad2d4n> {
@@ -24,53 +21,53 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn new(
         id: usize,
         thick: Dtype,
-        nodes: [&'quad2d4n Node2D; 4],
-        material: &'quad2d4n (Dtype, Dtype),
+        nodes: Box<[&'quad2d4n Node2D; 4]>,
+        material: [Dtype; 2],
     ) -> Self {
         Quad2D4N {
             id,
             thick,
             nodes,
-            strain: None,
-            stress: None,
             k_matrix: None,
             material,
         }
     }
 
     /// Set element material_args
-    pub fn set_material(&mut self, material_args: &'quad2d4n (Dtype, Dtype)) {
-        self.material = material_args;
+    pub fn set_material(&mut self, material_args: [Dtype; 2]) {
+        self.material[0] = material_args[0];
+        self.material[1] = material_args[1];
     }
 
     /// Get the rectangle element area
+    ///   D ----------- C
+    ///     |         |
+    ///     |         |
+    ///     |         |
+    ///   A ----------- B
+    /// divide squdABCD into tow triangles: triABC and tri CDA
+    /// S(ABCD) = S(ABC) + S(CDA)
     pub fn area(&self) -> Dtype {
-        let tri1: Tri2D3N = Tri2D3N {
-            id: 0,
-            thick: self.thick,
-            nodes: [self.nodes[0], self.nodes[1], self.nodes[2]],
-            strain: None,
-            stress: None,
-            k_matrix: None,
-            material: self.material,
-        };
-        let tri2: Tri2D3N = Tri2D3N {
-            id: 1,
-            thick: self.thick,
-            nodes: [self.nodes[2], self.nodes[3], self.nodes[0]],
-            strain: None,
-            stress: None,
-            k_matrix: None,
-            material: self.material,
-        };
-        tri1.area() + tri2.area()
+        let x = self.get_nodes_xcoords();
+        let y = self.get_nodes_ycoords();
+        let dx1_21 = x[1] - x[0];
+        let dx1_31 = x[2] - x[0];
+        let dy1_21 = y[1] - y[0];
+        let dy1_31 = y[2] - y[0];
+        let dx2_21 = x[3] - x[2];
+        let dx2_31 = x[0] - x[2];
+        let dy2_21 = y[3] - y[2];
+        let dy2_31 = y[0] - y[2];
+        let s_tri1 = 0.5 * (dx1_21 * dy1_31 - dx1_31 * dy1_21).abs();
+        let s_tri2 = 0.5 * (dx2_21 * dy2_31 - dx2_31 * dy2_21).abs();
+        s_tri1 + s_tri2
     }
 
     /// Get the x-coords of nodes in tri element
     pub fn get_nodes_xcoords(&self) -> [Dtype; 4] {
         let mut x_list = [0.0; 4];
         for i in 0..4 {
-            x_list[i] = self.nodes[i].coords[0];
+            x_list[i] = self.nodes[i].coords.borrow()[0];
         }
         x_list
     }
@@ -79,7 +76,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn get_nodes_ycoords(&self) -> [Dtype; 4] {
         let mut y_list = [0.0; 4];
         for i in 0..4 {
-            y_list[i] = self.nodes[i].coords[1];
+            y_list[i] = self.nodes[i].coords.borrow()[1];
         }
         y_list
     }
@@ -140,7 +137,6 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
          * N2 = 0.25 * (1 + Xi * s) * (1 - Yi * t)
          * N3 = 0.25 * (1 + Xi * s) * (1 + Yi * t)
          * N4 = 0.25 * (1 - Xi * s) * (1 + Yi * t)
-         *
          */
         let s_sign = [-1.0, 1.0, 1.0, -1.0];
         let t_sign = [-1.0, -1.0, 1.0, 1.0];
@@ -155,9 +151,9 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     ///  |       |   =      |                                |
     ///  | dN/dt |          | dN1/dt  dN1/dt  dN1/dt  dN1/dt |
     ///
-    ///                     | t-1     1-t     1+t     -1-t   |
-    ///              = 0.25 |                                |
-    ///                     | s-1     -1-s    1+s     1-s    |
+    ///                     | t-1  1-t  1+t -1-t   |
+    ///              = 0.25 |                      |
+    ///                     | s-1 -1-s  1+s  1-s   |
     fn diff_shape_mat_st(&self, s_t_coords: [Dtype; 2]) -> SMatrix<Dtype, 2, 4> {
         let s: Dtype = s_t_coords[0];
         let t: Dtype = s_t_coords[1];
@@ -211,12 +207,13 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
 
     /// Calculate element stiffness matrix K
     /// return a 8x8 matrix, elements are Dtype
-    fn calc_k(&self) -> [[Dtype; 8]; 8] {
+    fn calc_k(&self) -> Box<[[Dtype; 8]; 8]> {
         println!(
             "\n>>> Calculating Quad2D4N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
         );
-        let (ee, nu) = *self.material;
+        let ee = self.material[0];
+        let nu = self.material[1];
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
@@ -243,7 +240,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             }
         }
 
-        let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
+        let stiffness_matrix: Box<[[Dtype; 8]; 8]> = Box::new((self.thick * k_matrix).into());
         stiffness_matrix
     }
 
@@ -257,7 +254,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
 
     /// Get element's strss vector
     fn calc_stress(&self, s_t_coords: [Dtype; 2]) -> [Dtype; 3] {
-        let (ee, nu) = *self.material;
+        let ee = self.material[0];
+        let nu = self.material[1];
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
             [1.0, nu, 0.0],
             [nu, 1.0, 0.0],
@@ -270,7 +268,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     }
 
     /// Get element integration points' strain
-    pub fn calc_strain_integration_points(&self) -> [[Dtype; 3]; 4] {
+    pub fn calc_strain_at_intpts(&self) -> [[Dtype; 3]; 4] {
         let mut epsilon: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
         let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
         let int_pts: [[Dtype; 2]; 4] = [
@@ -286,20 +284,20 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     }
 
     /// Get element node's strain
-    pub fn calc_strain_nodes(&self) -> [[Dtype; 3]; 4] {
-        let intpt_strain = self.calc_strain_integration_points();
+    pub fn calc_strain_at_nodes(&self) -> [[Dtype; 3]; 4] {
+        let intpt_strain = self.calc_strain_at_intpts();
         let mut nodes_strain: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
 
         let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
         let nodes: [[Dtype; 2]; 4] = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]];
-        let ld_x = -gauss_pt;
-        let ld_y = -gauss_pt;
-        let rd_x = gauss_pt;
-        let rd_y = -gauss_pt;
-        let rt_x = gauss_pt;
-        let rt_y = gauss_pt;
-        let lt_x = -gauss_pt;
-        let lt_y = gauss_pt;
+        let left_down_x = -gauss_pt;
+        let left_down_y = -gauss_pt;
+        let right_down_x = gauss_pt;
+        let right_down_y = -gauss_pt;
+        let right_top_x = gauss_pt;
+        let right_top_y = gauss_pt;
+        let left_top_x = -gauss_pt;
+        let left_top_y = gauss_pt;
 
         let sigma_xx_intpt = SVector::from([
             intpt_strain[0][0],
@@ -321,10 +319,10 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         ]);
 
         let coord_mat = SMatrix::<Dtype, 4, 4>::from([
-            [ld_x * ld_y, ld_x, ld_y, 1.],
-            [rd_x * rd_y, rd_x, rd_y, 1.],
-            [rt_x * rt_y, rt_x, rt_y, 1.],
-            [lt_x * lt_y, lt_x, lt_y, 1.],
+            [left_down_x * left_down_y, left_down_x, left_down_y, 1.],
+            [right_down_x * right_down_y, right_down_x, right_down_y, 1.],
+            [right_top_x * right_top_y, right_top_x, right_top_y, 1.],
+            [left_top_x * left_top_y, left_top_x, left_top_y, 1.],
         ])
         .transpose();
         let arg_xx: [Dtype; 4] = coord_mat.cholesky().unwrap().solve(&sigma_xx_intpt).into();
@@ -337,7 +335,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     }
 
     /// Get element integration points' stress
-    pub fn calc_stress_integration_points(&self) -> [[Dtype; 3]; 4] {
+    pub fn calc_stress_at_intpt(&self) -> [[Dtype; 3]; 4] {
         let mut sigma: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
         let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
         let int_pts: [[Dtype; 2]; 4] = [
@@ -380,8 +378,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         format!("\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
             self.id,
             self.area(),
-            self.material.0,
-            self.material.1,
+            self.material[0],
+            self.material[1],
             self.nodes[0],
             self.nodes[1],
             self.nodes[2],
@@ -413,48 +411,15 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     }
 
     /// Print quad element's stiffness matrix
-    fn k_printer(&self, n_exp: Dtype) {
-        if self.k_matrix.is_none() {
-            panic!(
-                "!!! Quad2D4N#{}'s k mat is empty! call k() to calc it.",
-                self.id
-            )
-        }
-
-        print!("\nQuad2D4N k{} =  (* 10^{})\n[", self.id, n_exp as i32);
-        let elem_stiffness_mat = self.calc_k();
-        for row in 0..8 {
-            if row == 0 {
-                print!("[");
-            } else {
-                print!(" [");
-            }
-            for col in 0..8 {
-                print!(
-                    " {:>-12.6}",
-                    elem_stiffness_mat[row][col] / (10.0_f64.powf(n_exp as f64)) as Dtype
-                );
-            }
-            if row == 7 {
-                println!("]]");
-            } else {
-                println!("]");
-            }
-        }
-        print!("\n");
+    fn k_printr(&self, n_exp: Dtype) {
+        let k_mat: Box<[[Dtype; 8]; 8]> = self.calc_k();
+        print_2darr("\n Tri2D4N k", self.id(), k_mat.as_ref(), n_exp);
     }
 
     /// Return quad elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
-        if self.k_matrix.is_none() {
-            panic!(
-                "!!! Quad2D4N#{}'s k mat is empty! call k() to calc it.",
-                self.id
-            )
-        }
-
         let mut k_matrix = String::new();
-        let elem_stiffness_mat = self.calc_k();
+        let elem_stiffness_mat: Box<[[Dtype; 8]; 8]> = self.calc_k();
         for row in 0..8 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -480,10 +445,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
 
     /// Get the strain at (xi, eta) inside the element
     fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
-        if self.strain.is_none() {
-            self.strain = Some(self.calc_strain_integration_points());
-        }
-        let intpt_strain = self.strain.unwrap();
+        let intpt_strain = self.calc_strain_at_intpts();
         vec![
             intpt_strain[0].to_vec(),
             intpt_strain[1].to_vec(),
@@ -494,10 +456,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
 
     /// Get the stress at (xi, eta) inside the element
     fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
-        if self.stress.is_none() {
-            self.stress = Some(self.calc_stress_integration_points());
-        }
-        let intpt_stress = self.stress.unwrap();
+        let intpt_stress = self.calc_strain_at_nodes();
         vec![
             intpt_stress[0].to_vec(),
             intpt_stress[1].to_vec(),
@@ -529,8 +488,8 @@ impl fmt::Display for Quad2D4N<'_> {
 "\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^0)\n{}",
             self.id,
             self.area(),
-            self.material.0,
-            self.material.1,
+            self.material[0],
+            self.material[1],
             self.nodes[0],
             self.nodes[1],
             self.nodes[2],

@@ -60,8 +60,8 @@ where
     pub fn nodes_coordinate(&self) -> [Dtype; N * F] {
         let mut coords: [Dtype; N * F] = [0.0; N * F];
         for (idx, node) in self.nodes.iter().enumerate() {
-            coords[idx * F] = node.coords[0];
-            coords[idx * F + 1] = node.coords[1];
+            coords[idx * F] = node.coords.borrow()[0];
+            coords[idx * F + 1] = node.coords.borrow()[1];
         }
         coords
     }
@@ -160,7 +160,7 @@ where
 
         let elems: Vec<_> = self.elems.iter_mut().map(|elem| elem.k()).collect();
 
-        let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
+        let mut part_stiffness_mat: Box<[[Dtype; N * F]; N * F]> = Box::new([[0.0; N * F]; N * F]);
 
         let timing_start = Instant::now();
 
@@ -199,7 +199,7 @@ where
         );
 
         let elems: Vec<_> = self.elems.iter_mut().map(|elem| elem.k()).collect();
-        let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
+        let mut part_stiffness_mat: Box<[[Dtype; N * F]; N * F]> = Box::new([[0.0; N * F]; N * F]);
         let mat: Arc<Vec<Vec<ADtype>>> = Arc::new(
             (0..F * N)
                 .map(|_| (0..F * N).map(|_| ADtype::new(0.0)).collect())
@@ -296,7 +296,7 @@ where
         )
         .expect("Write Part2D Stiffness Matrix Failed!");
 
-        let k: [[Dtype; N * F]; N * F] = self.k_matrix.clone().unwrap().recover();
+        let k: [[Dtype; N * F]; N * F] = *self.k_matrix.clone().unwrap().recover();
         for row in 0..(N * F) {
             if row == 0 {
                 write!(k_matrix, "[[").expect("Write Part2D Stiffness Matrix Failed!");
@@ -340,7 +340,6 @@ where
             .iter_mut()
             .map(|elem| strain.push(elem.strain_at_intpt().remove(0)))
             .count();
-        crate::tool::print_2dvec("strain", &strain, 0.);
         strain
     }
 
@@ -351,7 +350,6 @@ where
             .iter_mut()
             .map(|elem| stress.push(elem.stress_at_intpt().remove(0)))
             .count();
-        crate::tool::print_2dvec("stress", &stress, 0.);
         stress
     }
 

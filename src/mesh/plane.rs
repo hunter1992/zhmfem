@@ -1,6 +1,6 @@
 use crate::dtty::basic::Dtype;
 
-type Points = Vec<Vec<Dtype>>;
+type Points = Vec<[Dtype; 2]>;
 type Coupls = Vec<Vec<usize>>;
 
 pub struct Rectangle {
@@ -14,7 +14,7 @@ impl Rectangle {
     }
 
     pub fn mesh_with_tri2d6n(&self, rows: usize, cols: usize) -> (Points, Coupls) {
-        let mut coords: Vec<Vec<Dtype>> = vec![];
+        let mut coords: Vec<[Dtype; 2]> = vec![];
         let mut coupls: Vec<Vec<usize>> = vec![];
 
         let x0 = if self.point2[0] > self.point1[0] {
@@ -35,10 +35,7 @@ impl Rectangle {
         // fill the nodes coords vector
         for r in 0..(2 * rows - 1) {
             for c in 0..(2 * cols - 1) {
-                coords.push(vec![
-                    x0 + c as Dtype * half_l_step,
-                    y0 + r as Dtype * half_h_step,
-                ]);
+                coords.push([x0 + c as Dtype * half_l_step, y0 + r as Dtype * half_h_step]);
             }
         }
 
@@ -78,7 +75,7 @@ impl Rectangle {
     }
 
     pub fn mesh_with_tri2d3n(&self, rows: usize, cols: usize) -> (Points, Coupls) {
-        let mut nodes: Vec<Vec<Dtype>> = vec![];
+        let mut nodes: Vec<[Dtype; 2]> = vec![];
         let mut coupls: Vec<Vec<usize>> = vec![];
 
         let x0 = if self.point2[0] > self.point1[0] {
@@ -99,7 +96,7 @@ impl Rectangle {
         // fill the nodes coords vector
         for r in 0..rows {
             for c in 0..cols {
-                nodes.push(vec![x0 + c as Dtype * l_step, y0 + r as Dtype * h_step]);
+                nodes.push([x0 + c as Dtype * l_step, y0 + r as Dtype * h_step]);
             }
         }
 
@@ -129,7 +126,7 @@ impl Rectangle {
     }
 
     pub fn mesh_with_rect(&self, rows: usize, cols: usize) -> (Points, Coupls) {
-        let mut points: Vec<Vec<Dtype>> = vec![];
+        let mut points: Vec<[Dtype; 2]> = vec![];
         let mut coupls: Vec<Vec<usize>> = vec![];
 
         let x0 = if self.point2[0] > self.point1[0] {
@@ -157,7 +154,7 @@ impl Rectangle {
          */
         for r in 0..rows {
             for c in 0..cols {
-                points.push(vec![x0 + c as Dtype * l_step, y0 + r as Dtype * h_step]);
+                points.push([x0 + c as Dtype * l_step, y0 + r as Dtype * h_step]);
             }
         }
 

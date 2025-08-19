@@ -1,5 +1,3 @@
-// 这个例子来源于曾攀《有限元基础教程》的例题3.2.5(1)
-
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -11,50 +9,47 @@ fn main() {
     // set timing start
     let time_start = Instant::now();
 
-    // -------- Part 1:  Set initial parameters --------
-    let cross_section_area: Vec<Dtype> = vec![100.0, 100.0, 100.0, 100.0];
-    let material: (Dtype, Dtype) = (295000.0, 0.25); //Young's modulud & Poisson's ratio
+    // -------- Part 0: Set initial parameters --------
+    const E: Dtype = 0.0; // Exponent in scientific notation to base 10
+    const CPU_CORES: usize = 2;
 
+    // "lu" for LU decomposition algorithm or
+    // "cholesky" for Cholesky Decomposition algorithm or
+    // "gs"       for gauss-seidel iteration algorithm
+    let calc_method: &str = "cholesky";
+    let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
+
+    let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
+
+    let thick: Dtype = 10.0; //Thickness of the plate
+    let material: [Dtype; 2] = [209000.0, 0.269]; //Young's modulud & Poisson's ratio
+
+    // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
     const R: usize = 2; // rows of nodes
     const C: usize = 2; // columns of nodes
-    const M: usize = 2; // num of nodes in single element
+    const M: usize = 3; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
-    const CPU_CORES: usize = 2;
-
-    //Controls the style of printing numbers in scientific notation
-    const E: Dtype = 4.0;
 
     // Manually set coords and grouped nodes index
-    let points: Vec<Vec<Dtype>> = vec![
-        vec![0.0, 0.0],
-        vec![400.0, 0.0],
-        vec![400.0, 300.0],
-        vec![0.0, 300.0],
-    ];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1], vec![2, 1], vec![0, 2], vec![3, 2]];
+    let points: Vec<[Dtype; 2]> = vec![[0.0, 0.0], [1000.0, 0.0], [0.0, 1000.0], [1000.0, 1000.0]];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![3, 2, 0]];
 
-    // Set boundary conditions and external loads
-    let zero_disp_index: Vec<usize> = vec![0, 1, 3, 6, 7];
-    let force_index: Vec<usize> = vec![2, 5];
-    let force_value: Vec<Dtype> = vec![20000.0, -25000.0];
-    let force_data: HashMap<usize, Dtype> = force_index
-        .into_iter()
-        .zip(force_value.into_iter())
-        .collect();
+    // Set boundary conditions and external loads manually
+    let zero_disp_index: Vec<usize> = vec![0, 1, 4];
+    let force_index: Vec<usize> = vec![2, 6];
+    let force_value: Vec<Dtype> = vec![-100000000.0, 100000000.0];
 
     // -------- Part 2:  Construct nodes, elements and parts --------
     // Construct 2D nodes vector
-    let nodes = nodes2d_vec(&points, &force_data);
+    let nodes = nodes2d_vec(&points, &force_index, &force_value);
 
-    // Construct Rod2D2N elements vector
-    let mut rods = rod2d2n_vec(&nodes, &grpdnidx, &cross_section_area, &material);
-    let element_type: &str = "Rod2D2N_";
+    // Construct Tri2D3N elements vector
+    let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, material);
 
     // Construct 2D part & assembly global stiffness matrix
-    let mut part: Part2D<'_, Rod2D2N<'_>, { R * C }, F, M> =
-        Part2D::new(1, &nodes, &mut rods, &grpdnidx);
-    let parallel_or_singllel = "singllel";
+    let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
+        Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
     part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
     // -------- Part 3:  Solve the problem --------
@@ -66,13 +61,8 @@ fn main() {
         part.k(parallel_or_singllel, CPU_CORES).clone(),
     );
 
-    // 1) solve the linear equations of static system using direct method.
-    eqs.lu_direct_solver(); //LU decomposition method
-    let output_file = "LU.txt";
-
-    // 2) solve the linear equations of static system using iter method.
-    //eqs.gauss_seidel_iter_solver(0.001);
-    //let output_file = "G-S.txt";
+    // 3) or you can solve the problem with a more concise call:
+    eqs.solve(calc_method, calc_accuracy);
 
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
@@ -80,7 +70,7 @@ fn main() {
     part.write_result(&eqs);
 
     // -------- Part 4:  Print all kinds of result --------
-    print_1darr("qe", &part.nodes_displacement(), 0.0, "v");
+    print_1darr("qe", &part.nodes_displacement(), E, "v");
     print_1darr("fe", &part.nodes_force(), E, "v");
 
     println!("\n>>> System energy:");
@@ -99,23 +89,36 @@ fn main() {
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
-    for elem in part.elems.iter() {
-        elem.k_printer(E);
-        elem.print_strain();
-        elem.print_stress();
-        println!("\nelem[{}] F_axial = {}", elem.id, elem.axial_force());
-    }
+    part.elems
+        .iter()
+        .map(|elem| {
+            println!("{}", elem.info(0.0));
+        })
+        .count();
 
     // -------- Part 5:  Write clac result into txt file --------
+    let problem_type = "stress2D";
+    let element_type = "Tri2D3N";
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
-    let output = format!("{output_path}{element_type}{output_file}");
+    let output_txt = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
+    );
+    let output_vtk = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+    );
+
+    // Output Calculation result into txt file
     part.txt_writer(
-        &output,
+        &output_txt,
         calc_time,
         E,
         (strain_energy, external_force_work, potential_energy),
     )
     .expect(">>> !!! Failed to output text result file !!!");
+
+    // Output Calculation result into vtk file
+    part.vtk_writer(&output_vtk, element_type)
+        .expect(">>> !!! Failed to output vtk file!");
 
     let total_time = time_start.elapsed();
     println!("\n>>> Total time consuming: {:?}", total_time);

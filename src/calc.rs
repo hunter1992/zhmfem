@@ -44,136 +44,123 @@ impl<const D: usize> LinearEqs<D> {
     /// 使用LU分解求解线性方程组(直接法)
     /// solve "A * x = b" using LU decomposition method
     pub fn lu_direct_solver(&mut self) {
-        if self.state == false {
-            // pre-process
-            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover()).transpose();
-            let loads = SVector::from(self.loads);
+        // pre-process
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose();
+        let loads = SVector::from(self.loads);
 
-            let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
-            let force_known = loads.select_rows(disps_unknown_idx.iter());
-            let kmat_eff = kmat
-                .select_columns(disps_unknown_idx.iter())
-                .select_rows(disps_unknown_idx.iter());
+        let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
+        let force_known = loads.select_rows(disps_unknown_idx.iter());
+        let kmat_eff = kmat
+            .select_columns(disps_unknown_idx.iter())
+            .select_rows(disps_unknown_idx.iter());
 
-            let time_lu = Instant::now();
-            // solve the K.q = F by LU decomposition
-            let disps_unknown_rlt: Vec<Dtype> =
-                kmat_eff.lu().solve(&force_known).unwrap().data.into();
-            let duration_lu = time_lu.elapsed();
-            println!(
-                "\n>>> LU decomposition method down!\n\ttime consuming = {:?}",
-                duration_lu
-            );
+        let time_lu = Instant::now();
+        // solve the K.q = F by LU decomposition
+        let disps_unknown_rlt: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
+        let duration_lu = time_lu.elapsed();
+        println!(
+            "\n>>> LU decomposition method down!\n\ttime consuming = {:?}",
+            duration_lu
+        );
 
-            // write result into fields
-            let _: Vec<_> = disps_unknown_idx
-                .iter()
-                .enumerate()
-                .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
-                .collect();
-            self.external_force = Some((kmat * SVector::from(self.disps)).into());
-            self.solver_time_consuming = Some(duration_lu);
-            self.state = true;
-        } else {
-            return;
-        }
+        // write result into fields
+        let _: Vec<_> = disps_unknown_idx
+            .iter()
+            .enumerate()
+            .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
+            .collect();
+        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.solver_time_consuming = Some(duration_lu);
+        self.state = true;
     }
 
     pub fn cholesky_direct_solver(&mut self) {
-        if self.state == false {
-            // pre-process
-            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover()).transpose();
-            let loads = SVector::from(self.loads);
+        // pre-process
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose();
+        let loads = SVector::from(self.loads);
 
-            let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
-            let force_known = loads.select_rows(disps_unknown_idx.iter());
-            let kmat_eff = kmat
-                .select_columns(disps_unknown_idx.iter())
-                .select_rows(disps_unknown_idx.iter());
+        let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
+        let force_known = loads.select_rows(disps_unknown_idx.iter());
+        let kmat_eff = kmat
+            .select_columns(disps_unknown_idx.iter())
+            .select_rows(disps_unknown_idx.iter());
 
-            let time_lu = Instant::now();
-            // solve the K.q = F by LU decomposition
-            let disps_unknown_rlt: Vec<Dtype> =
-                kmat_eff.cholesky().unwrap().solve(&force_known).data.into();
-            let duration_lu = time_lu.elapsed();
-            println!(
-                "\n>>> Cholesky decomposition method down!\n\ttime consuming = {:?}",
-                duration_lu
-            );
+        let time_lu = Instant::now();
+        // solve the K.q = F by LU decomposition
+        let disps_unknown_rlt: Vec<Dtype> =
+            kmat_eff.cholesky().unwrap().solve(&force_known).data.into();
+        let duration_lu = time_lu.elapsed();
+        println!(
+            "\n>>> Cholesky decomposition method down!\n\ttime consuming = {:?}",
+            duration_lu
+        );
 
-            // write result into fields
-            let _: Vec<_> = disps_unknown_idx
-                .iter()
-                .enumerate()
-                .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
-                .collect();
-            self.external_force = Some((kmat * SVector::from(self.disps)).into());
-            self.solver_time_consuming = Some(duration_lu);
-            self.state = true;
-        } else {
-            return;
-        }
+        // write result into fields
+        let _: Vec<_> = disps_unknown_idx
+            .iter()
+            .enumerate()
+            .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
+            .collect();
+        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.solver_time_consuming = Some(duration_lu);
+        self.state = true;
     }
 
     /// 使用Guass-Seidel迭代求解线性方程组(数值方法)
     /// solve "A*x = F" using Gauss-Seidel iterator:
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
     pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) {
-        if self.state == false {
-            // pre-process
-            let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
+        // pre-process
+        let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
 
-            let loads = SVector::from(self.loads);
-            let f_eff = loads.select_rows(disps_unknown_idx.iter());
+        let loads = SVector::from(self.loads);
+        let f_eff = loads.select_rows(disps_unknown_idx.iter());
 
-            let kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover()).transpose();
-            let kmat_eff = kmat
-                .select_columns(disps_unknown_idx.iter())
-                .select_rows(disps_unknown_idx.iter());
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose();
+        let kmat_eff = kmat
+            .select_columns(disps_unknown_idx.iter())
+            .select_rows(disps_unknown_idx.iter());
 
-            // construct Gauss-Seidel iter method
-            let l = kmat_eff.lower_triangle();
-            let d = DMatrix::from_diagonal(&kmat_eff.diagonal());
-            let u = kmat_eff.upper_triangle() - &d;
-            let grad = -l.try_inverse().unwrap();
+        // construct Gauss-Seidel iter method
+        let l = kmat_eff.lower_triangle();
+        let d = DMatrix::from_diagonal(&kmat_eff.diagonal());
+        let u = kmat_eff.upper_triangle() - &d;
+        let grad = -l.try_inverse().unwrap();
 
-            let size = disps_unknown_idx.len();
-            let mut x = DVector::<Dtype>::zeros(size);
+        let size = disps_unknown_idx.len();
+        let mut x = DVector::<Dtype>::zeros(size);
 
-            // Gauss-Seidel iterator loop
-            let mut count: usize = 0;
-            let time_gs = Instant::now();
-            loop {
-                let tmp = &grad * &u * &x - &grad * &f_eff;
-                //println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
+        // Gauss-Seidel iterator loop
+        let mut count: usize = 0;
+        let time_gs = Instant::now();
+        loop {
+            let tmp = &grad * &u * &x - &grad * &f_eff;
+            //println!("#{}, x={}, err={}", &count, &x, (&tmp - &x).abs().max());
 
-                if (&tmp - &x).abs().max() < calc_error {
-                    let duration_gs = time_gs.elapsed();
-                    self.solver_time_consuming = Some(duration_gs);
-                    print!("\n>>> Gauss-Seidel iter method down!");
-                    println!(
-                        "\n\ttime consuming = {:?}\n\tresult:   iter = {}\n\t\t   err = {:8.6}",
-                        duration_gs,
-                        count,
-                        (&tmp - &x).abs().max()
-                    );
-                    break;
-                }
-                x = tmp;
-                count += 1usize;
+            if (&tmp - &x).abs().max() < calc_error {
+                let duration_gs = time_gs.elapsed();
+                self.solver_time_consuming = Some(duration_gs);
+                print!("\n>>> Gauss-Seidel iter method down!");
+                println!(
+                    "\n\ttime consuming = {:?}\n\tresult:   iter = {}\n\t\t   err = {:8.6}",
+                    duration_gs,
+                    count,
+                    (&tmp - &x).abs().max()
+                );
+                break;
             }
-
-            // write result
-            let _: Vec<_> = disps_unknown_idx
-                .iter()
-                .enumerate()
-                .map(|(i, &idx)| self.disps[idx] = x[i])
-                .collect();
-            self.external_force = Some((kmat * SVector::from(self.disps)).into());
-            self.state = true;
-        } else {
-            return;
+            x = tmp;
+            count += 1usize;
         }
+
+        // write result
+        let _: Vec<_> = disps_unknown_idx
+            .iter()
+            .enumerate()
+            .map(|(i, &idx)| self.disps[idx] = x[i])
+            .collect();
+        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.state = true;
     }
 }
 

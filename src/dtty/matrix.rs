@@ -1,26 +1,29 @@
 use crate::dtty::basic::Dtype;
+use std::boxed::Box;
 
 /// Symmetric Skyline method to storage element and part stiffness matrix
 #[derive(Clone)]
 pub struct CompressedMatrix {
-    pub value: Vec<Dtype>,
-    pub ptr: Vec<usize>,
+    pub values: Box<Vec<Dtype>>,
+    pub pointr: Box<Vec<usize>>,
 }
 
 impl CompressedMatrix {
-    pub fn new(value: Vec<Dtype>, ptr: Vec<usize>) -> Self {
-        CompressedMatrix { value, ptr }
+    /// Construct a compressed matrix
+    pub fn new(values: Box<Vec<Dtype>>, pointr: Box<Vec<usize>>) -> Self {
+        CompressedMatrix { values, pointr }
     }
 
-    pub fn recover<const D: usize>(&self) -> [[Dtype; D]; D] {
-        let mut arr: [[Dtype; D]; D] = [[0.0; D]; D];
-        for idx in 0..D {
-            let len = self.ptr[idx + 1] - self.ptr[idx];
+    /// Recover a square matrix from compressed mat which is in CompressedMatrix shape
+    pub fn recover<const DIM: usize>(&self) -> Box<[[Dtype; DIM]; DIM]> {
+        let mut matrix: Box<[[Dtype; DIM]; DIM]> = Box::new([[0.0; DIM]; DIM]);
+        for idx in 0..DIM {
+            let len = self.pointr[idx + 1] - self.pointr[idx];
             for jump in 0..len {
-                arr[idx][idx - jump] = self.value[self.ptr[idx] + len - jump - 1];
-                arr[idx - jump][idx] = self.value[self.ptr[idx] + len - jump - 1];
+                matrix[idx][idx - jump] = self.values[self.pointr[idx] + len - jump - 1];
+                matrix[idx - jump][idx] = self.values[self.pointr[idx] + len - jump - 1];
             }
         }
-        arr
+        matrix
     }
 }
