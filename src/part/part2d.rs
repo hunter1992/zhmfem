@@ -1,7 +1,7 @@
 use crate::calc::LinearEqs;
 use crate::dtty::{
     basic::{ADtype, Dtype},
-    matrix::CompressedMatrix,
+    matrix::CompressedMatrixSKS,
     sdata::Sdata,
 };
 use crate::node::Node2D;
@@ -26,7 +26,7 @@ where
     pub nodes: &'part2d [Node2D],
     pub elems: &'part2d mut [Elem],
     pub cplds: &'part2d [Vec<usize>], //cplds: coupled nodes index
-    pub k_matrix: Option<CompressedMatrix>,
+    pub k_matrix: Option<CompressedMatrixSKS>,
     pub assembly_time_consuming: Option<std::time::Duration>,
 }
 
@@ -125,10 +125,10 @@ where
     /// Calculate part's global stiffness matrix
     /// The value of arg parallel_or_singllel can be:
     /// "parallel" or "p" or "singllel" or "s"
-    pub fn k(&mut self, parallel_or_singllel: &str, cpu_cores: usize) -> &CompressedMatrix {
+    pub fn k(&mut self, parallel_or_singllel: &str, cpu_cores: usize) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
             if self.cplds.len() != self.elems.len() {
-                println!("\n---> Error! From Part2D.k_singllel func.");
+                println!("\n---> Error! From Part2D.k func.");
                 println!("     The count of elements not eq to K mat size.");
                 panic!("---> Assembly global K failed!");
             }
@@ -152,7 +152,7 @@ where
         self.k_matrix.as_ref().unwrap()
     }
 
-    fn k_singllel(&mut self, _cpu_cores: usize) -> CompressedMatrix {
+    fn k_singllel(&mut self, _cpu_cores: usize) -> CompressedMatrixSKS {
         println!(
             "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} in single thread ......",
             self.id, self.id
@@ -192,7 +192,7 @@ where
         compress_matrix(part_stiffness_mat)
     }
 
-    fn k_parallel(&mut self, cpu_cores: usize) -> CompressedMatrix {
+    fn k_parallel(&mut self, cpu_cores: usize) -> CompressedMatrixSKS {
         println!(
             "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} in {} threads ......",
             self.id, self.id, cpu_cores

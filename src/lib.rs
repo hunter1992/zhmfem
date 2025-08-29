@@ -17,7 +17,7 @@ mod tool;
 pub use calc::LinearEqs;
 pub use dtty::{
     basic::{ADtype, Dtype, Jacobian2D, Jacobian3D},
-    matrix::CompressedMatrix,
+    matrix::CompressedMatrixSKS,
     sdata::Sdata,
 };
 pub use elem::{

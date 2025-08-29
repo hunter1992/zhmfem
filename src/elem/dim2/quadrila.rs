@@ -1,6 +1,6 @@
 use crate::dtty::{
     basic::{Dtype, Jacobian2D},
-    matrix::CompressedMatrix,
+    matrix::CompressedMatrixSKS,
 };
 use crate::node::Node2D;
 use crate::port::K;
@@ -12,7 +12,7 @@ pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
     pub nodes: Box<[&'quad2d4n Node2D; 4]>,
-    pub k_matrix: Option<CompressedMatrix>,
+    pub k_matrix: Option<CompressedMatrixSKS>,
     pub material: [Dtype; 2],
 }
 
@@ -402,7 +402,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
 /// Implement zhm::K trait for quadrilateral element
 impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     /// Cache stiffness matrix for quad element
-    fn k(&mut self) -> &CompressedMatrix {
+    fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
             self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
         } else {

@@ -1,6 +1,6 @@
 use crate::dtty::{
     basic::{Dtype, Jacobian2D},
-    matrix::CompressedMatrix,
+    matrix::CompressedMatrixSKS,
 };
 use crate::node::Node2D;
 use crate::port::K;
@@ -14,7 +14,7 @@ pub struct Tri2D3N<'tri2d3n> {
     pub id: usize,
     pub thick: Dtype,
     pub nodes: Box<[&'tri2d3n Node2D; 3]>,
-    pub k_matrix: Option<CompressedMatrix>,
+    pub k_matrix: Option<CompressedMatrixSKS>,
     pub material: [Dtype; 2],
 }
 
@@ -316,7 +316,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 /// Implement zhm::K trait for triangle element
 impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     /// Cache stiffness matrix for triangle element
-    fn k(&mut self) -> &CompressedMatrix {
+    fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
             self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
         } else {

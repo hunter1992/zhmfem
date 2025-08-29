@@ -1,4 +1,4 @@
-use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
+use crate::dtty::{basic::Dtype, matrix::CompressedMatrixSKS};
 use crate::elem::{
     //dim1::{beam::Beam1D2N, rod::Rod1D2N},
     dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::default::Default;
 
 /// Return a matrix compressed by Skyline symmetry algorithm
-pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> CompressedMatrix {
+pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> CompressedMatrixSKS {
     let mut values: Vec<Dtype> = vec![];
     let mut pointer: Vec<usize> = vec![];
 
@@ -42,7 +42,7 @@ pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> Compr
     }
     pointer.push(values.len());
 
-    CompressedMatrix {
+    CompressedMatrixSKS {
         values: Box::new(values),
         pointr: Box::new(pointer),
     }
@@ -50,7 +50,7 @@ pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> Compr
 
 /// calculate part's deform energy
 pub fn strain_energy<const D: usize>(
-    stiffness_matrix: CompressedMatrix,
+    stiffness_matrix: CompressedMatrixSKS,
     displacement: [Dtype; D],
 ) -> Dtype {
     let disp = SMatrix::<Dtype, D, 1>::from(displacement);
@@ -72,7 +72,7 @@ pub fn external_force_work<const D: usize>(
 
 /// calculate part's potential energy
 pub fn potential_energy<const D: usize>(
-    stiffness_matrix: CompressedMatrix,
+    stiffness_matrix: CompressedMatrixSKS,
     external_force: [Dtype; D],
     displacement: [Dtype; D],
 ) -> Dtype {

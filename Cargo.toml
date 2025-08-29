@@ -9,7 +9,7 @@ edition = "2024"
 #stack_size = "128MB"
 
 [profile.release]
-stack_size = "256"
+stack_size = "512"
 
 [dependencies]
 nalgebra = "0.33.2"

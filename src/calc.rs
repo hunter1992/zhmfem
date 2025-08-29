@@ -1,4 +1,4 @@
-use crate::dtty::{basic::Dtype, matrix::CompressedMatrix};
+use crate::dtty::{basic::Dtype, matrix::CompressedMatrixSKS};
 use na::{DMatrix, DVector, SMatrix, SVector};
 use std::collections::HashSet;
 use std::time::Instant;
@@ -8,7 +8,7 @@ pub struct LinearEqs<const D: usize> {
     pub disps: [Dtype; D],
     pub loads: [Dtype; D],
     pub disps_0_idx: Vec<usize>,
-    pub static_kmat: CompressedMatrix,
+    pub static_kmat: CompressedMatrixSKS,
     pub external_force: Option<[Dtype; D]>,
     pub solver_time_consuming: Option<std::time::Duration>,
 }
@@ -18,7 +18,7 @@ impl<const D: usize> LinearEqs<D> {
         disps: [Dtype; D],
         loads: [Dtype; D],
         disps_0_idx: Vec<usize>,
-        static_kmat: CompressedMatrix,
+        static_kmat: CompressedMatrixSKS,
     ) -> Self {
         LinearEqs {
             state: false,
