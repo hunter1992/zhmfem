@@ -9,7 +9,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    const STACK_SIZE: usize = 64 * 1024 * 1024; // MB = 1024 * 1024
+    const STACK_SIZE: usize = 256 * 1024 * 1024; // MB = 1024 * 1024
     let executor = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(|| {
@@ -17,7 +17,7 @@ fn main() {
             let time_start = Instant::now();
 
             // -------- Part 0: Set initial parameters --------
-            const E: Dtype = 0.0; // Exponent in scientific notation to base 10
+            const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
             const CPU_CORES: usize = 6;
 
             let calc_method: &str = "cholesky"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
@@ -70,7 +70,7 @@ fn main() {
 
             eqs.solve(calc_method, calc_accuracy);
 
-            let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
+            let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
             // write the displacement and force result into Node2D's field
             part.write_result(&eqs);
@@ -108,7 +108,7 @@ fn main() {
             let problem_type = "WEBexample";
             let element_type = "Tri2D3N";
             let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
-            let output_txt = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt");
+            let _output_txt = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt");
             let output_vtk = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk");
 
             /*

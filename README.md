@@ -112,20 +112,26 @@ at the current stage of development, there are no plans to redevelop new pre/pos
 #### 1. Operating system
 The author developed the original version of ZHMFEM using the Manjaro Linux system. Currently in the early stages of core functionality development, the compiled version of ZHMFEM is __not__ compatible with MacOS and Windows (you can fix this by compiling the source code yourself on your system). The operating system information used by the author is as follows:
 ```
- ██████████████████  ████████     zhm@zhm
- ██████████████████  ████████     OS: Manjaro 25.0.6 Zetar
- ██████████████████  ████████     Kernel: x86_64 Linux 6.12.39-1-MANJARO
- ██████████████████  ████████     Uptime: 2d 33m
- ████████            ████████     Packages: 1450
- ████████  ████████  ████████     Shell: zsh 5.9
- ████████  ████████  ████████     Resolution: 2560x1440
- ████████  ████████  ████████     DE: KDE
- ████████  ████████  ████████     WM: KWin
- ████████  ████████  ████████     GTK Theme: Breeze [GTK2/3]
- ████████  ████████  ████████     Icon Theme: breeze
- ████████  ████████  ████████     Disk: 173G / 989G (19%)
- ████████  ████████  ████████     CPU: Intel Core i5-8265U @ 8x 3.9GHz [55.0°C]
- ████████  ████████  ████████     GPU: NVIDIA GeForce MX250
+                   -`                    zhm@ZHM
+                 .o+`                    -------
+                `ooo/                    OS: Arch Linux x86_64
+               `+oooo:                   Host: HBL-WX9 (M1030)
+              `+oooooo:                  Kernel: Linux 6.16.8-zen3-1-zen
+              -+oooooo+:                 Uptime: 6 hours, 44 mins
+            `/:-:++oooo+:                Packages: 868 (pacman), 24 (flatpak)
+           `/++++/+++++++:               Shell: zsh 5.9
+          `/++++++++++++++:              Display (CMN1603): 1920x1080 in 16", 60 Hz [Built-in]
+         `/+++ooooooooooooo/`            DE: KDE Plasma 6.4.5
+        ./ooosssso++osssssso+`           WM: KWin (Wayland)
+       .oossssso-````/ossssss+`          WM Theme: Breeze
+      -osssssso.      :ssssssso.         Theme: Breeze (Classic) [Qt], Breeze [GTK2/3]
+     :osssssss/        osssso+++.        Icons: breeze [Qt], breeze [GTK2/3/4]
+    /ossssssss/        +ssssooo/-        Font: Noto Sans (12pt) [Qt], Noto Sans (12pt) [GTK2/3/4]
+  `/ossssso+/:-        -:/+osssso+-      Cursor: breeze (24px)
+ `+sso+:-`                 `.-/+oso:     Terminal: konsole 25.8.1
+`++:.                           `-/+/    Terminal Font: 文泉驿等宽微米黑 (14pt)
+.`                                 `/    CPU: Intel(R) Core(TM) i5-8265U (8) @ 3.90 GHz
+
 ```
 
 #### 2. Rust version
