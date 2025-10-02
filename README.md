@@ -110,7 +110,7 @@ at the current stage of development, there are no plans to redevelop new pre/pos
 ### Prerequisites
 
 #### 1. Operating system
-The author developed the original version of ZHMFEM using the Manjaro Linux system. Currently in the early stages of core functionality development, the compiled version of ZHMFEM is __not__ compatible with MacOS and Windows (you can fix this by compiling the source code yourself on your system). The operating system information used by the author is as follows:
+Currently in the early stages of core functionality development, the compiled version of ZHMFEM is __not__ compatible with MacOS and Windows (you can fix this by compiling the source code yourself on your system). The operating system information used by the author is as follows:
 ```
                    -`                    zhm@ZHM
                  .o+`                    -------
