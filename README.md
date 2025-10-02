@@ -138,13 +138,13 @@ Currently in the early stages of core functionality development, the compiled ve
 
 The Rust toolchain information used in the latest version of ZHMFEM is as follows:
 ```
-rustc 1.90.0-nightly (adcb3d3b4 2025-07-31)
+rustc 1.92.0-nightly (dc2c3564d 2025-09-29)
 binary: rustc
-commit-hash: adcb3d3b4cd3b7c4cde642f3ed537037f293738e
-commit-date: 2025-07-31
+commit-hash: dc2c3564d273cf8ccce32dc4f47eaa27063bceb9
+commit-date: 2025-09-29
 host: x86_64-unknown-linux-gnu
-release: 1.90.0-nightly
-LLVM version: 20.1.8
+release: 1.92.0-nightly
+LLVM version: 21.1.2
 ```
 
 [install Rust now](https://www.rust-lang.org/tools/install) 🌞
