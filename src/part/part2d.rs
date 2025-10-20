@@ -60,8 +60,8 @@ where
     pub fn nodes_coordinate(&self) -> [Dtype; N * F] {
         let mut coords: [Dtype; N * F] = [0.0; N * F];
         for (idx, node) in self.nodes.iter().enumerate() {
-            coords[idx * F] = node.coords.borrow()[0];
-            coords[idx * F + 1] = node.coords.borrow()[1];
+            coords[idx * F] = node.coords[0];
+            coords[idx * F + 1] = node.coords[1];
         }
         coords
     }
@@ -154,13 +154,13 @@ where
 
     fn k_singllel(&mut self, _cpu_cores: usize) -> CompressedMatrixSKS {
         println!(
-            "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} in single thread ......",
-            self.id, self.id
+            "\n>>> Assembling Part2D(#{})'s stiffness matrix K{}(size: {}x{}) in single thread ......",
+            self.id, self.id, N*F, N*F 
         );
 
         let elems: Vec<_> = self.elems.iter_mut().map(|elem| elem.k()).collect();
 
-        let mut part_stiffness_mat: Box<[[Dtype; N * F]; N * F]> = Box::new([[0.0; N * F]; N * F]);
+        let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
 
         let timing_start = Instant::now();
 
@@ -189,17 +189,17 @@ where
         );
         self.assembly_time_consuming = Some(time_consuming);
 
-        compress_matrix(part_stiffness_mat)
+        compress_matrix(&part_stiffness_mat)
     }
 
     fn k_parallel(&mut self, cpu_cores: usize) -> CompressedMatrixSKS {
         println!(
-            "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} in {} threads ......",
-            self.id, self.id, cpu_cores
+            "\n>>> Assembling Part2D(#{})'s stiffness matrix K{} (size: {}x{}) in {} threads ......",
+            self.id, self.id, N*F, N*F, cpu_cores
         );
 
         let elems: Vec<_> = self.elems.iter_mut().map(|elem| elem.k()).collect();
-        let mut part_stiffness_mat: Box<[[Dtype; N * F]; N * F]> = Box::new([[0.0; N * F]; N * F]);
+        let mut part_stiffness_mat: [[Dtype; N * F]; N * F] = [[0.0; N * F]; N * F];
         let mat: Arc<Vec<Vec<ADtype>>> = Arc::new(
             (0..F * N)
                 .map(|_| (0..F * N).map(|_| ADtype::new(0.0)).collect())
@@ -254,7 +254,7 @@ where
                 part_stiffness_mat[x][y] = mat[x][y].load(Ordering::Relaxed);
             }
         }
-        compress_matrix(part_stiffness_mat)
+        compress_matrix(&part_stiffness_mat)
     }
 
     /// Print part's global stiffness matrix

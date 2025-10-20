@@ -4,13 +4,13 @@ use std::boxed::Box;
 /// Symmetric Skyline method to storage element and part stiffness matrix
 #[derive(Clone)]
 pub struct CompressedMatrixSKS {
-    pub values: Box<Vec<Dtype>>, // matrix element data
-    pub pointr: Box<Vec<usize>>, //
+    pub values: Vec<Dtype>, // matrix element data
+    pub pointr: Vec<usize>, //
 }
 
 impl CompressedMatrixSKS {
     /// Construct a compressed matrix
-    pub fn new(values: Box<Vec<Dtype>>, pointr: Box<Vec<usize>>) -> Self {
+    pub fn new(values: Vec<Dtype>, pointr: Vec<usize>) -> Self {
         CompressedMatrixSKS { values, pointr }
     }
 

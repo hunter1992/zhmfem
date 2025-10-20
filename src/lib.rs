@@ -49,14 +49,15 @@ mod testing {
         assert_eq!(3usize, node3.id);
 
         assert_eq!([1.0 as Dtype], node1.coords);
-        assert_eq!([1.0 as Dtype, 2.0 as Dtype], node2.coords.take());
+        assert_eq!([1.0 as Dtype, 2.0 as Dtype], node2.coords);
         assert_eq!([1.0 as Dtype, 2.0 as Dtype, 3.0 as Dtype], node3.coords);
     }
 
-    /*
     #[test]
     fn gen_elements() {
-        let material: (Dtype, Dtype) = (1.0, 0.25);
+        let material: [Dtype; 2] = [1.0, 0.25];
+
+        /*
         // 1D
         let node_a = Node1D::new(1, [0.0]);
         let node_b = Node1D::new(2, [1.0]);
@@ -67,6 +68,7 @@ mod testing {
         assert_eq!(1usize, rod1.id);
         assert_ne!(2usize, rod1.id);
         assert_eq!(2usize, rod2.id);
+        */
 
         // 2D
         let node1 = Node2D::new(1, [0.0, 0.0]);
@@ -75,10 +77,15 @@ mod testing {
         let node4 = Node2D::new(4, [1.0, 1.0]);
         let thick = 1.0;
 
-        let tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node3], &material);
-        let tri2 = Tri2D3N::new(2, thick, [&node4, &node2, &node3], &material);
+        let tri1 = Tri2D3N::new(1, thick, Box::new([&node1, &node2, &node3]), material);
+        let tri2 = Tri2D3N::new(2, thick, Box::new([&node4, &node2, &node3]), material);
 
-        let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4], &material);
+        let rec1 = Quad2D4N::new(
+            3,
+            thick,
+            Box::new([&node1, &node2, &node3, &node4]),
+            material,
+        );
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
@@ -96,7 +103,6 @@ mod testing {
         assert_eq!(0.5 as Dtype, tri2.area());
         assert_eq!(1.0 as Dtype, rec1.area());
     }
-    */
 
     #[test]
     fn gen_parts() {
@@ -114,8 +120,8 @@ mod testing {
         let mut tris: Vec<Tri2D3N> = tri2d3n_vec(thick, &nodes, &cplds, [ee, nu]);
 
         let p1: Part2D<Tri2D3N, 4, 2, 3> = Part2D::new(1, &nodes, &mut tris, &cplds);
-        assert_eq!(p1.elems[1].nodes[1].coords.borrow()[1], 1.0);
-        assert_ne!(p1.elems[1].nodes[1].coords.borrow()[1], -1.0);
+        assert_eq!(p1.elems[1].nodes[1].coords[1], 1.0);
+        assert_ne!(p1.elems[1].nodes[1].coords[1], -1.0);
 
         let disp = vec![
             -1024., -1024., -1024., -1024., -1024., -1024., -1024., -1024.,
@@ -153,51 +159,47 @@ mod testing {
 
     #[test]
     fn calc_tri_elem_k() {
+        let thick = 1.0;
+        let material: [Dtype; 2] = [1.0, 0.25];
+
+        let node1 = Node2D::new(1, [0.0, 0.0]);
+        let node2 = Node2D::new(2, [1.0, 0.0]);
+        let node3 = Node2D::new(3, [0.0, 1.0]);
+
+        let nodes = Box::new([&node1, &node2, &node3]);
+        let tri1 = Tri2D3N::new(1, thick, nodes, material);
+        let k: [[Dtype; 6]; 6] = tri1.calc_k();
+
+        assert_eq!(0.73333335, k[0][0]);
+    }
+
+    #[test]
+    fn calc_quad_elem_k() {
+        let thick = 1.0;
         let material: [Dtype; 2] = [1.0, 0.25];
 
         let node1 = Node2D::new(1, [0.0, 0.0]);
         let node2 = Node2D::new(2, [1.0, 0.0]);
         let node3 = Node2D::new(3, [1.0, 1.0]);
         let node4 = Node2D::new(4, [0.0, 1.0]);
-        let thick = 1.0;
 
-        let mut tri1 = Tri2D3N::new(1, thick, Box::new([&node1, &node2, &node4]), material);
-        let mut tri2 = Tri2D3N::new(2, thick, Box::new([&node3, &node4, &node2]), material);
+        let nodes = Box::new([&node1, &node2, &node3, &node4]);
+        let quad1 = Quad2D4N::new(1, thick, nodes, material);
+        let k1: [[Dtype; 8]; 8] = quad1.calc_k();
 
-        let k1: [[Dtype; 6]; 6] = *tri1.k().recover();
-        let k2: [[Dtype; 6]; 6] = *tri2.k().recover();
-
-        assert_eq!(k1, k2);
-    }
-
-    /*
-    #[test]
-    fn calc_quad_elem_k() {
-        let material = (1.0 as Dtype, 0.25 as Dtype);
-
-        let thick = 1.0;
-        let node1 = Node2D::new(1, [0.0, 0.0]);
-        let node2 = Node2D::new(2, [1.0, 0.0]);
-        let node3 = Node2D::new(3, [1.0, 1.0]);
-        let node4 = Node2D::new(4, [0.0, 1.0]);
-
-        let mut quad1 = Quad2D4N::new(1, thick, [&node1, &node2, &node3, &node4], &material);
-
-        let k1: [[Dtype; 8]; 8] = quad1.k().recover();
         assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
-    */
 
-    /*
     #[bench]
-    /// benchmark的结果是:393.49 ns +/- 36.23 ns/iter (Intel 8265U 插电) 20241205
+    /// benchmark的结果是:393.49 ns/iter (+/- 36.23) (Intel 8265U 插电) 20241205
+    /// benchmark的结果是:285.15 ns/iter (+/- 32.51) (Intel 8265U 插电) 20251020
     fn calc_quad_k_speed(b: &mut Bencher) {
         b.iter(|| calc_quad_elem_k());
     }
-    */
 
     #[bench]
-    /// benchmark的结果是:229.13 ns +/- 06.28 ns/iter (Intel 8265U 插电) 20241205
+    /// benchmark的结果是:229.13 ns/iter (+/- 06.28) (Intel 8265U 插电) 20241205
+    /// benchmark的结果是: 40.02 ns/iter (+/-  0.67) (Intel 8265U 插电) 20251020
     fn calc_tri_k_speed(b: &mut Bencher) {
         b.iter(|| calc_tri_elem_k());
     }

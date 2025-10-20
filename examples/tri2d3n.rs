@@ -13,13 +13,15 @@ fn main() {
     const E: Dtype = 0.0; // Exponent in scientific notation to base 10
     const CPU_CORES: usize = 2;
 
-    // "lu" for LU decomposition algorithm or
-    // "cholesky" for Cholesky Decomposition algorithm or
+    // "lu"       for LU       decomposition algorithm or
+    // "cholesky" for Cholesky decomposition algorithm or
     // "gs"       for gauss-seidel iteration algorithm
     let calc_method: &str = "cholesky";
-    let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
+    // Calculation accuracy of iterative algorithm
+    let calc_accuracy: Dtype = 0.001;
 
-    let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
+    // "s" or "singllel" or "p" or "parallel"
+    let parallel_or_singllel: &str = "s";
 
     let thick: Dtype = 1.0; //Thickness of the plate
     let material: [Dtype; 2] = [1.0, 0.25]; //Young's modulud & Poisson's ratio

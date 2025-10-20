@@ -9,7 +9,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    const STACK_SIZE: usize = 256 * 1024 * 1024; // MB = 1024 * 1024
+    const STACK_SIZE: usize = 512 * 1024 * 1024; // MB = 1024 * 1024
     let executor = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(|| {
@@ -20,18 +20,19 @@ fn main() {
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
             const CPU_CORES: usize = 6;
 
-            let calc_method: &str = "cholesky"; // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+            // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
+            let calc_method: &str = "cholesky"; 
             let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
-            let parallel_or_singllel: &str = "p"; // "s" or "p"
+            let parallel_or_singllel: &str = "s"; // "s" or "p"
 
             let thick: Dtype = 10.0; //Thickness of the plate
             let material: [Dtype; 2] = [209000.0, 0.269]; //Young's modulud & Poisson's ratio
 
             // -------- Part 1:  Meshing and applying boundary conditions --------
             // Set mesh and freedom parameters
-            const R: usize = 31; // rows of nodes
-            const C: usize = 31; // columns of nodes
+            const R: usize = 35; // rows of nodes
+            const C: usize = 35; // columns of nodes
             const M: usize = 3; // num of nodes in single element
             const F: usize = 2; // num of degree freedom at single node
 

@@ -6,19 +6,18 @@ use crate::elem::{
 use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
 use std::boxed::Box;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::default::Default;
 
 /// Return a matrix compressed by Skyline symmetry algorithm
-pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> CompressedMatrixSKS {
+pub fn compress_matrix<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixSKS {
     let mut values: Vec<Dtype> = vec![];
-    let mut pointer: Vec<usize> = vec![];
+    let mut pointr: Vec<usize> = vec![];
 
     let mut flag: bool = true; //当前行是否需要处理
     let mut col_idx_in_single_row: usize = 0;
     for row_idx in 0..DIM {
-        pointer.push(col_idx_in_single_row);
+        pointr.push(col_idx_in_single_row);
         for col_idx in 0..=row_idx {
             if mat[row_idx][col_idx] == 0.0 {
                 if flag == false {
@@ -40,12 +39,9 @@ pub fn compress_matrix<const DIM: usize>(mat: Box<[[Dtype; DIM]; DIM]>) -> Compr
         }
         flag = false;
     }
-    pointer.push(values.len());
+    pointr.push(values.len());
 
-    CompressedMatrixSKS {
-        values: Box::new(values),
-        pointr: Box::new(pointer),
-    }
+    CompressedMatrixSKS { values, pointr }
 }
 
 /// calculate part's deform energy
@@ -221,7 +217,7 @@ pub fn nodes2d_vec(
     for (idx, coord) in coords.iter().enumerate() {
         nodes.push(Node2D {
             id: idx,
-            coords: Box::new(RefCell::new([coord[0], coord[1]])),
+            coords: [coord[0], coord[1]],
             ..Default::default()
         });
     }

@@ -56,7 +56,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn get_nodes_xcoords(&self) -> [Dtype; 3] {
         let mut x_list = [0.0; 3];
         for (idx, node) in self.nodes.iter().enumerate() {
-            x_list[idx] = node.coords.borrow()[0];
+            x_list[idx] = node.coords[0];
         }
         x_list
     }
@@ -65,7 +65,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn get_nodes_ycoords(&self) -> [Dtype; 3] {
         let mut y_list = [0.0; 3];
         for (idx, node) in self.nodes.iter().enumerate() {
-            y_list[idx] = node.coords.borrow()[1];
+            y_list[idx] = node.coords[1];
         }
         y_list
     }
@@ -233,7 +233,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///         = thick * INT[ B(s, t)' * D * B(s, t) * det(J) ] dsdt
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * Area
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * 0.5 //标准三角形面积为0.5
-    fn calc_k(&self) -> Box<[[Dtype; 6]; 6]> {
+    pub fn calc_k(&self) -> [[Dtype; 6]; 6] {
         //println!(
         //    "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
         //    self.id, self.id
@@ -251,7 +251,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         let det_j = self.jacobian().determinant();
         let b_mat = self.geometry_mat_xy();
         let core = b_mat.transpose() * elasticity_mat * b_mat * det_j;
-        let stiffness_matrix: Box<[[Dtype; 6]; 6]> = Box::new((0.5 * self.thick * core).into());
+        let stiffness_matrix: [[Dtype; 6]; 6] = (0.5 * self.thick * core).into();
         stiffness_matrix
     }
 
@@ -318,7 +318,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     /// Cache stiffness matrix for triangle element
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
+            self.k_matrix.get_or_insert(compress_matrix(&self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
@@ -326,14 +326,14 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
 
     /// Print triangle element's stiffness matrix
     fn k_printr(&self, n_exp: Dtype) {
-        let k_mat: Box<[[Dtype; 6]; 6]> = self.calc_k();
-        print_2darr("\nTri2D3N k", self.id(), k_mat.as_ref(), n_exp);
+        let k_mat: [[Dtype; 6]; 6] = self.calc_k();
+        print_2darr("\nTri2D3N k", self.id(), &k_mat, n_exp);
     }
 
     /// Return triangle elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
-        let elem_stiffness_mat: Box<[[Dtype; 6]; 6]> = self.calc_k();
+        let elem_stiffness_mat: [[Dtype; 6]; 6] = self.calc_k();
         for row in 0..6 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");

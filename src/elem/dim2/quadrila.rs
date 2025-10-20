@@ -8,6 +8,7 @@ use crate::tool::{compress_matrix, print_1darr, print_2darr};
 use na::{SMatrix, SVector};
 use std::fmt::{self, Write};
 
+/// Four-node quad element in two-dimensional plane
 pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
@@ -33,7 +34,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         }
     }
 
-    /// Set element material_args
+    /// Set Quad2D4N element's material parameter
     pub fn set_material(&mut self, material_args: [Dtype; 2]) {
         self.material[0] = material_args[0];
         self.material[1] = material_args[1];
@@ -63,40 +64,40 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         s_tri1 + s_tri2
     }
 
-    /// Get the x-coords of nodes in tri element
+    /// Get the x-coords of nodes in quad element
     pub fn get_nodes_xcoords(&self) -> [Dtype; 4] {
         let mut x_list = [0.0; 4];
-        for i in 0..4 {
-            x_list[i] = self.nodes[i].coords.borrow()[0];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            x_list[idx] = node.coords[0];
         }
         x_list
     }
 
-    /// Get the y-coords of nodes in tri element
+    /// Get the y-coords of nodes in quad element
     pub fn get_nodes_ycoords(&self) -> [Dtype; 4] {
         let mut y_list = [0.0; 4];
-        for i in 0..4 {
-            y_list[i] = self.nodes[i].coords.borrow()[1];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            y_list[idx] = node.coords[1];
         }
         y_list
     }
 
-    /// Get nodes' disps vector in tri element
+    /// Get nodes' disps vector in quad element
     pub fn get_nodes_displacement(&self) -> [Dtype; 8] {
-        let mut disps = [0.0; 8];
-        for idx in 0..4 {
-            disps[2 * idx] = self.nodes[idx].displs.borrow()[0];
-            disps[2 * idx + 1] = self.nodes[idx].displs.borrow()[1];
+        let mut displacement = [0.0; 8];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            displacement[2 * idx] = node.displs.borrow()[0];
+            displacement[2 * idx + 1] = node.displs.borrow()[1];
         }
-        disps
+        displacement
     }
 
-    /// Get nodes's force vector in tri element
+    /// Get nodes's force vector in quad element
     pub fn get_nodes_force(&self) -> [Dtype; 8] {
         let mut forces = [0.0; 8];
-        for idx in 0..4 {
-            forces[2 * idx] = self.nodes[idx].forces.borrow()[0];
-            forces[2 * idx + 1] = self.nodes[idx].forces.borrow()[1];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            forces[2 * idx] = node.forces.borrow()[0];
+            forces[2 * idx + 1] = node.forces.borrow()[1];
         }
         forces
     }
@@ -154,6 +155,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     ///                     | t-1  1-t  1+t -1-t   |
     ///              = 0.25 |                      |
     ///                     | s-1 -1-s  1+s  1-s   |
+    #[inline]
     fn diff_shape_mat_st(&self, s_t_coords: [Dtype; 2]) -> SMatrix<Dtype, 2, 4> {
         let s: Dtype = s_t_coords[0];
         let t: Dtype = s_t_coords[1];
@@ -181,16 +183,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         jecobain.try_inverse().unwrap() * diff_shape_mat_st
     }
 
-    /// Calculate the Jacobian matrix of quadrilateral
-    fn jacobian(&self, s_t_coords: [Dtype; 2]) -> Jacobian2D {
-        let x: [Dtype; 4] = self.get_nodes_xcoords();
-        let y: [Dtype; 4] = self.get_nodes_ycoords();
-        let dn_st = self.diff_shape_mat_st(s_t_coords);
-        let xy = SMatrix::<Dtype, 4, 2>::from([x, y]);
-        dn_st * xy
-    }
-
     /// Geometry matrix B(xi, eta) 用参数坐标表示物理坐标下的几何矩阵
+    #[inline]
     fn geometry_mat_xy(&self, s_t_coords: [Dtype; 2]) -> SMatrix<Dtype, 3, 8> {
         let dn_xy = self.diff_shape_mat_xy(s_t_coords);
         SMatrix::<Dtype, 3, 8>::from([
@@ -205,9 +199,19 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         ])
     }
 
+    /// Calculate the Jacobian matrix of quadrilateral
+    #[inline]
+    fn jacobian(&self, s_t_coords: [Dtype; 2]) -> Jacobian2D {
+        let x: [Dtype; 4] = self.get_nodes_xcoords();
+        let y: [Dtype; 4] = self.get_nodes_ycoords();
+        let dn_st = self.diff_shape_mat_st(s_t_coords);
+        let xy = SMatrix::<Dtype, 4, 2>::from([x, y]);
+        dn_st * xy
+    }
+
     /// Calculate element stiffness matrix K
     /// return a 8x8 matrix, elements are Dtype
-    fn calc_k(&self) -> Box<[[Dtype; 8]; 8]> {
+    pub fn calc_k(&self) -> [[Dtype; 8]; 8] {
         println!(
             "\n>>> Calculating Quad2D4N(#{})'s stiffness matrix k{} ......",
             self.id, self.id
@@ -240,7 +244,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             }
         }
 
-        let stiffness_matrix: Box<[[Dtype; 8]; 8]> = Box::new((self.thick * k_matrix).into());
+        let stiffness_matrix: [[Dtype; 8]; 8] = (self.thick * k_matrix).into();
         stiffness_matrix
     }
 
@@ -404,7 +408,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     /// Cache stiffness matrix for quad element
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(compress_matrix(self.calc_k()))
+            self.k_matrix.get_or_insert(compress_matrix(&self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }
@@ -412,14 +416,14 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
 
     /// Print quad element's stiffness matrix
     fn k_printr(&self, n_exp: Dtype) {
-        let k_mat: Box<[[Dtype; 8]; 8]> = self.calc_k();
-        print_2darr("\n Tri2D4N k", self.id(), k_mat.as_ref(), n_exp);
+        let k_mat: [[Dtype; 8]; 8] = self.calc_k();
+        print_2darr("\n Tri2D4N k", self.id(), &k_mat, n_exp);
     }
 
     /// Return quad elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
-        let elem_stiffness_mat: Box<[[Dtype; 8]; 8]> = self.calc_k();
+        let elem_stiffness_mat: [[Dtype; 8]; 8] = self.calc_k();
         for row in 0..8 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
