@@ -132,6 +132,9 @@ Currently in the early stages of core functionality development, the compiled ve
 `++:.                           `-/+/    Terminal Font: 文泉驿等宽微米黑 (14pt)
 .`                                 `/    CPU: Intel(R) Core(TM) i5-8265U (8) @ 3.90 GHz
 
+I use Arch, BTW :)
+
+Ahh..., just kidding
 ```
 
 #### 2. Rust version
@@ -147,7 +150,7 @@ release: 1.92.0-nightly
 LLVM version: 21.1.2
 ```
 
-[install Rust now](https://www.rust-lang.org/tools/install) 🌞
+[install Rust now](https://www.rust-lang.org/tools/install) 
 
 ### Install ZHMFEM and use
 
@@ -166,7 +169,7 @@ LLVM version: 21.1.2
    cargo run -j 4 --release --example <example-name>
    ```
 
-   Here the <example-name> means the file name without ".rs" .
+   Here the "example-name" means the file name without ".rs" .
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -174,17 +177,20 @@ LLVM version: 21.1.2
 <!-- Case study using ZHMFEM -->
 ## Case study using ZHMFEM
 
-In this study, ZHMFEM is employed to calculate the plane stress problem of a square thin plate.
-Subsequently, the calculation results obtained from ZHMFEM are rigorously verified.
+In this case study, we demonstrate how to use ZHMFEM performing numerical calculations 
+for a plane stress problem and write the results to a VTK file. The calculated results 
+in the VTK file are visualized using ParaView and compared with ABAQUS calculations 
+(with identical parameters) to validate the computational accuracy of ZHMFEM.
 
 ### Calculation case description
 
 This example question comes from 
 __[Finite Element Basics Tutorial](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d)__
-( Page114 ) written by Zeng Pan. 
+( Page114 ) written by Prof. Zeng Pan. 
 
-( in Chinese: [《有限元基础教程》](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d)/ [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)编著
-北京：高等教育出版社，2009.7(2022.5 重印) ISBN 978-7-04-025841-7 ).
+( in Chinese:
+[《有限元基础教程》](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d)/ [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)编著
+北京：高等教育出版社，2009.7 (2022.5 重印) ISBN: 978-7-04-025841-7 ).
 
 If you are interested in learning FEM, here is a 
 [great lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
@@ -192,7 +198,9 @@ by Prof. Zeng Pan (Tsinghua University).
 
 The example question is:
 For the plane stress problem shown in the figure below, the given material parameters are:
+
 E = 209GPa (Young's modulus), $\nu$ = 0.269 (Poisson's ratio). 
+
 The square steel plate has a side length of 1000 mm and a thickness of 10 mm. 
 
 + Known displacement boundary conditions: 
@@ -207,9 +215,9 @@ The square steel plate has a side length of 1000 mm and a thickness of 10 mm.
 
 ### Aim  
 
-Use the two-dimensional plane elements (Tri2D3N and Quad2D4N elements) in ZHMFEM to
-calculate the plane stress problem of a square thin plate. Obtain node displacement,
-integral point stress, and thin plate deformation.
+Use the two-dimensional plane elements (Tri2D3N and Quad2D4N elements in ZHMFEM) to
+calculate the plane stress problem mentioned above. Obtain nodal displacement,
+integral point stress, and the plate deformation.
 
 Triangular elements and rectangular elements are used to mesh square thin plates, as shown in Figure 4-8(a) and 4-8(b).
 
