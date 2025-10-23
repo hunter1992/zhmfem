@@ -193,7 +193,7 @@ __[Finite Element Basics Tutorial](https://www.hep.com.cn/book/show/d57da3a7-0a3
 北京:高等教育出版社,2009.7 (2022.5 重印) ISBN:978-7-04-025841-7 ).
 
 If you are interested in learning FEM, here is a 
-[great lessen](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
+[ great lessen ](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
 by Prof. Zeng Pan (Tsinghua University).
 
 The example question is:
