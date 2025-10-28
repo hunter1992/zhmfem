@@ -189,14 +189,15 @@ __[Finite Element Basics Tutorial](https://www.hep.com.cn/book/show/d57da3a7-0a3
 ( Page114 ) written by Prof. Zeng Pan. 
 
 ( in Chinese:
-[《有限元基础教程》](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d)/ [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)编著
+[《有限元基础教程》](https://www.hep.com.cn/book/show/d57da3a7-0a3e-4298-96d4-f92f1243a51d) / [曾攀](https://zh.wikipedia.org/wiki/%E6%9B%BE%E6%94%80)编著
 北京:高等教育出版社,2009.7 (2022.5 重印) ISBN:978-7-04-025841-7 ).
 
 If you are interested in learning FEM, here is a 
 [ great lessen ](https://www.bilibili.com/video/BV1iP4y1y7qh/?spm_id_from=333.337.search-card.all.click) 
 by Prof. Zeng Pan (Tsinghua University).
 
-The example question is:
+The case is:
+
 For the plane stress problem shown in the figure below, the given material parameters are:
 
 E = 209GPa (Young's modulus), $\nu$ = 0.269 (Poisson's ratio). 
@@ -435,7 +436,6 @@ and outputting the resulting files are clearly marked with comments in each samp
 - [✔] Add output .vtk file
 - [ ] Add Tri2D6N element
 - [ ] Add non-linear rod element
-- [ ] Add Tri2D6N elements
 - [ ] Add document
 - [ ] Add non-linear FEM
     - [ ] plastic
