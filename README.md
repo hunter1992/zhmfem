@@ -212,7 +212,7 @@ The square steel plate has a side length of 1000 mm and a thickness of 10 mm.
   
   $$p_{Bx}=-1,\quad p_{By}=0,\quad p_{Cx}=1,\quad p_{Cy}=0,\quad p_{Dy}=0$$
 
-![Plane stress problem 平面应力问题](imgs/CST.png "plane stress problem")
+![Plane stress problem 平面应力问题](imgs/CST.jpg "plane stress problem")
 
 ### Aim  
 
