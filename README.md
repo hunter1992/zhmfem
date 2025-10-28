@@ -141,13 +141,13 @@ Ahh..., just kidding
 
 The Rust toolchain information used in the latest version of ZHMFEM is as follows:
 ```
-rustc 1.92.0-nightly (dc2c3564d 2025-09-29)
+rustc 1.93.0-nightly (f37aa9955 2025-10-26)
 binary: rustc
-commit-hash: dc2c3564d273cf8ccce32dc4f47eaa27063bceb9
-commit-date: 2025-09-29
+commit-date: 2025-10-26
 host: x86_64-unknown-linux-gnu
-release: 1.92.0-nightly
-LLVM version: 21.1.2
+release: 1.93.0-nightly
+LLVM version: 21.1.3
+
 ```
 
 [install Rust now](https://www.rust-lang.org/tools/install) 
