@@ -147,7 +147,6 @@ commit-date: 2025-10-26
 host: x86_64-unknown-linux-gnu
 release: 1.93.0-nightly
 LLVM version: 21.1.3
-
 ```
 
 [install Rust now](https://www.rust-lang.org/tools/install) 
