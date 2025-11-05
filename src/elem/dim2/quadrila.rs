@@ -4,7 +4,7 @@ use crate::dtty::{
 };
 use crate::node::Node2D;
 use crate::port::K;
-use crate::tool::{compress_matrix, print_1darr, print_2darr};
+use crate::tool::{compress_matrix_sks, print_1darr, print_2darr};
 use na::{SMatrix, SVector};
 use std::fmt::{self, Write};
 
@@ -166,6 +166,16 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         .transpose()
     }
 
+    /// Calculate the Jacobian matrix of quadrilateral
+    #[inline]
+    fn jacobian(&self, s_t_coords: [Dtype; 2]) -> Jacobian2D {
+        let x: [Dtype; 4] = self.get_nodes_xcoords();
+        let y: [Dtype; 4] = self.get_nodes_ycoords();
+        let dn_st = self.diff_shape_mat_st(s_t_coords);
+        let xy = SMatrix::<Dtype, 4, 2>::from([x, y]);
+        dn_st * xy
+    }
+
     /// Derivatives of shape functions with respect to physical coordinates
     /// 形函数对物理坐标的导数
     /// dN/dx = (dN/ds * ds/dx) + (dN/dt * dt/dx)
@@ -181,6 +191,28 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         let diff_shape_mat_st = self.diff_shape_mat_st(s_t_coords);
         let jecobain = self.jacobian(s_t_coords);
         jecobain.try_inverse().unwrap() * diff_shape_mat_st
+    }
+
+    /// Get inverse shape matrix at integration points
+    /// The shape mat at integration point is:
+    ///     [ N1(s1, t1),   N2(s1, t1),   N3(s1, t1),   N4(s1, t1) ]
+    ///     [ N1(s2, t2),   N2(s2, t2),   N3(s2, t2),   N4(s2, t2) ]
+    ///     [ N1(s3, t3),   N2(s3, t3),   N3(s3, t3),   N4(s3, t3) ]
+    ///     [ N1(s4, t4),   N2(s4, t4),   N3(s4, t4),   N4(s4, t4) ]
+    pub fn inv_shape_mat_under_st_at_intpoint(&self) -> [[Dtype; 4]; 4] {
+        let gp: Dtype = (1.0 as Dtype) / ((3.0 as Dtype).sqrt()); // gp for gauss point
+        let n1 = self.shape_func_st(0);
+        let n2 = self.shape_func_st(1);
+        let n3 = self.shape_func_st(2);
+        let n4 = self.shape_func_st(3);
+
+        let shape_mat: SMatrix<Dtype, 4, 4> = SMatrix::<Dtype, 4, 4>::from([
+            [n1(-gp, -gp), n1(gp, -gp), n1(gp, gp), n1(-gp, gp)],
+            [n2(-gp, -gp), n2(gp, -gp), n2(gp, gp), n2(-gp, gp)],
+            [n3(-gp, -gp), n3(gp, -gp), n3(gp, gp), n3(-gp, gp)],
+            [n4(-gp, -gp), n4(gp, -gp), n4(gp, gp), n4(-gp, gp)],
+        ]);
+        shape_mat.try_inverse().unwrap().into()
     }
 
     /// Geometry matrix B(xi, eta) 用参数坐标表示物理坐标下的几何矩阵
@@ -199,23 +231,13 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
         ])
     }
 
-    /// Calculate the Jacobian matrix of quadrilateral
-    #[inline]
-    fn jacobian(&self, s_t_coords: [Dtype; 2]) -> Jacobian2D {
-        let x: [Dtype; 4] = self.get_nodes_xcoords();
-        let y: [Dtype; 4] = self.get_nodes_ycoords();
-        let dn_st = self.diff_shape_mat_st(s_t_coords);
-        let xy = SMatrix::<Dtype, 4, 2>::from([x, y]);
-        dn_st * xy
-    }
-
     /// Calculate element stiffness matrix K
     /// return a 8x8 matrix, elements are Dtype
     pub fn calc_k(&self) -> [[Dtype; 8]; 8] {
-        println!(
-            "\n>>> Calculating Quad2D4N(#{})'s stiffness matrix k{} ......",
-            self.id, self.id
-        );
+        // println!(
+        //     "\n>>> Calculating Quad2D4N(#{})'s stiffness matrix k{} ......",
+        //     self.id, self.id
+        // );
         let ee = self.material[0];
         let nu = self.material[1];
         let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
@@ -408,7 +430,8 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     /// Cache stiffness matrix for quad element
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(compress_matrix(&self.calc_k()))
+            self.k_matrix
+                .get_or_insert(compress_matrix_sks(&self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }

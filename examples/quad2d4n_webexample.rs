@@ -1,5 +1,3 @@
-// This example comes from: https://cloud.tencent.com/developer/article/1086452
-
 #![allow(incomplete_features)]
 #![feature(generic_const_exprs)]
 
@@ -18,31 +16,35 @@ fn main() {
 
             // -------- Part 0: Set initial parameters --------
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
-            const CPU_CORES: usize = 8;
+            const CPU_CORES: usize = 2;
 
-            // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
-            let calc_method: &str = "cholesky"; 
-            let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
+            // "lu"       for LU       decomposition algorithm or
+            // "cholesky" for Cholesky decomposition algorithm or
+            // "gs"       for gauss-seidel iteration algorithm
+            let calc_method: &str = "cholesky";
+            // Calculation accuracy of iterative algorithm
+            let calc_accuracy: Dtype = 0.001;
 
-            let parallel_or_singllel: &str = "s"; // "s" or "p"
+            // "s" or "singllel" or "p" or "parallel"
+            let parallel_or_singllel: &str = "s";
 
             let thick: Dtype = 10.0; //Thickness of the plate
             let material: [Dtype; 2] = [210000.0, 0.30]; //Young's modulud & Poisson's ratio
 
             // -------- Part 1:  Meshing and applying boundary conditions --------
             // Set mesh and freedom parameters
-            const R: usize = 41;     // rows of nodes
-            const C: usize = 41;     // columns of nodes
-            const D: usize = R * C;  // Dimension of part stiffness matrix
-            const N: usize = 3;      // num of nodes in single element
-            const F: usize = 2;      // num of degree freedom at single node
+            const R: usize = 41; // rows of nodes
+            const C: usize = 41; // columns of nodes
+            const D: usize = R * C; // Dimension of part stiffness matrix
+            const M: usize = 4; // num of nodes in single element
+            const F: usize = 2; // num of degree freedom at single node
 
             // Automatically set coords and grouped nodes index
             // Auto-mesh generate coords and grouped nodes index
             const W: Dtype = 1000.0; // width
             const H: Dtype = 1000.0; // height
             let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
-            let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
+            let (points, grpdnidx) = solid1.mesh_with_quad2d4n(R, C);
 
             // Set boundary conditions and external loads automatically
             let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
@@ -54,14 +56,12 @@ fn main() {
             let nodes = nodes2d_vec(&points, &force_index, &force_value);
 
             // Construct Tri2D3N elements vector
-            let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, material);
+            let mut quads = quad2d4n_vec(thick, &nodes, &grpdnidx, material);
 
             // Construct 2D part & assembly global stiffness matrix
-            // let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
-            //     Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-            let mut part: Part2D<'_, Tri2D3N<'_>, D, F, N> =
-                Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-            //part.k_printer(parallel_or_singllel, CPU_CORES, E);
+            let mut part: Part2D<'_, Quad2D4N<'_>, D, F, M> =
+                Part2D::new(1, &nodes, &mut quads, &grpdnidx);
+            // part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
             // -------- Part 3:  Solve the problem --------
             // construct solver and solve the case
@@ -72,6 +72,15 @@ fn main() {
                 part.k(parallel_or_singllel, CPU_CORES).clone(),
             );
 
+            // 1) solve the linear equations of static system using direct method.
+            // eqs.lu_direct_solver(); //LU decomposition method
+            // let output_file = "LU.txt";
+
+            // 2) solve the linear equations of static system using iter method.
+            // eqs.gauss_seidel_iter_solver(0.001);
+            // let output_file = "G-S.txt";
+
+            // 3) or you can solve the problem with a more concise call:
             eqs.solve(calc_method, calc_accuracy);
 
             let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
@@ -80,8 +89,8 @@ fn main() {
             part.write_result(&eqs);
 
             // -------- Part 4:  Print all kinds of result --------
-            //print_1darr("qe", &part.nodes_displacement(), E, "v");
-            //print_1darr("fe", &part.nodes_force(), E, "v");
+            // print_1darr("qe", &part.nodes_displacement(), E, "v");
+            // print_1darr("fe", &part.nodes_force(), E, "v");
 
             println!("\n>>> System energy:");
             let strain_energy: Dtype = strain_energy(
@@ -99,31 +108,15 @@ fn main() {
             println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
             println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
-            /*
-            part.elems
-                .iter()
-                .map(|elem| {
-                    println!("{}", elem.info(0.0));
-                })
-                .count();
-            */
-
             // -------- Part 5:  Write clac result into txt file --------
             let problem_type = "WEBexample";
-            let element_type = "Tri2D3N";
+            let element_type = "Quad2D4N";
             let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
-            let _output_txt = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt");
-            let output_vtk = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk");
+            let output_vtk = format!(
+        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+    );
 
-            /*
-            part.txt_writer(
-                &output_txt,
-                calc_time,
-                E,
-                (strain_energy, external_force_work, potential_energy),
-            )
-            .expect(">>> !!! Failed to output text result file !!!");*/
-
+            // Output Calculation result into vtk file
             part.vtk_writer(&output_vtk, element_type)
                 .expect(">>> !!! Failed to output vtk file!");
 

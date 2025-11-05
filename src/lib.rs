@@ -170,7 +170,7 @@ mod testing {
         let tri1 = Tri2D3N::new(1, thick, nodes, material);
         let k: [[Dtype; 6]; 6] = tri1.calc_k();
 
-        assert_eq!(0.73333335, k[0][0]);
+        assert_eq!(0.7333333333333334, k[0][0]);
     }
 
     #[test]
@@ -187,7 +187,7 @@ mod testing {
         let quad1 = Quad2D4N::new(1, thick, nodes, material);
         let k1: [[Dtype; 8]; 8] = quad1.calc_k();
 
-        assert_eq!(0.48888892 as Dtype, k1[0][0]);
+        assert_eq!(0.4888888888888888 as Dtype, k1[0][0]);
     }
 
     #[bench]

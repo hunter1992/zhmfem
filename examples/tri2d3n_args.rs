@@ -15,7 +15,7 @@ fn main() {
             let time_start = Instant::now();
 
             // -------- Part 0: Set initial parameters --------
-            const E: Dtype = 0.0; // Exponent in scientific notation to base 10
+            const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
             const CPU_CORES: usize = 8;
 
             // "lu" for LU decomposition algorithm or
@@ -33,6 +33,7 @@ fn main() {
             // Set mesh and freedom parameters
             const R: usize = 2; // rows of nodes
             const C: usize = 2; // columns of nodes
+            const D: usize = R * C; // Dimension of part stiffness matrix
             const M: usize = 3; // num of nodes in single element
             const F: usize = 2; // num of degree freedom at single node
 
@@ -54,7 +55,7 @@ fn main() {
             let mut triangles = tri2d3n_vec(thick, &nodes, &grpdnidx, material);
 
             // Construct 2D part & assembly global stiffness matrix
-            let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
+            let mut part: Part2D<'_, Tri2D3N<'_>, D, F, M> =
                 Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
             //part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
@@ -70,7 +71,7 @@ fn main() {
             // 3) or you can solve the problem with a more concise call:
             eqs.solve(calc_method, calc_accuracy);
 
-            let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
+            let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
             // write the displacement and force result into Node2D's field
             part.write_result(&eqs);
@@ -108,7 +109,7 @@ fn main() {
             let problem_type = "stress2D";
             let element_type = "Tri2D3N";
             let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
-            let output_txt = format!(
+            let _output_txt = format!(
         "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
     );
             let output_vtk = format!(

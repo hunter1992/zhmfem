@@ -4,7 +4,7 @@ use crate::dtty::{
 };
 use crate::node::Node2D;
 use crate::port::K;
-use crate::tool::{compress_matrix, print_2darr};
+use crate::tool::{compress_matrix_sks, print_2darr};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -42,6 +42,11 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// Get Tri2D3N element's area value
+    ///   C \
+    ///     |\
+    ///     | \
+    ///     |  \
+    ///   A ----\B
     pub fn area(&self) -> Dtype {
         let x = self.get_nodes_xcoords();
         let y = self.get_nodes_ycoords();
@@ -234,19 +239,17 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * Area
     ///         = thick * B(s, t)' * D * B(s, t) * det(J) * 0.5 //标准三角形面积为0.5
     pub fn calc_k(&self) -> [[Dtype; 6]; 6] {
-        //println!(
-        //    "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
-        //    self.id, self.id
-        //);
+        // println!(
+        //     "\n>>> Calculating Tri2D3N(#{})'s local stiffness matrix k{} ......",
+        //     self.id, self.id
+        // );
         let ee = self.material[0];
         let nu = self.material[1];
-        let elasticity_mat = (ee / (1.0 - nu * nu))
-            * (SMatrix::<Dtype, 3, 3>::from([
-                [1.0, nu, 0.0],
-                [nu, 1.0, 0.0],
-                [0.0, 0.0, 0.5 * (1.0 - nu)],
-            ])
-            .transpose());
+        let elasticity_mat = SMatrix::<Dtype, 3, 3>::from([
+            [1.0, nu, 0.0],
+            [nu, 1.0, 0.0],
+            [0.0, 0.0, 0.5 * (1.0 - nu)],
+        ]) * (ee / (1.0 - nu * nu));
 
         let det_j = self.jacobian().determinant();
         let b_mat = self.geometry_mat_xy();
@@ -318,7 +321,8 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     /// Cache stiffness matrix for triangle element
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
-            self.k_matrix.get_or_insert(compress_matrix(&self.calc_k()))
+            self.k_matrix
+                .get_or_insert(compress_matrix_sks(&self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }

@@ -6,7 +6,7 @@ use crate::dtty::{
 };
 use crate::node::Node2D;
 use crate::port::{Export, K};
-use crate::tool::compress_matrix;
+use crate::tool::compress_matrix_sks;
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
@@ -189,7 +189,7 @@ where
         );
         self.assembly_time_consuming = Some(time_consuming);
 
-        compress_matrix(&part_stiffness_mat)
+        compress_matrix_sks(&part_stiffness_mat)
     }
 
     fn k_parallel(&mut self, cpu_cores: usize) -> CompressedMatrixSKS {
@@ -254,7 +254,7 @@ where
                 part_stiffness_mat[x][y] = mat[x][y].load(Ordering::Relaxed);
             }
         }
-        compress_matrix(&part_stiffness_mat)
+        compress_matrix_sks(&part_stiffness_mat)
     }
 
     /// Print part's global stiffness matrix

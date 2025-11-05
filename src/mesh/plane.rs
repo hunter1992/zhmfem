@@ -125,7 +125,7 @@ impl Rectangle {
         (nodes, coupls)
     }
 
-    pub fn mesh_with_rect(&self, rows: usize, cols: usize) -> (Points, Coupls) {
+    pub fn mesh_with_quad2d4n(&self, rows: usize, cols: usize) -> (Points, Coupls) {
         let mut points: Vec<[Dtype; 2]> = vec![];
         let mut coupls: Vec<Vec<usize>> = vec![];
 

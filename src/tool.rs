@@ -6,11 +6,10 @@ use crate::elem::{
 use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
 use std::boxed::Box;
-use std::collections::HashMap;
 use std::default::Default;
 
 /// Return a matrix compressed by Skyline symmetry algorithm
-pub fn compress_matrix<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixSKS {
+pub fn compress_matrix_sks<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixSKS {
     let mut values: Vec<Dtype> = vec![];
     let mut pointr: Vec<usize> = vec![];
 
@@ -174,12 +173,20 @@ pub fn print_2dvec(name: &str, mat: &[Vec<Dtype>], n_exp: Dtype) {
 }
 
 /// Constructe a 1D nodes vector
-pub fn nodes1d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec<Node1D> {
+pub fn nodes1d_vec(
+    coords: &Vec<[Dtype; 1]>,
+    force_idx: &[usize],
+    force_value: &[Dtype],
+) -> Vec<Node1D> {
     let mut nodes: Vec<Node1D> = Vec::with_capacity(coords.len());
     for (idx, coord) in coords.iter().enumerate() {
-        nodes.push(Node1D::new(idx, [coord[0]]));
+        nodes.push(Node1D {
+            id: idx,
+            coords: [coord[0]],
+            ..Default::default()
+        });
     }
-    for (idx, &f) in forces {
+    for (idx, &f) in force_idx.iter().zip(force_value.iter()) {
         nodes[idx / 1].forces.borrow_mut()[idx % 1] = f;
     }
     nodes
@@ -212,8 +219,7 @@ pub fn nodes2d_vec(
     force_idx: &[usize],
     force_value: &[Dtype],
 ) -> Vec<Node2D> {
-    let num_nodes: usize = coords.len();
-    let mut nodes: Vec<Node2D> = Vec::with_capacity(num_nodes);
+    let mut nodes: Vec<Node2D> = Vec::with_capacity(coords.len());
     for (idx, coord) in coords.iter().enumerate() {
         nodes.push(Node2D {
             id: idx,
@@ -228,12 +234,20 @@ pub fn nodes2d_vec(
 }
 
 /// Constructe a 3D nodes vector
-pub fn nodes3d_vec(coords: &[Vec<Dtype>], forces: &HashMap<usize, Dtype>) -> Vec<Node3D> {
+pub fn nodes3d_vec(
+    coords: &Vec<[Dtype; 3]>,
+    force_idx: &[usize],
+    force_value: &[Dtype],
+) -> Vec<Node3D> {
     let mut nodes: Vec<Node3D> = Vec::with_capacity(coords.len());
     for (idx, coord) in coords.iter().enumerate() {
-        nodes.push(Node3D::new(idx, [coord[0], coord[1], coord[2]]));
+        nodes.push(Node3D {
+            id: idx,
+            coords: [coord[0], coord[1], coord[2]],
+            ..Default::default()
+        })
     }
-    for (idx, &f) in forces {
+    for (idx, &f) in force_idx.iter().zip(force_value.iter()) {
         nodes[idx / 3].forces.borrow_mut()[idx % 3] = f;
     }
     nodes
@@ -334,11 +348,11 @@ pub fn tri2d3n_vec<'tri2d3n>(
 pub fn quad2d4n_vec<'quad2d4n>(
     thick: Dtype,
     nodes: &'quad2d4n [Node2D],
-    coupled_nodes: &[&[usize]],
+    coupled_nodes_id: &[Vec<usize>],
     material: [Dtype; 2],
 ) -> Vec<Quad2D4N<'quad2d4n>> {
-    let mut quad2d4n: Vec<Quad2D4N> = Vec::with_capacity(coupled_nodes.len());
-    for (id, cpld) in coupled_nodes.iter().enumerate() {
+    let mut quad2d4n: Vec<Quad2D4N> = Vec::with_capacity(coupled_nodes_id.len());
+    for (id, cpld) in coupled_nodes_id.iter().enumerate() {
         quad2d4n.push(Quad2D4N {
             id,
             thick,
