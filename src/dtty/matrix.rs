@@ -1,5 +1,5 @@
 use crate::dtty::basic::Dtype;
-use std::boxed::Box;
+use std::fmt;
 
 /// Symmetric Skyline method to storage element and part stiffness matrix
 #[derive(Clone)]
@@ -30,19 +30,29 @@ impl CompressedMatrixSKS {
     }
 }
 
+impl fmt::Display for CompressedMatrixSKS {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "\n\tdata: {:?}\n\tpointer: {:?}\n",
+            self.values, self.pointr
+        )
+    }
+}
+
 /// Compressed sparse row format to storage element's or part's stiffness matrix
 /// Notice: here the stiffness matrix is symmetric, so the compressed matrix in csr
 /// format just hava half data.
 #[derive(Clone)]
 pub struct CompressedMatrixCSR {
-    pub values: Box<Vec<Dtype>>, // matrix element data
-    pub colidx: Box<Vec<Dtype>>, // data in which colum
-    pub pointr: Box<Vec<usize>>, // rows head's pointer
+    pub values: Vec<Dtype>, // matrix element data
+    pub colidx: Vec<usize>, // data in which colum
+    pub pointr: Vec<usize>, // rows head's pointer
 }
 
 impl CompressedMatrixCSR {
     /// Construct a compressed matrix
-    pub fn new(values: Box<Vec<Dtype>>, colidx: Box<Vec<Dtype>>, pointr: Box<Vec<usize>>) -> Self {
+    pub fn new(values: Vec<Dtype>, colidx: Vec<usize>, pointr: Vec<usize>) -> Self {
         CompressedMatrixCSR {
             values,
             colidx,
@@ -61,5 +71,15 @@ impl CompressedMatrixCSR {
             }
         }
         matrix
+    }
+}
+
+impl fmt::Display for CompressedMatrixCSR {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "\n\tdata: {:?}\n\tcolumn index: {:?}\n\tpointer: {:?}\n",
+            self.values, self.colidx, self.pointr
+        )
     }
 }

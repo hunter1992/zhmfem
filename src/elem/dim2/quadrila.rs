@@ -312,10 +312,10 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     /// Get element node's strain
     pub fn calc_strain_at_nodes(&self) -> [[Dtype; 3]; 4] {
         let intpt_strain = self.calc_strain_at_intpts();
-        let mut nodes_strain: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
+        let nodes_strain: [[Dtype; 3]; 4] = [[0.0; 3]; 4];
 
         let gauss_pt = (1.0 as Dtype) / ((3.0 as Dtype).sqrt());
-        let nodes: [[Dtype; 2]; 4] = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]];
+        let _nodes: [[Dtype; 2]; 4] = [[-1., -1.], [1., -1.], [1., 1.], [-1., 1.]];
         let left_down_x = -gauss_pt;
         let left_down_y = -gauss_pt;
         let right_down_x = gauss_pt;

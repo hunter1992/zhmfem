@@ -2,7 +2,6 @@ use crate::calc::LinearEqs;
 use crate::dtty::{
     basic::{ADtype, Dtype},
     matrix::CompressedMatrixSKS,
-    sdata::Sdata,
 };
 use crate::node::Node2D;
 use crate::port::{Export, K};
@@ -535,6 +534,7 @@ where
 
                 Ok(true)
             }
+
             "Quad2D4N" => {
                 println!("\n>>> Writing calc results into vtk file ......");
                 let vtk_quadrilateral = self.vtk_quad2d4n_legacy(elem_type);

@@ -1,4 +1,7 @@
-use crate::dtty::{basic::Dtype, matrix::CompressedMatrixSKS};
+use crate::dtty::{
+    basic::Dtype,
+    matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
+};
 use crate::elem::{
     //dim1::{beam::Beam1D2N, rod::Rod1D2N},
     dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
@@ -7,6 +10,38 @@ use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
 use std::boxed::Box;
 use std::default::Default;
+
+/// Return a matrix compressed by Compressed Sparse Row format
+pub fn compress_matrix_csr<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixCSR {
+    let mut values: Vec<Dtype> = vec![];
+    let mut colidx: Vec<usize> = vec![];
+    let mut pointr: Vec<usize> = vec![];
+
+    let mut flag: bool = true;
+    let mut counter: usize = 0;
+    for row_idx in 0..DIM {
+        for col_idx in 0..=row_idx {
+            if 0.0 == mat[row_idx][col_idx] {
+                continue;
+            } else {
+                values.push(mat[row_idx][col_idx]);
+                colidx.push(col_idx);
+                if flag {
+                    pointr.push(counter);
+                    flag = false;
+                }
+                counter += 1;
+            }
+        }
+        flag = true;
+    }
+
+    CompressedMatrixCSR {
+        values,
+        colidx,
+        pointr,
+    }
+}
 
 /// Return a matrix compressed by Skyline symmetry algorithm
 pub fn compress_matrix_sks<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixSKS {

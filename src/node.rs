@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::default::Default;
 use std::fmt;
 
+/// 1D node with 48 Bytes
 pub struct Node1D {
     pub id: usize,
     pub coords: [Dtype; 1],

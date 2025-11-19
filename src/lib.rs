@@ -17,7 +17,7 @@ mod tool;
 pub use calc::LinearEqs;
 pub use dtty::{
     basic::{ADtype, Dtype, Jacobian2D, Jacobian3D},
-    matrix::CompressedMatrixSKS,
+    matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
     sdata::Sdata,
 };
 pub use elem::{
@@ -30,8 +30,6 @@ pub use node::{Node1D, Node2D, Node3D};
 pub use part::part2d::Part2D;
 pub use port::{Export, K};
 pub use tool::*;
-
-pub use std::collections::HashMap;
 
 #[cfg(test)]
 mod testing {
