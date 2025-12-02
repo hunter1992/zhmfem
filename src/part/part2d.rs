@@ -1,4 +1,4 @@
-use crate::calc::LinearEqs;
+use crate::calc::solver::LinearEqs;
 use crate::dtty::{
     basic::{ADtype, Dtype},
     matrix::CompressedMatrixSKS,

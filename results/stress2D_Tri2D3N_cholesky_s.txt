@@ -5,7 +5,7 @@
 			W_f:      3.437500 (exforce works)
 			E_p:     -1.718750 (potential energy)
 
->>> Solver time consuming: 909ns
+>>> Solver time consuming: 2.609µs
 
 >>> Part2D stiffness matrix:
 
@@ -31,13 +31,13 @@ Elem_Tri2D3N:
 			Id: 0
 			Coords: [    0.0000,     0.0000]
 			Displs: [    0.0000,     0.0000]
-			Forces: [    1.0000,    -0.0000]
+			Forces: [    1.0000,     0.0000]
 
 		Node_2D:
 			Id: 1
 			Coords: [    1.0000,     0.0000]
 			Displs: [   -1.7187,    -0.9375]
-			Forces: [   -1.0000,     0.0000]
+			Forces: [   -1.0000,    -0.0000]
 
 		Node_2D:
 			Id: 2
@@ -68,8 +68,8 @@ Elem_Tri2D3N:
 		Node_2D:
 			Id: 3
 			Coords: [    1.0000,     1.0000]
-			Displs: [    1.7187,    -1.7187]
-			Forces: [    1.0000,    -0.0000]
+			Displs: [    1.7188,    -1.7188]
+			Forces: [    1.0000,     0.0000]
 
 		Node_2D:
 			Id: 2
@@ -81,7 +81,7 @@ Elem_Tri2D3N:
 			Id: 1
 			Coords: [    1.0000,     0.0000]
 			Displs: [   -1.7187,    -0.9375]
-			Forces: [   -1.0000,     0.0000]
+			Forces: [   -1.0000,    -0.0000]
 
 	Strain:
 		[    1.718750,    -0.781250,     0.937500]

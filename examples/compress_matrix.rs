@@ -47,9 +47,23 @@ fn main() {
             1.5582470267318653,
         ],
     ];
-    let comp_sks_a = compress_matrix_sks(&a);
-    let comp_csr_a = compress_matrix_csr(&a);
 
-    print!("{}", comp_sks_a);
-    print!("{}", comp_csr_a);
+    print_2darr("A", 0, &a, 0.0);
+
+    let comp_sks_a = compress_matrix_sks(&a);
+    let comp_csr0_a = compress_matrix_csr_0based(&a);
+    let comp_csr1_a = compress_matrix_csr_1based(&a);
+
+    let recover_sks: [[Dtype; 8]; 8] = *comp_sks_a.recover();
+    let recover_csr_0: [[Dtype; 8]; 8] = *comp_csr0_a.recover();
+    let recover_csr_1: [[Dtype; 8]; 8] = *comp_csr1_a.recover();
+
+    print!(">>> SKS:\n{:-10.4}", comp_sks_a);
+    print_2darr("Recover by SKS", 0, &recover_sks, 0.0);
+    println!("-------------------------------");
+    print!(">>> CSR_0based:\n{:-10.4}", comp_csr0_a);
+    print_2darr("Recover by csr_0", 0, &recover_csr_0, 0.0);
+    println!("-------------------------------");
+    print!(">>> CSR_1based:\n{:-10.4}", comp_csr1_a);
+    print_2darr("Recover by SKS", 0, &recover_csr_1, 0.0);
 }

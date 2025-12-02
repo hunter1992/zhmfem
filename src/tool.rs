@@ -12,12 +12,14 @@ use std::boxed::Box;
 use std::default::Default;
 
 /// Return a matrix compressed by Compressed Sparse Row format
-pub fn compress_matrix_csr<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixCSR {
+pub fn compress_matrix_csr_0based<const DIM: usize>(
+    mat: &[[Dtype; DIM]; DIM],
+) -> CompressedMatrixCSR {
     let mut values: Vec<Dtype> = vec![];
     let mut colidx: Vec<usize> = vec![];
     let mut pointr: Vec<usize> = vec![];
 
-    let mut flag: bool = true;
+    let mut no_head_in_current_row: bool = true;
     let mut counter: usize = 0;
     for row_idx in 0..DIM {
         for col_idx in 0..=row_idx {
@@ -26,14 +28,59 @@ pub fn compress_matrix_csr<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> Compr
             } else {
                 values.push(mat[row_idx][col_idx]);
                 colidx.push(col_idx);
-                if flag {
+                if no_head_in_current_row {
                     pointr.push(counter);
-                    flag = false;
+                    no_head_in_current_row = false;
                 }
                 counter += 1;
             }
         }
-        flag = true;
+        no_head_in_current_row = true;
+    }
+
+    pointr.push(counter);
+
+    CompressedMatrixCSR {
+        values,
+        colidx,
+        pointr,
+    }
+}
+
+/// Return a CSR matrix, index in 1-based
+pub fn compress_matrix_csr_1based<const DIM: usize>(
+    mat: &[[Dtype; DIM]; DIM],
+) -> CompressedMatrixCSR {
+    let mut values: Vec<Dtype> = vec![];
+    let mut colidx: Vec<usize> = vec![];
+    let mut pointr: Vec<usize> = vec![];
+
+    let mut no_head_in_current_row: bool = true;
+    let mut counter: usize = 0;
+    for row_idx in 0..DIM {
+        for col_idx in 0..row_idx {
+            if 0.0 == mat[row_idx][col_idx] {
+                continue;
+            } else {
+                values.push(mat[row_idx][col_idx]);
+                colidx.push(col_idx);
+                if no_head_in_current_row {
+                    pointr.push(counter);
+                    no_head_in_current_row = false;
+                }
+                counter += 1;
+            }
+        }
+        no_head_in_current_row = true;
+    }
+
+    pointr.push(counter);
+
+    for idx in 0..colidx.len() {
+        colidx[idx] += 1;
+    }
+    for idx in 0..(pointr.len() - 1) {
+        pointr[idx] += 1;
     }
 
     CompressedMatrixCSR {

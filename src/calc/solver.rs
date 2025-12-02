@@ -1,4 +1,8 @@
-use crate::dtty::{basic::Dtype, matrix::CompressedMatrixSKS};
+use crate::dtty::{
+    basic::Dtype,
+    matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
+};
+use crate::tool::compress_matrix_csr_1based;
 use na::{DMatrix, DVector, SMatrix, SVector};
 use std::collections::HashSet;
 use std::time::Instant;
@@ -35,11 +39,27 @@ impl<const D: usize> LinearEqs<D> {
     pub fn solve(&mut self, solve_method: &str, calc_error: Dtype) {
         match solve_method {
             "lu" => self.lu_direct_solver(),
+            // "pardiso" => self.panua_pardiso_direct_solver(),
             "cholesky" => self.cholesky_direct_solver(),
             "gs" => self.gauss_seidel_iter_solver(calc_error),
             _ => panic!("!!! The provided algorithm is currently not supported!"),
         }
     }
+
+    /// 使用Panua Tech的PARDISO进行求解
+    // pub fn panua_pardiso_direct_solver(&mut self) {
+    //     // pre-process
+    //     let kmat: CompressedMatrixCSR = compress_matrix_csr(
+    //         SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose(),
+    //     );
+    //     let loads = SVector::from(self.loads);
+
+    //     let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
+    //     let force_known = loads.select_rows(disps_unknown_idx.iter());
+    //     let kmat_eff = kmat
+    //         .select_columns(disps_unknown_idx.iter())
+    //         .select_rows(disps_unknown_idx.iter());
+    // }
 
     /// 使用LU分解求解线性方程组(直接法)
     /// solve "A * x = b" using LU decomposition method

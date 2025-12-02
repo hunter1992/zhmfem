@@ -1,10 +1,16 @@
 fn main() {
     println!("");
     println!("    ========================================");
-    println!("    ========== WELCOME to zhmfem! ==========");
+    println!("    ========== WELCOME to ZHMFEM! ==========");
     println!("    ========================================\n");
-    println!(">>> check the examples under 'zhmfem/examples/' path using:");
+    println!(">>> check the examples under 'zhmfem/examples/' path");
+    println!("    and run a example  with command:");
+    println!();
     println!("        cargo run --example <example-name>");
+    println!();
+    println!("    or:");
+    println!();
+    println!("        cargo run -j 4 --release");
 
     println!("\n\n\n>>> ====== ZHMFEM Data size (Byte)======");
     use std::mem;
@@ -35,4 +41,5 @@ fn main() {
         "    Sizeof Part2D(Quad2D4N mesh):   {}",
         size_of_part2d_quad2d4n
     );
+    println!("=========================================\n");
 }

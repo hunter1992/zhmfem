@@ -14,7 +14,10 @@ mod part;
 mod port;
 mod tool;
 
-pub use calc::LinearEqs;
+pub use calc::{
+    panua::{pardiso, pardisoinit},
+    solver::LinearEqs,
+};
 pub use dtty::{
     basic::{ADtype, Dtype, Jacobian2D, Jacobian3D},
     matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
