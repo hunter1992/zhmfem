@@ -422,7 +422,7 @@ The code in *tri2d3n.rs* and *quad2d4n.rs* under “zhmfem/examples/”:
 
 <details>
 
-<summary><span  style="font-size: medium; color: orange; ">tri2d3n.rs</span></summary>
+<summary><span  style="font-size: medium; color: orange; ">quad2d4n.rs</span></summary>
 
 ```rust
 // tri2d3n.rs
