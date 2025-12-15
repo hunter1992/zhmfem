@@ -1,10 +1,9 @@
 use crate::dtty::{
     basic::Dtype,
-    matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
+    matrix::{CSRforPanuaPARDISO, CompressedMatrixCSR, CompressedMatrixSKS},
 };
-use crate::tool::compress_matrix_csr_1based;
+use crate::tool::idx_subtract;
 use na::{DMatrix, DVector, SMatrix, SVector};
-use std::collections::HashSet;
 use std::time::Instant;
 
 pub struct LinearEqs<const D: usize> {
@@ -35,37 +34,226 @@ impl<const D: usize> LinearEqs<D> {
         }
     }
 
-    /// Solve the defined problem
-    pub fn solve(&mut self, solve_method: &str, calc_error: Dtype) {
+    /// Solving systems of linear algebraic equations
+    /// 1) solve_method:
+    ///                  auto     ---- Panua Tech's PARDISO
+    ///                  lu       ---- LU decomposition method
+    ///                  pardiso  ---- Panua Tech's PARDISO
+    ///                  cholesky ---- Cholesky decomposition method
+    ///                  gs       ---- Gauss-Seidel iterative algorithm
+    ///
+    /// 2) calc_error  : set the truncation error for the iterative algorithm
+    ///
+    /// 3) cpus        : set the number of threads for parallel computing
+    pub fn solve(
+        &mut self,
+        solve_method: &str,
+        calc_error: Dtype,
+        cpus: usize,
+    ) -> Result<bool, i32> {
         match solve_method {
-            "lu" => self.lu_direct_solver(),
-            // "pardiso" => self.panua_pardiso_direct_solver(),
+            "auto" => self.panua_pardiso_direct_solver(cpus),
+            "pardiso" => self.panua_pardiso_direct_solver(cpus),
             "cholesky" => self.cholesky_direct_solver(),
+            "lu" => self.lu_direct_solver(),
             "gs" => self.gauss_seidel_iter_solver(calc_error),
-            _ => panic!("!!! The provided algorithm is currently not supported!"),
+            _ => panic!(
+                "!!! The algorithm for solving the linear equations was not selected.
+    If you are unsure, you can enter \"auto\""
+            ),
         }
     }
 
-    /// 使用Panua Tech的PARDISO进行求解
-    // pub fn panua_pardiso_direct_solver(&mut self) {
-    //     // pre-process
-    //     let kmat: CompressedMatrixCSR = compress_matrix_csr(
-    //         SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose(),
-    //     );
-    //     let loads = SVector::from(self.loads);
+    /// Solve the "A*x = b" with direct method using Panua Tech's PARDISO
+    pub fn panua_pardiso_direct_solver(&mut self, cpus: usize) -> Result<bool, i32> {
+        use crate::calc::panua;
+        use std::env;
+        use std::os::raw::c_void;
+        use std::ptr;
 
-    //     let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
-    //     let force_known = loads.select_rows(disps_unknown_idx.iter());
-    //     let kmat_eff = kmat
-    //         .select_columns(disps_unknown_idx.iter())
-    //         .select_rows(disps_unknown_idx.iter());
-    // }
+        // STEP 0. Prepare the coefficient matrix and RHS vector needed for calculation
+        let disps_unknown_idx: Vec<usize> = idx_subtract::<D>(self.disps_0_idx.clone());
+        let mut b: Vec<Dtype> = disps_unknown_idx
+            .iter()
+            .map(|&idx| self.loads[idx])
+            .collect();
+        let mut csr: CompressedMatrixCSR =
+            CompressedMatrixCSR::from_vec(self.static_kmat.get_sub_matrix(&disps_unknown_idx));
 
-    /// 使用LU分解求解线性方程组(直接法)
-    /// solve "A * x = b" using LU decomposition method
-    pub fn lu_direct_solver(&mut self) {
+        csr.convert_1base();
+        let matrix: CSRforPanuaPARDISO = csr.as_panua_pardiso_arg();
+
+        let mut x: Vec<Dtype> = vec![0.0; matrix.squaredim];
+
+        // STEP 1. Set environment variables and shared library file paths
+        unsafe {
+            env::set_var("PARDISO_LIC_PATH", "/opt/panua-pardiso-20240229-linux/bin");
+            env::set_var("PARDISO_PATH", "/opt/panua-pardiso-20240229-linux/lib");
+            env::set_var("PARDISOLICMESSAGE", "1"); // 抑制许可证检查信息输出
+        }
+        let pardiso_path = env::var("PARDISO_PATH").expect("!!! PARDISO_PATH must be set!");
+        let pardiso_lic_path =
+            env::var("PARDISO_LIC_PATH").expect("!!! PARDISO_LIC_PATH must be set!");
+        println!("\n>>> PARDISO_PATH = {:?}", pardiso_path);
+        println!("\n>>> PARDISO_LIC_PATH= {:?}", pardiso_lic_path);
+
+        // STEP 2. Set PARDISO parameters
+        const NRHS: usize = 1;
+        let mut pt: [*mut c_void; 64] = [ptr::null_mut(); 64];
+        let mut maxfct: i32 = 1;
+        let mut mnum: i32 = 1;
+        let mut mtype: i32 = 2;
+        let mut phase: i32;
+        let mut n: i32 = matrix.squaredim as i32;
+        let a: Vec<Dtype> = matrix.values;
+        let ia: Vec<i32> = matrix.rowptr;
+        let ja: Vec<i32> = matrix.colidx;
+        let mut nrhs: i32 = NRHS as i32;
+        let mut iparm: [i32; 64] = [0; 64];
+        let mut msglvl: i32 = 1;
+        let mut dparm: [f64; 64] = [0.0; 64];
+        let mut error: i32 = 0;
+        let mut solver: i32 = 0;
+
+        unsafe {
+            // ---------------------
+            // Initialization
+            // ---------------------
+            iparm[0] = 0;
+            panua::pardisoinit(
+                pt.as_mut_ptr(),
+                &mut mtype,
+                &mut solver,
+                iparm.as_mut_ptr(),
+                dparm.as_mut_ptr(),
+                &mut error,
+            );
+            if error != 0 {
+                println!("\n[PARDISO]: !!!ERROR during Reordering");
+                return Err(error);
+            } else {
+                println!("\n[PARDISO]: Initialization complete.");
+            }
+
+            // ---------------------
+            // Ordering
+            // ---------------------
+            iparm[2] = cpus as i32;
+            phase = 11;
+            let time_start1 = Instant::now();
+            panua::pardiso(
+                pt.as_mut_ptr(),
+                &mut maxfct,
+                &mut mnum,
+                &mut mtype,
+                &mut phase,
+                &mut n,
+                a.as_ptr() as *mut f64,
+                ia.as_ptr() as *mut i32,
+                ja.as_ptr() as *mut i32,
+                ptr::null_mut(),
+                &mut nrhs,
+                iparm.as_mut_ptr(),
+                &mut msglvl,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                &mut error,
+                dparm.as_mut_ptr(),
+            );
+            let time_end1 = time_start1.elapsed();
+            if error != 0 {
+                println!("\n[PARDISO]: !!!ERROR during Reordering");
+                return Err(error);
+            }
+
+            // ------------------------
+            // Numerical Factorization
+            // ------------------------
+            phase = 22;
+            let time_start2 = Instant::now();
+            panua::pardiso(
+                pt.as_mut_ptr(),
+                &mut maxfct,
+                &mut mnum,
+                &mut mtype,
+                &mut phase,
+                &mut n,
+                a.as_ptr() as *mut f64,
+                ia.as_ptr() as *mut i32,
+                ja.as_ptr() as *mut i32,
+                ptr::null_mut(),
+                &mut nrhs,
+                iparm.as_mut_ptr(),
+                &mut msglvl,
+                ptr::null_mut(),
+                ptr::null_mut(),
+                &mut error,
+                dparm.as_mut_ptr(),
+            );
+            let time_end2 = time_start2.elapsed();
+            if error != 0 {
+                return Err(error);
+            }
+
+            // ------------------------
+            // Solving
+            // ------------------------
+            phase = 33;
+            let time_start3 = Instant::now();
+            panua::pardiso(
+                pt.as_mut_ptr(),
+                &mut maxfct,
+                &mut mnum,
+                &mut mtype,
+                &mut phase,
+                &mut n,
+                a.as_ptr() as *mut f64,
+                ia.as_ptr() as *mut i32,
+                ja.as_ptr() as *mut i32,
+                ptr::null_mut(),
+                &mut nrhs,
+                iparm.as_mut_ptr(),
+                &mut msglvl,
+                b.as_mut_ptr(),
+                x.as_mut_ptr(),
+                &mut error,
+                dparm.as_mut_ptr(),
+            );
+            let time_end3 = time_start3.elapsed();
+            let time_end4 = time_start1.elapsed();
+            if error != 0 {
+                return Err(error);
+            }
+
+            println!("\n>>> PARDISO calculation down!");
+            println!(
+                "\tN of equations:                       {}",
+                disps_unknown_idx.len()
+            );
+            println!("\tAnalysis time consuming:              {:?}", time_end1);
+            println!("\tNumeric Factorization time consuming: {:?}", time_end2);
+            println!("\tSolve time consuming:                 {:?}", time_end3);
+            println!("\tTotal time consuming:                 {:?}", time_end4);
+            self.solver_time_consuming = Some(time_end4);
+        }
+
+        // write result into fields
+        let _: Vec<_> = disps_unknown_idx
+            .iter()
+            .enumerate()
+            .map(|(i, &idx)| self.disps[idx] = x[i])
+            .collect();
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
+        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.state = true;
+
+        Ok(self.state)
+    }
+
+    /// Solve "A * x = b" with direct method using LU decomposition
+    pub fn lu_direct_solver(&mut self) -> Result<bool, i32> {
         // pre-process
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose();
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
         let loads = SVector::from(self.loads);
 
         let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
@@ -74,12 +262,13 @@ impl<const D: usize> LinearEqs<D> {
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
 
-        let time_lu = Instant::now();
+        let time_start_lu = Instant::now();
         // solve the K.q = F by LU decomposition
         let disps_unknown_rlt: Vec<Dtype> = kmat_eff.lu().solve(&force_known).unwrap().data.into();
-        let duration_lu = time_lu.elapsed();
+        let duration_lu = time_start_lu.elapsed();
         println!(
-            "\n>>> LU decomposition method down!\n\ttime consuming = {:?}",
+            "\n>>> LU decomposition method down!\n\tN of equations:  {}\n\tTime consuming: {:?}",
+            disps_unknown_idx.len(),
             duration_lu
         );
 
@@ -92,11 +281,14 @@ impl<const D: usize> LinearEqs<D> {
         self.external_force = Some((kmat * SVector::from(self.disps)).into());
         self.solver_time_consuming = Some(duration_lu);
         self.state = true;
+
+        Ok(self.state)
     }
 
-    pub fn cholesky_direct_solver(&mut self) {
+    /// Solve "A * x = b" with direct method using Cholesky decomposition
+    pub fn cholesky_direct_solver(&mut self) -> Result<bool, i32> {
         // pre-process
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose();
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
         let loads = SVector::from(self.loads);
 
         let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
@@ -105,13 +297,14 @@ impl<const D: usize> LinearEqs<D> {
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
 
-        let time_lu = Instant::now();
+        let time_start_cholesky = Instant::now();
         // solve the K.q = F by LU decomposition
         let disps_unknown_rlt: Vec<Dtype> =
             kmat_eff.cholesky().unwrap().solve(&force_known).data.into();
-        let duration_lu = time_lu.elapsed();
+        let duration_lu = time_start_cholesky.elapsed();
         println!(
-            "\n>>> Cholesky decomposition method down!\n\ttime consuming = {:?}",
+            "\n>>> Cholesky decomposition method down!\n\tN of equations: {}\n\tTime consuming: {:?}",
+            disps_unknown_idx.len(),
             duration_lu
         );
 
@@ -124,19 +317,21 @@ impl<const D: usize> LinearEqs<D> {
         self.external_force = Some((kmat * SVector::from(self.disps)).into());
         self.solver_time_consuming = Some(duration_lu);
         self.state = true;
+
+        Ok(self.state)
     }
 
-    /// 使用Guass-Seidel迭代求解线性方程组(数值方法)
-    /// solve "A*x = F" using Gauss-Seidel iterator:
+    /// Solve "A*x = F" with iterator method using Gauss-Seidel
     ///   x(k+1) = -[(D+L)^(-1)] * U * x(k)  + [(D+L)^(-1)] * F
-    pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) {
+    /// url:https://www.jianshu.com/p/e14d9e910984
+    pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) -> Result<bool, i32> {
         // pre-process
         let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
 
         let loads = SVector::from(self.loads);
         let f_eff = loads.select_rows(disps_unknown_idx.iter());
 
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover()).transpose();
+        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
         let kmat_eff = kmat
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
@@ -181,13 +376,7 @@ impl<const D: usize> LinearEqs<D> {
             .collect();
         self.external_force = Some((kmat * SVector::from(self.disps)).into());
         self.state = true;
-    }
-}
 
-/// 求出Part各单元所有节点位移向量中，非零位移的索引
-fn idx_subtract<const N: usize>(zero_disps_idx: Vec<usize>) -> Vec<usize> {
-    let all_idx: [usize; N] = std::array::from_fn(|x| x);
-    let whole: HashSet<usize> = HashSet::from(all_idx);
-    let zeros: HashSet<usize> = zero_disps_idx.into_iter().collect();
-    (&whole - &zeros).iter().cloned().collect()
+        Ok(self.state)
+    }
 }

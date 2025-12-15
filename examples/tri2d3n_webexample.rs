@@ -18,10 +18,15 @@ fn main() {
 
             // -------- Part 0: Set initial parameters --------
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
-            const CPU_CORES: usize = 8;
+            let cpu_cores: usize = 8;
 
-            // "lu" for LU decomposition algorithm or "gs" for gauss-seidel iteration method
-            let calc_method: &str = "cholesky"; 
+            // "lu"       for LU       decomposition algorithm or
+            // "cholesky" for Cholesky decomposition algorithm or
+            // "pardiso"  for calling  Panua Tech's PARDISO
+            // "gs"       for gauss-seidel iteration algorithm
+            // let calc_method: &str = "cholesky"; 
+            let calc_method: &str = "auto"; 
+            
             let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
             let parallel_or_singllel: &str = "s"; // "s" or "p"
@@ -61,7 +66,6 @@ fn main() {
             //     Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
             let mut part: Part2D<'_, Tri2D3N<'_>, D, F, N> =
                 Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-            //part.k_printer(parallel_or_singllel, CPU_CORES, E);
 
             // -------- Part 3:  Solve the problem --------
             // construct solver and solve the case
@@ -69,10 +73,10 @@ fn main() {
                 part.nodes_displacement(),
                 part.nodes_force(),
                 zero_disp_index,
-                part.k(parallel_or_singllel, CPU_CORES).clone(),
+                part.k(parallel_or_singllel, cpu_cores).clone(),
             );
 
-            eqs.solve(calc_method, calc_accuracy);
+            let _ = eqs.solve(calc_method, calc_accuracy, cpu_cores);
 
             let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
@@ -85,13 +89,13 @@ fn main() {
 
             println!("\n>>> System energy:");
             let strain_energy: Dtype = strain_energy(
-                part.k(parallel_or_singllel, CPU_CORES).clone(),
+                part.k(parallel_or_singllel, cpu_cores).clone(),
                 part.nodes_displacement(),
             );
             let external_force_work: Dtype =
                 external_force_work(part.nodes_force(), part.nodes_displacement());
             let potential_energy: Dtype = potential_energy(
-                part.k(parallel_or_singllel, CPU_CORES).clone(),
+                part.k(parallel_or_singllel, cpu_cores).clone(),
                 part.nodes_force(),
                 part.nodes_displacement(),
             );

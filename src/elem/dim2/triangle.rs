@@ -4,7 +4,7 @@ use crate::dtty::{
 };
 use crate::node::Node2D;
 use crate::port::K;
-use crate::tool::{compress_matrix_sks, print_2darr};
+use crate::tool::{compress_symmetry_matrix_sks, print_2darr};
 use na::SMatrix;
 use std::fmt::{self, Write};
 
@@ -322,7 +322,7 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
             self.k_matrix
-                .get_or_insert(compress_matrix_sks(&self.calc_k()))
+                .get_or_insert(compress_symmetry_matrix_sks(&self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }

@@ -1,6 +1,6 @@
 fn main() {
     // Setting path to pardiso's .so file
-    let lib_path = "/home/zhm/Documents/Scripts/Rust/Learn/Calc/PARDISO/panua_ffi_dynamic/lib/";
+    let lib_path = "/opt/panua-pardiso-20240229-linux/lib/";
     println!("cargo:rustc-link-search=native={}", lib_path);
 
     // Setting rpath(runtime path)

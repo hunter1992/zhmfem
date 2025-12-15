@@ -11,12 +11,14 @@ fn main() {
 
     // -------- Part 0: Set initial parameters --------
     const E: Dtype = 0.0; // Exponent in scientific notation to base 10
-    const CPU_CORES: usize = 2;
+    let cpu_cores: usize = 2;
 
     // "lu"       for LU       decomposition algorithm or
     // "cholesky" for Cholesky decomposition algorithm or
+    // "pardiso"  for calling  Panua Tech's PARDISO
     // "gs"       for gauss-seidel iteration algorithm
     let calc_method: &str = "cholesky";
+
     // Calculation accuracy of iterative algorithm
     let calc_accuracy: Dtype = 0.001;
 
@@ -34,12 +36,12 @@ fn main() {
     const F: usize = 2; // num of degree freedom at single node
 
     // Manually set coords and grouped nodes index
-    let points = vec![[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2], vec![3, 2, 1]];
+    let points = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![2, 3, 1]];
 
     // Set boundary conditions and external loads manually
-    let zero_disp_index: Vec<usize> = vec![0, 1, 4];
-    let force_index: Vec<usize> = vec![2, 6];
+    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
+    let force_index: Vec<usize> = vec![2, 4];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
 
     // Automatically set coords and grouped nodes index
@@ -71,7 +73,7 @@ fn main() {
     // Construct 2D part & assembly global stiffness matrix
     let mut part: Part2D<'_, Tri2D3N<'_>, { R * C }, F, M> =
         Part2D::new(1, &nodes, &mut triangles, &grpdnidx);
-    part.k_printer(parallel_or_singllel, CPU_CORES, E);
+    part.k_printer(parallel_or_singllel, cpu_cores, E);
 
     // -------- Part 3:  Solve the problem --------
     // construct solver and solve the case
@@ -79,7 +81,7 @@ fn main() {
         part.nodes_displacement(),
         part.nodes_force(),
         zero_disp_index,
-        part.k(parallel_or_singllel, CPU_CORES).clone(),
+        part.k(parallel_or_singllel, cpu_cores).clone(),
     );
 
     // 1) solve the linear equations of static system using direct method.
@@ -91,7 +93,7 @@ fn main() {
     // let output_file = "G-S.txt";
 
     // 3) or you can solve the problem with a more concise call:
-    eqs.solve(calc_method, calc_accuracy);
+    let _ = eqs.solve(calc_method, calc_accuracy, cpu_cores);
 
     let calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
@@ -104,13 +106,13 @@ fn main() {
 
     println!("\n>>> System energy:");
     let strain_energy: Dtype = strain_energy(
-        part.k(parallel_or_singllel, CPU_CORES).clone(),
+        part.k(parallel_or_singllel, cpu_cores).clone(),
         part.nodes_displacement(),
     );
     let external_force_work: Dtype =
         external_force_work(part.nodes_force(), part.nodes_displacement());
     let potential_energy: Dtype = potential_energy(
-        part.k(parallel_or_singllel, CPU_CORES).clone(),
+        part.k(parallel_or_singllel, cpu_cores).clone(),
         part.nodes_force(),
         part.nodes_displacement(),
     );

@@ -9,89 +9,13 @@ use crate::elem::{
 use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
 use std::boxed::Box;
+use std::collections::HashSet;
 use std::default::Default;
 
-/// Return a matrix compressed by Compressed Sparse Row format
-pub fn compress_matrix_csr_0based<const DIM: usize>(
+/// Return a symmetry matrix compressed by Skyline symmetry algorithm
+pub fn compress_symmetry_matrix_sks<const DIM: usize>(
     mat: &[[Dtype; DIM]; DIM],
-) -> CompressedMatrixCSR {
-    let mut values: Vec<Dtype> = vec![];
-    let mut colidx: Vec<usize> = vec![];
-    let mut pointr: Vec<usize> = vec![];
-
-    let mut no_head_in_current_row: bool = true;
-    let mut counter: usize = 0;
-    for row_idx in 0..DIM {
-        for col_idx in 0..=row_idx {
-            if 0.0 == mat[row_idx][col_idx] {
-                continue;
-            } else {
-                values.push(mat[row_idx][col_idx]);
-                colidx.push(col_idx);
-                if no_head_in_current_row {
-                    pointr.push(counter);
-                    no_head_in_current_row = false;
-                }
-                counter += 1;
-            }
-        }
-        no_head_in_current_row = true;
-    }
-
-    pointr.push(counter);
-
-    CompressedMatrixCSR {
-        values,
-        colidx,
-        pointr,
-    }
-}
-
-/// Return a CSR matrix, index in 1-based
-pub fn compress_matrix_csr_1based<const DIM: usize>(
-    mat: &[[Dtype; DIM]; DIM],
-) -> CompressedMatrixCSR {
-    let mut values: Vec<Dtype> = vec![];
-    let mut colidx: Vec<usize> = vec![];
-    let mut pointr: Vec<usize> = vec![];
-
-    let mut no_head_in_current_row: bool = true;
-    let mut counter: usize = 0;
-    for row_idx in 0..DIM {
-        for col_idx in 0..row_idx {
-            if 0.0 == mat[row_idx][col_idx] {
-                continue;
-            } else {
-                values.push(mat[row_idx][col_idx]);
-                colidx.push(col_idx);
-                if no_head_in_current_row {
-                    pointr.push(counter);
-                    no_head_in_current_row = false;
-                }
-                counter += 1;
-            }
-        }
-        no_head_in_current_row = true;
-    }
-
-    pointr.push(counter);
-
-    for idx in 0..colidx.len() {
-        colidx[idx] += 1;
-    }
-    for idx in 0..(pointr.len() - 1) {
-        pointr[idx] += 1;
-    }
-
-    CompressedMatrixCSR {
-        values,
-        colidx,
-        pointr,
-    }
-}
-
-/// Return a matrix compressed by Skyline symmetry algorithm
-pub fn compress_matrix_sks<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> CompressedMatrixSKS {
+) -> CompressedMatrixSKS {
     let mut values: Vec<Dtype> = vec![];
     let mut pointr: Vec<usize> = vec![];
 
@@ -125,13 +49,53 @@ pub fn compress_matrix_sks<const DIM: usize>(mat: &[[Dtype; DIM]; DIM]) -> Compr
     CompressedMatrixSKS { values, pointr }
 }
 
+/// Return a symmetry matrix compressed by Compressed Sparse Row format
+pub fn compress_symmetry_matrix_csr<const DIM: usize>(
+    mat: &[[Dtype; DIM]; DIM],
+) -> CompressedMatrixCSR {
+    let mut values: Vec<Dtype> = vec![];
+    let mut colidx: Vec<usize> = vec![];
+    let mut rowptr: Vec<usize> = vec![];
+    let baseinfo: u8 = 0;
+    let squaredim: usize = DIM;
+
+    let mut no_head_in_current_row: bool = true;
+    let mut counter: usize = 0;
+    for row_idx in 0..DIM {
+        for col_idx in row_idx..DIM {
+            if 0.0 == mat[row_idx][col_idx] {
+                continue;
+            } else {
+                values.push(mat[row_idx][col_idx]);
+                colidx.push(col_idx);
+                if no_head_in_current_row {
+                    rowptr.push(counter);
+                    no_head_in_current_row = false;
+                }
+                counter += 1;
+            }
+        }
+        no_head_in_current_row = true;
+    }
+
+    rowptr.push(counter);
+
+    CompressedMatrixCSR {
+        values,
+        colidx,
+        rowptr,
+        baseinfo,
+        squaredim,
+    }
+}
+
 /// calculate part's deform energy
 pub fn strain_energy<const D: usize>(
     stiffness_matrix: CompressedMatrixSKS,
     displacement: [Dtype; D],
 ) -> Dtype {
     let disp = SMatrix::<Dtype, D, 1>::from(displacement);
-    let k_matrix = SMatrix::<Dtype, D, D>::from(*stiffness_matrix.recover());
+    let k_matrix = SMatrix::<Dtype, D, D>::from(*stiffness_matrix.recover_square_arr());
     let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
     strain_energy[0][0]
 }
@@ -449,4 +413,17 @@ pub fn quad2d4n_vec<'quad2d4n>(
         })
     }
     quad2d4n
+}
+
+/// 对索引执行差集操作，保留满足特定要求的索引
+/// idx_whole:  [0, 1, 2, 3, 4, 5]
+/// idx_remove: [1, 3, 4]
+/// idx_to_get: [0, 2, 5]
+pub fn idx_subtract<const N: usize>(zero_disps_idx: Vec<usize>) -> Vec<usize> {
+    let all_idx: [usize; N] = std::array::from_fn(|x| x);
+    let whole: HashSet<usize> = HashSet::from(all_idx);
+    let zeros: HashSet<usize> = zero_disps_idx.into_iter().collect();
+    let mut result: Vec<usize> = (&whole - &zeros).iter().cloned().collect();
+    result.sort();
+    result
 }

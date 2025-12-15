@@ -16,7 +16,7 @@ fn main() {
 
             // -------- Part 0: Set initial parameters --------
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
-            const CPU_CORES: usize = 2;
+            let cpu_cores: usize = 2;
 
             // "lu"       for LU       decomposition algorithm or
             // "cholesky" for Cholesky decomposition algorithm or
@@ -69,7 +69,7 @@ fn main() {
                 part.nodes_displacement(),
                 part.nodes_force(),
                 zero_disp_index,
-                part.k(parallel_or_singllel, CPU_CORES).clone(),
+                part.k(parallel_or_singllel, cpu_cores).clone(),
             );
 
             // 1) solve the linear equations of static system using direct method.
@@ -81,7 +81,7 @@ fn main() {
             // let output_file = "G-S.txt";
 
             // 3) or you can solve the problem with a more concise call:
-            eqs.solve(calc_method, calc_accuracy);
+            let _ = eqs.solve(calc_method, calc_accuracy, cpu_cores);
 
             let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
@@ -94,13 +94,13 @@ fn main() {
 
             println!("\n>>> System energy:");
             let strain_energy: Dtype = strain_energy(
-                part.k(parallel_or_singllel, CPU_CORES).clone(),
+                part.k(parallel_or_singllel, cpu_cores).clone(),
                 part.nodes_displacement(),
             );
             let external_force_work: Dtype =
                 external_force_work(part.nodes_force(), part.nodes_displacement());
             let potential_energy: Dtype = potential_energy(
-                part.k(parallel_or_singllel, CPU_CORES).clone(),
+                part.k(parallel_or_singllel, cpu_cores).clone(),
                 part.nodes_force(),
                 part.nodes_displacement(),
             );

@@ -4,7 +4,7 @@ use crate::dtty::{
 };
 use crate::node::Node2D;
 use crate::port::K;
-use crate::tool::{compress_matrix_sks, print_1darr, print_2darr};
+use crate::tool::{compress_symmetry_matrix_sks, print_1darr, print_2darr};
 use na::{SMatrix, SVector};
 use std::fmt::{self, Write};
 
@@ -431,7 +431,7 @@ impl<'quad2d4n> K for Quad2D4N<'quad2d4n> {
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
             self.k_matrix
-                .get_or_insert(compress_matrix_sks(&self.calc_k()))
+                .get_or_insert(compress_symmetry_matrix_sks(&self.calc_k()))
         } else {
             self.k_matrix.as_ref().unwrap()
         }

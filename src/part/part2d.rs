@@ -5,7 +5,7 @@ use crate::dtty::{
 };
 use crate::node::Node2D;
 use crate::port::{Export, K};
-use crate::tool::compress_matrix_sks;
+use crate::tool::compress_symmetry_matrix_sks;
 use std::fmt::Write as _;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
@@ -167,7 +167,7 @@ where
             .iter()
             .zip(elems.iter())
             .map(|(cpld, &elem)| {
-                let elem_stiffness_mat = elem.recover::<{ M * F }>();
+                let elem_stiffness_mat = elem.recover_square_arr::<{ M * F }>();
                 for idx in 0..M {
                     for idy in 0..M {
                         for row in 0..F {
@@ -188,7 +188,7 @@ where
         );
         self.assembly_time_consuming = Some(time_consuming);
 
-        compress_matrix_sks(&part_stiffness_mat)
+        compress_symmetry_matrix_sks(&part_stiffness_mat)
     }
 
     fn k_parallel(&mut self, cpu_cores: usize) -> CompressedMatrixSKS {
@@ -225,7 +225,7 @@ where
                                 for idy in 0..M {
                                     for row in 0..F {
                                         for col in 0..F {
-                                            let elem_stiffness_mat = elem.recover::<{ M * F }>();
+                                            let elem_stiffness_mat = elem.recover_square_arr::<{ M * F }>();
                                             mat_clone[cpld[idx] * F + row][cpld[idy] * F + col]
                                                 .fetch_add(
                                                     elem_stiffness_mat[idx * F + row]
@@ -253,7 +253,7 @@ where
                 part_stiffness_mat[x][y] = mat[x][y].load(Ordering::Relaxed);
             }
         }
-        compress_matrix_sks(&part_stiffness_mat)
+        compress_symmetry_matrix_sks(&part_stiffness_mat)
     }
 
     /// Print part's global stiffness matrix
@@ -262,7 +262,7 @@ where
             self.k(parallel_or_singllel, cpu_cores);
         }
 
-        let k_matrix = self.k_matrix.clone().unwrap().recover::<{ N * F }>();
+        let k_matrix = self.k_matrix.clone().unwrap().recover_square_arr::<{ N * F }>();
         print!("\nPart #{}  K =  (* 10^{})\n[", self.id, n_exp as u8);
         for row in 0..(N * F) {
             if row == 0 {
@@ -295,7 +295,7 @@ where
         )
         .expect("Write Part2D Stiffness Matrix Failed!");
 
-        let k: [[Dtype; N * F]; N * F] = *self.k_matrix.clone().unwrap().recover();
+        let k: [[Dtype; N * F]; N * F] = *self.k_matrix.clone().unwrap().recover_square_arr();
         for row in 0..(N * F) {
             if row == 0 {
                 write!(k_matrix, "[[").expect("Write Part2D Stiffness Matrix Failed!");

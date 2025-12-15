@@ -1,4 +1,4 @@
-use std::os::raw::{c_double, c_int, c_void};
+use std::os::raw::c_void;
 
 // 链接动态库
 #[link(name = "pardiso", kind = "dylib")]
