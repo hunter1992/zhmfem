@@ -5,7 +5,7 @@
 			W_f:      8.181818 (exforce works)
 			E_p:     -4.090909 (potential energy)
 
->>> Solver time consuming: 1.446µs
+>>> Solver time consuming: 659ns
 
 >>> Part2D stiffness matrix:
 
@@ -43,18 +43,18 @@ Elem_Quad2D4N:
 			Id: 2
 			Coords: [    1.0000,     1.0000]
 			Displs: [    4.0909,    -4.0909]
-			Forces: [    1.0000,    -0.0000]
+			Forces: [    1.0000,     0.0000]
 
 		Node_2D:
 			Id: 3
 			Coords: [    0.0000,     1.0000]
 			Displs: [    0.0000,     0.0000]
-			Forces: [   -1.0000,     0.0000]
+			Forces: [   -1.0000,    -0.0000]
 
 	Strain: (at integration points)
 		[   -2.361887,     0.000000,    -2.361887]
-		[   -2.361887,    -0.000000,     2.361887]
-		[    2.361887,    -0.000000,     2.361887]
+		[   -2.361887,     0.000000,     2.361887]
+		[    2.361887,     0.000000,     2.361887]
 		[    2.361887,     0.000000,    -2.361887]
 
 	Stress: (at integration points)
