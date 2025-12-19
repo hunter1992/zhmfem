@@ -5,7 +5,7 @@
 			W_f:      8.181818 (exforce works)
 			E_p:     -4.090909 (potential energy)
 
->>> Solver time consuming: 659ns
+>>> Solver time consuming: 936ns
 
 >>> Part2D stiffness matrix:
 

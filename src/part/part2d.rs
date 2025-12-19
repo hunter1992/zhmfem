@@ -295,7 +295,7 @@ where
         )
         .expect("Write Part2D Stiffness Matrix Failed!");
 
-        let k: [[Dtype; N * F]; N * F] = *self.k_matrix.clone().unwrap().recover_square_arr();
+        let k: [[Dtype; N * F]; N * F] = self.k_matrix.clone().unwrap().recover_square_arr();
         for row in 0..(N * F) {
             if row == 0 {
                 write!(k_matrix, "[[").expect("Write Part2D Stiffness Matrix Failed!");

@@ -95,7 +95,7 @@ pub fn strain_energy<const D: usize>(
     displacement: [Dtype; D],
 ) -> Dtype {
     let disp = SMatrix::<Dtype, D, 1>::from(displacement);
-    let k_matrix = SMatrix::<Dtype, D, D>::from(*stiffness_matrix.recover_square_arr());
+    let k_matrix = SMatrix::<Dtype, D, D>::from(stiffness_matrix.recover_square_arr());
     let strain_energy: [[Dtype; 1]; 1] = (0.5 * disp.transpose() * k_matrix * disp).into();
     strain_energy[0][0]
 }

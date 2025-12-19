@@ -20,7 +20,7 @@ fn main() {
     let calc_method: &str = "cholesky";
 
     // Calculation accuracy of iterative algorithm
-    let calc_accuracy: Dtype = 0.001;
+    let calc_accuracy: Dtype = 0.0001;
 
     // "s" or "singllel" or "p" or "parallel"
     let parallel_or_singllel: &str = "s";
@@ -120,12 +120,14 @@ fn main() {
     println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
     println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
+    /*
     part.elems
         .iter()
         .map(|elem| {
             println!("{}", elem.info(0.0));
         })
         .count();
+    */
 
     // -------- Part 5:  Write clac result into txt file --------
     let problem_type = "stress2D";

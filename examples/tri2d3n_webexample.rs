@@ -9,7 +9,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    const STACK_SIZE: usize = 512 * 1024 * 1024; // MB = 1024 * 1024
+    const STACK_SIZE: usize = 1024 * 1024 * 1024; // MB = 1024 * 1024
     let executor = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(|| {
@@ -25,6 +25,7 @@ fn main() {
             // "pardiso"  for calling  Panua Tech's PARDISO
             // "gs"       for gauss-seidel iteration algorithm
             // let calc_method: &str = "cholesky"; 
+            //let calc_method: &str = "auto"; 
             let calc_method: &str = "auto"; 
             
             let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
@@ -126,7 +127,8 @@ fn main() {
                 E,
                 (strain_energy, external_force_work, potential_energy),
             )
-            .expect(">>> !!! Failed to output text result file !!!");*/
+            .expect(">>> !!! Failed to output text result file !!!");
+            */
 
             part.vtk_writer(&output_vtk, element_type)
                 .expect(">>> !!! Failed to output vtk file!");

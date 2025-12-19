@@ -16,7 +16,7 @@ fn main() {
     print_2darr("A", 0, &matrix, 0.0);
 
     let sks = compress_symmetry_matrix_sks(&matrix);
-    let recover_sks: [[Dtype; 8]; 8] = *sks.recover_square_arr();
+    let recover_sks: [[Dtype; 8]; 8] = sks.recover_square_arr();
     print!(">>> SKS format:\n{:-5.2}", sks);
     print_2darr("Recover by SKS", 0, &recover_sks, 0.0);
     println!("=================================================================================");

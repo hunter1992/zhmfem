@@ -34,9 +34,7 @@ impl CompressedMatrixSKS {
 
     /// Compresse a matrix in SKS form from a full square matrix Vec
     pub fn from_vec(mat: Vec<Vec<Dtype>>) -> Self {
-        if mat[0].len() != mat.len() {
-            panic!("!!! The matrix need to be compressed is not squaer!\n\tfrom /src/dtty/matrix.CompressedMatrixSKS.from_vec func");
-        }
+        assert_eq!(mat.len(), mat[0].len());
         let dim = mat.len();
         let mut values: Vec<Dtype> = vec![];
         let mut pointr: Vec<usize> = vec![];
@@ -72,8 +70,8 @@ impl CompressedMatrixSKS {
     }
 
     /// Recover a square matrix from compressed mat which is in CompressedMatrix shape
-    pub fn recover_square_arr<const DIM: usize>(&self) -> Box<[[Dtype; DIM]; DIM]> {
-        let mut matrix: Box<[[Dtype; DIM]; DIM]> = Box::new([[0.0; DIM]; DIM]);
+    pub fn recover_square_arr<const DIM: usize>(&self) -> [[Dtype; DIM]; DIM] {
+        let mut matrix: [[Dtype; DIM]; DIM] = [[0.0; DIM]; DIM];
         for row_idx in 0..DIM {
             let len = self.pointr[row_idx + 1] - self.pointr[row_idx];
             for jump in 0..len {

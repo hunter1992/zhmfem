@@ -1,11 +1,11 @@
 >>> ZHMFEM calculating results:
 
 >>> System energy:
-			E_d:      1.718750 (deform energy)
-			W_f:      3.437500 (exforce works)
-			E_p:     -1.718750 (potential energy)
+			E_d:      1.718611 (deform energy)
+			W_f:      3.437221 (exforce works)
+			E_p:     -1.718611 (potential energy)
 
->>> Solver time consuming: 1.13164ms
+>>> Solver time consuming: 6.539µs
 
 >>> Part2D stiffness matrix:
 
@@ -31,24 +31,24 @@ Elem_Tri2D3N:
 			Id: 0
 			Coords: [    0.0000,     0.0000]
 			Displs: [    0.0000,     0.0000]
-			Forces: [    1.0000,    -0.0000]
+			Forces: [    0.9999,    -0.0001]
 
 		Node_2D:
 			Id: 1
 			Coords: [    1.0000,     0.0000]
-			Displs: [   -1.7187,    -0.9375]
-			Forces: [   -1.0000,    -0.0000]
+			Displs: [   -1.7187,    -0.9373]
+			Forces: [   -1.0000,     0.0001]
 
 		Node_2D:
 			Id: 3
 			Coords: [    0.0000,     1.0000]
-			Displs: [    0.0000,     0.7812]
-			Forces: [   -1.0000,     0.0000]
+			Displs: [    0.0000,     0.7813]
+			Forces: [   -0.9999,     0.0000]
 
 	Strain:
-		[   -1.718750,     0.781250,    -0.937500]
+		[   -1.718708,     0.781265,    -0.937278]
 	Stress:
-		[   -1.625000,     0.375000,    -0.375000]
+		[   -1.624951,     0.375027,    -0.374911]
 
 	Stiffness Matrix K0 =  (*10^0)
 [[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]
@@ -68,25 +68,25 @@ Elem_Tri2D3N:
 		Node_2D:
 			Id: 2
 			Coords: [    1.0000,     1.0000]
-			Displs: [    1.7187,    -1.7187]
+			Displs: [    1.7187,    -1.7185]
 			Forces: [    1.0000,     0.0000]
 
 		Node_2D:
 			Id: 3
 			Coords: [    0.0000,     1.0000]
-			Displs: [    0.0000,     0.7812]
-			Forces: [   -1.0000,     0.0000]
+			Displs: [    0.0000,     0.7813]
+			Forces: [   -0.9999,     0.0000]
 
 		Node_2D:
 			Id: 1
 			Coords: [    1.0000,     0.0000]
-			Displs: [   -1.7187,    -0.9375]
-			Forces: [   -1.0000,    -0.0000]
+			Displs: [   -1.7187,    -0.9373]
+			Forces: [   -1.0000,     0.0001]
 
 	Strain:
-		[    1.718750,    -0.781250,     0.937500]
+		[    1.718653,    -0.781248,     0.937569]
 	Stress:
-		[    1.625000,    -0.375000,     0.375000]
+		[    1.624897,    -0.375024,     0.375027]
 
 	Stiffness Matrix K1 =  (*10^0)
 [[     0.733333      0.333333     -0.533333     -0.200000     -0.200000     -0.133333 ]

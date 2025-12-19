@@ -21,7 +21,8 @@ fn main() {
             // "lu"       for LU       decomposition algorithm or
             // "cholesky" for Cholesky decomposition algorithm or
             // "gs"       for gauss-seidel iteration algorithm
-            let calc_method: &str = "cholesky";
+            // "pardiso"  for calling Panua Tech's PARDISO share lib
+            let calc_method: &str = "pardiso";
             // Calculation accuracy of iterative algorithm
             let calc_accuracy: Dtype = 0.001;
 

@@ -77,6 +77,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Transform area-coords [L1, L2, L3] into (x, y) coords
     pub fn coords_transform_ltox(&self, area_coords: [Dtype; 2]) -> [Dtype; 2] {
+        assert!(2 == area_coords.len());
         let xs = self.get_nodes_xcoords();
         let ys = self.get_nodes_ycoords();
         let l3 = 1.0 - area_coords[0] - area_coords[1];
@@ -197,7 +198,6 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// | dN/dx |                 | dN/ds |
     /// |       |    =   J^(-1) * |       |
     /// | dN/dy |2x3              | dN/dt |2x3
-    #[inline]
     fn diff_shape_mat_xy(&self) -> SMatrix<Dtype, 2, 3> {
         let diff_shape_mat_st =
             SMatrix::<Dtype, 2, 3>::from([[-1.0, -1.0], [1.0, 0.0], [0.0, 1.0]]);
@@ -206,7 +206,6 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// B(s,t) for Tri2D3N which is a 3x6 mat
-    #[inline]
     fn geometry_mat_xy(&self) -> SMatrix<Dtype, 3, 6> {
         let dn_xy = self.diff_shape_mat_xy();
         SMatrix::<Dtype, 3, 6>::from([
@@ -222,7 +221,6 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// Calculate the Jacobian matrix of tri2d3n element
     /// J = [[dx/ds, dy/ds]
     ///      [dx/dt, dy/dt]]
-    #[inline]
     fn jacobian(&self) -> Jacobian2D {
         let xs: [Dtype; 3] = self.get_nodes_xcoords();
         let ys: [Dtype; 3] = self.get_nodes_ycoords();

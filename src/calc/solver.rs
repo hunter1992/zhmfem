@@ -47,20 +47,25 @@ impl<const D: usize> LinearEqs<D> {
     /// 3) cpus        : set the number of threads for parallel computing
     pub fn solve(
         &mut self,
-        solve_method: &str,
-        calc_error: Dtype,
+        solve_algorithm: &str,
+        truncation_error: Dtype,
         cpus: usize,
     ) -> Result<bool, i32> {
-        match solve_method {
-            "auto" => self.panua_pardiso_direct_solver(cpus),
+        match solve_algorithm {
             "pardiso" => self.panua_pardiso_direct_solver(cpus),
             "cholesky" => self.cholesky_direct_solver(),
             "lu" => self.lu_direct_solver(),
-            "gs" => self.gauss_seidel_iter_solver(calc_error),
-            _ => panic!(
-                "!!! The algorithm for solving the linear equations was not selected.
-    If you are unsure, you can enter \"auto\""
-            ),
+            "gs" => self.gauss_seidel_iter_solver(truncation_error),
+            "auto" => {
+                if 0 < D && D <= 256 {
+                    self.gauss_seidel_iter_solver(truncation_error)
+                } else if 256 < D && D <= 2048 {
+                    self.cholesky_direct_solver()
+                } else {
+                    self.panua_pardiso_direct_solver(cpus)
+                }
+            }
+            _ => panic!("No solution algorithm selected! If unsure, you can enter \"auto\"."),
         }
     }
 
@@ -87,7 +92,7 @@ impl<const D: usize> LinearEqs<D> {
 
         // STEP 1. Set environment variables and shared library file paths
         unsafe {
-            env::set_var("PARDISO_LIC_PATH", "/opt/panua-pardiso-20240229-linux/bin");
+            env::set_var("PARDISO_LIC_PATH", "/opt/panua-pardiso-20240229-linux/lic");
             env::set_var("PARDISO_PATH", "/opt/panua-pardiso-20240229-linux/lib");
             env::set_var("PARDISOLICMESSAGE", "1"); // 抑制许可证检查信息输出
         }
@@ -243,8 +248,8 @@ impl<const D: usize> LinearEqs<D> {
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = x[i])
             .collect();
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
-        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        let static_kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover_square_arr());
+        self.external_force = Some((static_kmat * SVector::from(self.disps)).into());
         self.state = true;
 
         Ok(self.state)
@@ -253,12 +258,12 @@ impl<const D: usize> LinearEqs<D> {
     /// Solve "A * x = b" with direct method using LU decomposition
     pub fn lu_direct_solver(&mut self) -> Result<bool, i32> {
         // pre-process
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
+        let static_kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover_square_arr());
         let loads = SVector::from(self.loads);
 
         let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
         let force_known = loads.select_rows(disps_unknown_idx.iter());
-        let kmat_eff = kmat
+        let kmat_eff = static_kmat
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
 
@@ -278,7 +283,7 @@ impl<const D: usize> LinearEqs<D> {
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
             .collect();
-        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.external_force = Some((static_kmat * SVector::from(self.disps)).into());
         self.solver_time_consuming = Some(duration_lu);
         self.state = true;
 
@@ -288,12 +293,12 @@ impl<const D: usize> LinearEqs<D> {
     /// Solve "A * x = b" with direct method using Cholesky decomposition
     pub fn cholesky_direct_solver(&mut self) -> Result<bool, i32> {
         // pre-process
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
+        let static_kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover_square_arr());
         let loads = SVector::from(self.loads);
 
         let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
         let force_known = loads.select_rows(disps_unknown_idx.iter());
-        let kmat_eff = kmat
+        let kmat_eff = static_kmat
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
 
@@ -314,7 +319,7 @@ impl<const D: usize> LinearEqs<D> {
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = disps_unknown_rlt[i])
             .collect();
-        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.external_force = Some((static_kmat * SVector::from(self.disps)).into());
         self.solver_time_consuming = Some(duration_lu);
         self.state = true;
 
@@ -326,13 +331,13 @@ impl<const D: usize> LinearEqs<D> {
     /// url:https://www.jianshu.com/p/e14d9e910984
     pub fn gauss_seidel_iter_solver(&mut self, calc_error: Dtype) -> Result<bool, i32> {
         // pre-process
-        let disps_unknown_idx = idx_subtract::<D>(self.disps_0_idx.clone());
+        let disps_unknown_idx: Vec<usize> = idx_subtract::<D>(self.disps_0_idx.clone());
 
         let loads = SVector::from(self.loads);
         let f_eff = loads.select_rows(disps_unknown_idx.iter());
 
-        let kmat = SMatrix::<Dtype, D, D>::from(*self.static_kmat.recover_square_arr()).transpose();
-        let kmat_eff = kmat
+        let static_kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover_square_arr());
+        let kmat_eff = static_kmat
             .select_columns(disps_unknown_idx.iter())
             .select_rows(disps_unknown_idx.iter());
 
@@ -374,7 +379,7 @@ impl<const D: usize> LinearEqs<D> {
             .enumerate()
             .map(|(i, &idx)| self.disps[idx] = x[i])
             .collect();
-        self.external_force = Some((kmat * SVector::from(self.disps)).into());
+        self.external_force = Some((static_kmat * SVector::from(self.disps)).into());
         self.state = true;
 
         Ok(self.state)

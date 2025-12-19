@@ -7,7 +7,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    const STACK_SIZE: usize = 64 * 1024 * 1024; // MB = 1024 * 1024
+    const STACK_SIZE: usize = 1024 * 1024 * 1024; // MB = 1024 * 1024
     let executor = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(|| {
@@ -21,7 +21,9 @@ fn main() {
             // "lu" for LU decomposition algorithm or
             // "cholesky" for Cholesky Decomposition algorithm or
             // "gs"       for gauss-seidel iteration algorithm
-            let calc_method: &str = "cholesky";
+            // "pardiso"  for calling Panua Tech's PARDISO share lib
+            // "auto"     for software automatic selection algorithm
+            let calc_method: &str = "pardiso";
             let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
             let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
@@ -31,20 +33,22 @@ fn main() {
 
             // -------- Part 1:  Meshing and applying boundary conditions --------
             // Set mesh and freedom parameters
-            const R: usize = 2; // rows of nodes
-            const C: usize = 2; // columns of nodes
+            const R: usize = 21; // rows of nodes
+            const C: usize = 21; // columns of nodes
             const D: usize = R * C; // Dimension of part stiffness matrix
             const M: usize = 3; // num of nodes in single element
             const F: usize = 2; // num of degree freedom at single node
 
-            // Manually set coords and grouped nodes index
-            let points: Vec<[Dtype; 2]> =
-                vec![[0.0, 0.0], [1000.0, 0.0], [0.0, 1000.0], [1000.0, 1000.0]];
-            let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 3], vec![3, 2, 0]];
+            // Automatically set coords and grouped nodes index
+            // Auto-mesh generate coords and grouped nodes index
+            const W: Dtype = 1000.0; // width
+            const H: Dtype = 1000.0; // height
+            let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
+            let (points, grpdnidx) = solid1.mesh_with_tri2d3n(R, C);
 
-            // Set boundary conditions and external loads manually
-            let zero_disp_index: Vec<usize> = vec![0, 1, 4];
-            let force_index: Vec<usize> = vec![2, 6];
+            // Set boundary conditions and external loads automatically
+            let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
+            let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
             let force_value: Vec<Dtype> = vec![-100000000.0, 100000000.0];
 
             // -------- Part 2:  Construct nodes, elements and parts --------
@@ -92,8 +96,8 @@ fn main() {
                 part.nodes_force(),
                 part.nodes_displacement(),
             );
-            println!("\tE_d: {:-9.6} (deform energy)", strain_energy);
-            println!("\tW_f: {:-9.6} (exforce works)", external_force_work);
+            println!("\tE_d:  {:-9.6} (deform energy)", strain_energy);
+            println!("\tW_f:  {:-9.6} (exforce works)", external_force_work);
             println!("\tE_p: {:-9.6} (potential energy)", potential_energy);
 
             /*
@@ -110,11 +114,11 @@ fn main() {
             let element_type = "Tri2D3N";
             let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
             let _output_txt = format!(
-        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
-    );
+                "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
+            );
             let output_vtk = format!(
-        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
-    );
+                "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+            );
 
             /*
             // Output Calculation result into txt file
