@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 nalgebra = "0.34.1"
 atomic_float = "1.1.0"
-vtkio = {version = "0.6", default-features = false}
+vtkio = { version = "0.7.0-rc1", default-features = false }
 
 [lib]
-doctest = false
+#doctest = false

@@ -12,7 +12,7 @@ use std::fmt::{self, Write};
 pub struct Quad2D4N<'quad2d4n> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: Box<[&'quad2d4n Node2D; 4]>,
+    pub nodes: [&'quad2d4n Node2D; 4],
     pub k_matrix: Option<CompressedMatrixSKS>,
     pub material: [Dtype; 2],
 }
@@ -22,7 +22,7 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     pub fn new(
         id: usize,
         thick: Dtype,
-        nodes: Box<[&'quad2d4n Node2D; 4]>,
+        nodes: [&'quad2d4n Node2D; 4],
         material: [Dtype; 2],
     ) -> Self {
         Quad2D4N {
@@ -401,7 +401,8 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
             [[-gauss_pt, -gauss_pt], [gauss_pt, -gauss_pt]],
             [[gauss_pt, gauss_pt], [-gauss_pt, gauss_pt]],
         ];
-        format!("\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
+        format!(
+            "\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
             self.id,
             self.area(),
             self.material[0],
@@ -512,7 +513,7 @@ impl fmt::Display for Quad2D4N<'_> {
         ];
         write!(
             f,
-"\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^0)\n{}",
+            "\n-----------------------------------------------------------------------------\nElem_Quad2D4N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}{}\n\tStrain: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStress: (at integration points)\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^0)\n{}",
             self.id,
             self.area(),
             self.material[0],

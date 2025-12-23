@@ -219,7 +219,9 @@ impl CompressedMatrixCSR {
             }
             self.baseinfo = 1;
         } else if self.baseinfo == 1 {
-            panic!("!!! The CSR matrix is already 1-based, from src/dtty/matrix/CompressedMatrixCSR.convert_1base.")
+            panic!(
+                "!!! The CSR matrix is already 1-based, from src/dtty/matrix/CompressedMatrixCSR.convert_1base."
+            )
         }
     }
 
@@ -234,7 +236,9 @@ impl CompressedMatrixCSR {
                 .for_each(|rowpointer| *rowpointer -= 1);
             self.baseinfo = 0;
         } else if self.baseinfo == 0 {
-            panic!("!!! The CSR matrix is already 0-based, from src/dtty/matrix/CompressedMatrixCSR.convert_0base.")
+            panic!(
+                "!!! The CSR matrix is already 0-based, from src/dtty/matrix/CompressedMatrixCSR.convert_0base."
+            )
         }
     }
 

@@ -27,7 +27,7 @@ fn main() {
             // let calc_method: &str = "cholesky"; 
             //let calc_method: &str = "auto"; 
             let calc_method: &str = "auto"; 
-            
+
             let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
             let parallel_or_singllel: &str = "s"; // "s" or "p"

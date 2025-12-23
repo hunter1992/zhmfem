@@ -13,7 +13,7 @@ use std::fmt::{self, Write};
 pub struct Tri2D3N<'tri2d3n> {
     pub id: usize,
     pub thick: Dtype,
-    pub nodes: Box<[&'tri2d3n Node2D; 3]>,
+    pub nodes: [&'tri2d3n Node2D; 3],
     pub k_matrix: Option<CompressedMatrixSKS>,
     pub material: [Dtype; 2],
 }
@@ -23,7 +23,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     pub fn new(
         id: usize,
         thick: Dtype,
-        nodes: Box<[&'tri2d3n Node2D; 3]>,
+        nodes: [&'tri2d3n Node2D; 3],
         material: [Dtype; 2],
     ) -> Self {
         Tri2D3N {
@@ -37,8 +37,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Set Tri2D3N element's material parameter
     pub fn set_material(&mut self, material_args: [Dtype; 2]) {
-        self.material[0] = material_args[0];
-        self.material[1] = material_args[1];
+        self.material = material_args;
     }
 
     /// Get Tri2D3N element's area value
@@ -297,7 +296,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
 
     /// Output element's calculation result
     pub fn calc_result_info(&self, n_exp: Dtype) -> String {
-        format!("\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
+        format!(
+            "\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
             self.id,
             self.area(),
             self.material[0],
@@ -386,7 +386,7 @@ impl fmt::Display for Tri2D3N<'_> {
         let stress = self.calc_stress();
         write!(
             f,
-"\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\tStiffness Matrix K{} =  (*10^0)\n{}",
+            "\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\tStiffness Matrix K{} =  (*10^0)\n{}",
             self.id,
             self.area(),
             self.material[0],

@@ -3,12 +3,12 @@ use crate::dtty::{
     matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
 };
 use crate::elem::{
+    dim1::rod::Rod1D2N,
     //dim1::{beam::Beam1D2N, rod::Rod1D2N},
     dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
 };
 use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
-use std::boxed::Box;
 use std::collections::HashSet;
 use std::default::Default;
 
@@ -238,6 +238,26 @@ pub fn nodes1d_vec(
     nodes
 }
 
+/// Constructe a 2D nodes vector
+pub fn nodes2d_vec(
+    coords: &Vec<[Dtype; 2]>,
+    force_idx: &[usize],
+    force_value: &[Dtype],
+) -> Vec<Node2D> {
+    let mut nodes: Vec<Node2D> = Vec::with_capacity(coords.len());
+    for (idx, coord) in coords.iter().enumerate() {
+        nodes.push(Node2D {
+            id: idx,
+            coords: [coord[0], coord[1]],
+            ..Default::default()
+        });
+    }
+    for (idx, &f) in force_idx.iter().zip(force_value.iter()) {
+        nodes[idx / 2].forces.get_mut()[idx % 2] = f;
+    }
+    nodes
+}
+
 /// convert 1D or 2D points to 3D points
 pub fn convert_to_3d_points<'zhmfem>(
     dim: usize,
@@ -257,26 +277,6 @@ pub fn convert_to_3d_points<'zhmfem>(
         panic!("!!! convert 1d/2d points to 3d points failed.");
     }
     points
-}
-
-/// Constructe a 2D nodes vector
-pub fn nodes2d_vec(
-    coords: &Vec<[Dtype; 2]>,
-    force_idx: &[usize],
-    force_value: &[Dtype],
-) -> Vec<Node2D> {
-    let mut nodes: Vec<Node2D> = Vec::with_capacity(coords.len());
-    for (idx, coord) in coords.iter().enumerate() {
-        nodes.push(Node2D {
-            id: idx,
-            coords: [coord[0], coord[1]],
-            ..Default::default()
-        });
-    }
-    for (idx, &f) in force_idx.iter().zip(force_value.iter()) {
-        nodes[idx / 2].forces.get_mut()[idx % 2] = f;
-    }
-    nodes
 }
 
 /// Constructe a 3D nodes vector
@@ -299,15 +299,13 @@ pub fn nodes3d_vec(
     nodes
 }
 
-/*
 /// Constructe a rod1d2n elements vector
 /// every rod with same cross sectional area
 pub fn rod1d2n_vec<'rod1d2n>(
-    //nodes: &'rod1d2n Vec<Node1D>,
     nodes: &'rod1d2n [Node1D],
     coupled_nodes_idx: &[Vec<usize>],
     cross_sectional_area: &'rod1d2n [Dtype],
-    material: &'rod1d2n (Dtype, Dtype),
+    material: [Dtype; 2],
 ) -> Vec<Rod1D2N<'rod1d2n>> {
     let mut rod1d2n: Vec<Rod1D2N> = Vec::with_capacity(coupled_nodes_idx.len());
     for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
@@ -320,7 +318,6 @@ pub fn rod1d2n_vec<'rod1d2n>(
     }
     rod1d2n
 }
-*/
 
 /*
 /// Constructe a rod2d2n elements vector
@@ -381,7 +378,7 @@ pub fn tri2d3n_vec<'tri2d3n>(
         tri2d3n.push(Tri2D3N {
             id,
             thick,
-            nodes: Box::new([&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]]),
+            nodes: [&nodes[cpld[0]], &nodes[cpld[1]], &nodes[cpld[2]]],
             k_matrix: None,
             material,
         })
@@ -402,12 +399,12 @@ pub fn quad2d4n_vec<'quad2d4n>(
         quad2d4n.push(Quad2D4N {
             id,
             thick,
-            nodes: Box::new([
+            nodes: [
                 &nodes[cpld[0]],
                 &nodes[cpld[1]],
                 &nodes[cpld[2]],
                 &nodes[cpld[3]],
-            ]),
+            ],
             k_matrix: None,
             material,
         })

@@ -24,13 +24,14 @@ pub use dtty::{
     sdata::Sdata,
 };
 pub use elem::{
+    dim1::rod::Rod1D2N,
     //dim1::{beam::Beam1D2N, rod::Rod1D2N},
     //dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N},
     dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
 };
 pub use mesh::plane::Rectangle;
 pub use node::{Node1D, Node2D, Node3D};
-pub use part::part2d::Part2D;
+pub use part::{part1d::Part1D, part2d::Part2D};
 pub use port::{Export, K};
 pub use tool::*;
 
@@ -78,15 +79,10 @@ mod testing {
         let node4 = Node2D::new(4, [1.0, 1.0]);
         let thick = 1.0;
 
-        let tri1 = Tri2D3N::new(1, thick, Box::new([&node1, &node2, &node3]), material);
-        let tri2 = Tri2D3N::new(2, thick, Box::new([&node4, &node2, &node3]), material);
+        let tri1 = Tri2D3N::new(1, thick, [&node1, &node2, &node3], material);
+        let tri2 = Tri2D3N::new(2, thick, [&node4, &node2, &node3], material);
 
-        let rec1 = Quad2D4N::new(
-            3,
-            thick,
-            Box::new([&node1, &node2, &node3, &node4]),
-            material,
-        );
+        let rec1 = Quad2D4N::new(3, thick, [&node1, &node2, &node3, &node4], material);
 
         assert_eq!(1usize, tri1.id);
         assert_ne!(2usize, tri1.id);
@@ -167,7 +163,7 @@ mod testing {
         let node2 = Node2D::new(2, [1.0, 0.0]);
         let node3 = Node2D::new(3, [0.0, 1.0]);
 
-        let nodes = Box::new([&node1, &node2, &node3]);
+        let nodes = [&node1, &node2, &node3];
         let tri1 = Tri2D3N::new(1, thick, nodes, material);
         let k: [[Dtype; 6]; 6] = tri1.calc_k();
 
@@ -184,7 +180,7 @@ mod testing {
         let node3 = Node2D::new(3, [1.0, 1.0]);
         let node4 = Node2D::new(4, [0.0, 1.0]);
 
-        let nodes = Box::new([&node1, &node2, &node3, &node4]);
+        let nodes = [&node1, &node2, &node3, &node4];
         let quad1 = Quad2D4N::new(1, thick, nodes, material);
         let k1: [[Dtype; 8]; 8] = quad1.calc_k();
 

@@ -1,0 +1,101 @@
+>>> ZHMFEM calculating results:
+
+>>> System energy:
+			E_d:      0.218750 (deform energy)
+			W_f:      0.437500 (exforce works)
+			E_p:     -0.218750 (potential energy)
+
+>>> Solver time consuming: 24.968669ms
+
+>>> Part2D stiffness matrix:
+
+Part #1  K =  (* 10^0)
+[[  40000.000000  -40000.000000       0.000000       0.000000  ]
+ [ -40000.000000  100000.000000  -60000.000000       0.000000  ]
+ [      0.000000  -60000.000000  180000.000000  -120000.000000  ]
+ [      0.000000       0.000000  -120000.000000  120000.000000 ]]
+
+>>> Details of each element:
+-----------------------------------------------------------------------------
+Elem_Rod1D2N:
+	Id:	0
+	Area:     0.020000
+	Mats: 200000.000000 (Young's modulus)
+	          0.250000 (Poisson's ratio)
+	Nodes:
+		Node_1D:
+			Id: 0
+			Coords: [    0.0000]
+			Displs: [   -0.0046]
+			Forces: [ -100.0000]
+
+		Node_1D:
+			Id: 1
+			Coords: [    0.1000]
+			Displs: [   -0.0021]
+			Forces: [    0.0000]
+
+	Strain:
+		[    0.025000]
+	Stress:
+		[ 5000.000000]
+
+	Stiffness Matrix K0 =  (*10^0)
+[[ 40000.000000  -40000.000000 ]
+ [ -40000.000000  40000.000000 ]]
+
+-----------------------------------------------------------------------------
+Elem_Rod1D2N:
+	Id:	1
+	Area:     0.030000
+	Mats: 200000.000000 (Young's modulus)
+	          0.250000 (Poisson's ratio)
+	Nodes:
+		Node_1D:
+			Id: 1
+			Coords: [    0.1000]
+			Displs: [   -0.0021]
+			Forces: [    0.0000]
+
+		Node_1D:
+			Id: 2
+			Coords: [    0.2000]
+			Displs: [   -0.0004]
+			Forces: [   50.0000]
+
+	Strain:
+		[    0.016667]
+	Stress:
+		[ 3333.333333]
+
+	Stiffness Matrix K1 =  (*10^0)
+[[ 60000.000000  -60000.000000 ]
+ [ -60000.000000  60000.000000 ]]
+
+-----------------------------------------------------------------------------
+Elem_Rod1D2N:
+	Id:	2
+	Area:     0.060000
+	Mats: 200000.000000 (Young's modulus)
+	          0.250000 (Poisson's ratio)
+	Nodes:
+		Node_1D:
+			Id: 2
+			Coords: [    0.2000]
+			Displs: [   -0.0004]
+			Forces: [   50.0000]
+
+		Node_1D:
+			Id: 3
+			Coords: [    0.3000]
+			Displs: [    0.0000]
+			Forces: [   50.0000]
+
+	Strain:
+		[    0.004167]
+	Stress:
+		[  833.333333]
+
+	Stiffness Matrix K2 =  (*10^0)
+[[ 120000.000000  -120000.000000 ]
+ [ -120000.000000  120000.000000 ]]
