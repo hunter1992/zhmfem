@@ -2,11 +2,12 @@ use crate::calc::solver::LinearEqs;
 use crate::dtty::{
     basic::{ADtype, Dtype},
     matrix::CompressedMatrixSKS,
+    sdata::NodeSData2D,
 };
 use crate::node::Node2D;
-use crate::port::{Export, K};
-use crate::tool::compress_symmetry_matrix_sks;
-use std::fmt::Write as _;
+use crate::port::{Export, SData, StaticStiffness};
+use crate::tool::{chunck_vec2arr, compress_symmetry_matrix_sks};
+use std::fmt::{Display, Write as _};
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -16,8 +17,13 @@ use vtkio::model::*;
 
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
 /// In general, the value of F in a two-dimensional plane is 2
-pub struct Part2D<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
-where
+pub struct Part2D<
+    'part2d,
+    Elem: StaticStiffness + SData,
+    const N: usize,
+    const F: usize,
+    const M: usize,
+> where
     [[Dtype; N * F]; N * F]: Sized,
     [[Dtype; M * F]; M * F]: Sized,
 {
@@ -29,7 +35,7 @@ where
     pub assembly_time_consuming: Option<std::time::Duration>,
 }
 
-impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize>
+impl<'part2d, Elem: StaticStiffness + SData, const N: usize, const F: usize, const M: usize>
     Part2D<'part2d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
@@ -345,23 +351,69 @@ where
     }
 
     /// Returns the strain value for each constant strain element
-    pub fn elem_strain(&mut self) -> Vec<Vec<Dtype>> {
+    pub fn tri2d3n_elem_strain(&mut self) -> Vec<Vec<Dtype>> {
         let mut strain: Vec<Vec<Dtype>> = Vec::with_capacity(self.cplds.len());
         self.elems
-            .iter_mut()
-            .map(|elem| strain.push(elem.strain_at_intpt().remove(0)))
-            .count();
+            .iter_mut() //这里虽然调用的函数名字是strain_at_nodes
+            .map(|elem| strain.push(elem.strain_at_nodes()))
+            .count(); //但对CST的Tri2D3N而言是单元内的应变
         strain
     }
 
     /// Returns the stress value for each constant strain element
-    pub fn elem_stress(&mut self) -> Vec<Vec<Dtype>> {
+    pub fn tri2d3n_elem_stress(&mut self) -> Vec<Vec<Dtype>> {
         let mut stress: Vec<Vec<Dtype>> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| stress.push(elem.stress_at_intpt().remove(0)))
+            .map(|elem| stress.push(elem.stress_at_nodes()))
             .count();
         stress
+    }
+
+    /// Return the strain at nodes for each Quad2D4N element
+    pub fn quad2d4n_node_strain(&mut self) -> Vec<NodeSData2D> {
+        let n_nodes: usize = self.nodes.len();
+        let mut node_sdata: Vec<NodeSData2D> = vec![NodeSData2D::default(); n_nodes];
+
+        let mut area_data: Dtype;
+        let mut nodes_ids: Vec<usize>;
+        let mut tmp_sdata: Vec<[Dtype; 3]>;
+        for elem in self.elems.iter_mut() {
+            nodes_ids = elem.nodes_ids();
+            area_data = elem.elem_size();
+            tmp_sdata = chunck_vec2arr::<3>(elem.strain_at_nodes());
+            for idx in 0..4 {
+                node_sdata[nodes_ids[idx]]
+                    .sdata_on_node
+                    .push(tmp_sdata[idx]);
+                node_sdata[nodes_ids[idx]].area_arround_node.push(area_data);
+            }
+        }
+
+        node_sdata
+    }
+
+    /// Return the stress at nodes for each Quad2D4N element
+    pub fn quad2d4n_node_stress(&mut self) -> Vec<NodeSData2D> {
+        let n_nodes: usize = self.nodes.len();
+        let mut node_sdata: Vec<NodeSData2D> = vec![NodeSData2D::default(); n_nodes];
+
+        let mut area_data: Dtype;
+        let mut nodes_ids: Vec<usize>;
+        let mut tmp_sdata: Vec<[Dtype; 3]>;
+        for elem in self.elems.iter_mut() {
+            nodes_ids = elem.nodes_ids();
+            area_data = elem.elem_size();
+            tmp_sdata = chunck_vec2arr::<3>(elem.stress_at_nodes());
+            for idx in 0..4 {
+                node_sdata[nodes_ids[idx]]
+                    .sdata_on_node
+                    .push(tmp_sdata[idx]);
+                node_sdata[nodes_ids[idx]].area_arround_node.push(area_data);
+            }
+        }
+
+        node_sdata
     }
 
     /// Wtrie triangle elements into vtk file
@@ -379,8 +431,8 @@ where
             vtk_cpld[idx * 4 + 3] = self.cplds[idx][2] as u32;
         }
 
-        let strain = self.elem_strain();
-        let stress = self.elem_stress();
+        let strain = self.tri2d3n_elem_strain();
+        let stress = self.tri2d3n_elem_stress();
 
         let mut cell_e11: Vec<Dtype> = vec![0.0; elem_num];
         let mut cell_e22: Vec<Dtype> = vec![0.0; elem_num];
@@ -447,6 +499,18 @@ where
             vtk_cpld[idx * 5 + 4] = self.cplds[idx][3] as u32;
         }
 
+        let sdata: Vec<NodeSData2D> = self.quad2d4n_node_strain();
+        let strain: Vec<[Dtype; 3]> = sdata.iter().map(|s| s.data_smoothing("a")).collect();
+        let e11: Vec<Dtype> = strain.iter().map(|s| s[0]).collect();
+        let e22: Vec<Dtype> = strain.iter().map(|s| s[1]).collect();
+        let e12: Vec<Dtype> = strain.iter().map(|s| s[2]).collect();
+
+        let sdata: Vec<NodeSData2D> = self.quad2d4n_node_stress();
+        let stress: Vec<[Dtype; 3]> = sdata.iter().map(|s| s.data_smoothing("a")).collect();
+        let s11: Vec<Dtype> = stress.iter().map(|s| s[0]).collect();
+        let s22: Vec<Dtype> = stress.iter().map(|s| s[1]).collect();
+        let s12: Vec<Dtype> = stress.iter().map(|s| s[2]).collect();
+
         Vtk {
             version: Version::Legacy { major: 4, minor: 2 },
             title: String::from(vtk_file_name),
@@ -466,6 +530,12 @@ where
                     point: vec![
                         Attribute::vectors("displacement").with_data(displs),
                         Attribute::vectors("force").with_data(forces),
+                        Attribute::scalars("e11", 1).with_data(e11),
+                        Attribute::scalars("e22", 1).with_data(e22),
+                        Attribute::scalars("e12", 1).with_data(e12),
+                        Attribute::scalars("s11", 1).with_data(s11),
+                        Attribute::scalars("s22", 1).with_data(s22),
+                        Attribute::scalars("s12", 1).with_data(s12),
                     ],
                     cell: vec![],
                 },
@@ -474,8 +544,13 @@ where
     }
 }
 
-impl<'part2d, Elem: K, const N: usize, const F: usize, const M: usize> Export
-    for Part2D<'part2d, Elem, N, F, M>
+impl<
+        'part2d,
+        Elem: Display + StaticStiffness + SData,
+        const N: usize,
+        const F: usize,
+        const M: usize,
+    > Export for Part2D<'part2d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
     [[Dtype; M * F]; M * F]: Sized,
@@ -521,7 +596,7 @@ where
         write!(text_writer, "\n>>> Details of each element:")
             .expect("Write parts' result into txt file failed!!!");
         for elem in self.elems.iter() {
-            write!(text_writer, "{}\n", elem.info(n_exp)).expect("Write info failed!");
+            write!(text_writer, "{}\n", elem).expect("Write info failed!");
         }
         text_writer.flush().expect("!!! Flush txt file failed!");
         print!("  Down!");

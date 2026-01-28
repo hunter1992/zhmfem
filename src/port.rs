@@ -1,20 +1,18 @@
 use crate::dtty::{basic::Dtype, matrix::CompressedMatrixSKS};
 
-/// K trait generate element's stiffness matrix under linear analysis.
-/// Output stress/strain vector at some point in element.
-pub trait K {
+/// Element's stiffness matrix under static linear analysis.
+pub trait StaticStiffness {
     fn k(&mut self) -> &CompressedMatrixSKS;
     fn k_printr(&self, n_exp: Dtype);
     fn k_string(&self, n_exp: Dtype) -> String;
+}
 
-    fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>>;
-    fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>>;
-
-    //fn strain_at_nodes(&mut self) -> Vec<Vec<Dtype>>;
-    //fn stress_at_nodes(&mut self) -> Vec<Vec<Dtype>>;
-
-    fn info(&self, n_exp: Dtype) -> String;
-    fn id(&self) -> usize;
+/// Strain and stress data
+pub trait SData {
+    fn elem_size(&self) -> Dtype;
+    fn nodes_ids(&self) -> Vec<usize>;
+    fn strain_at_nodes(&mut self) -> Vec<Dtype>;
+    fn stress_at_nodes(&mut self) -> Vec<Dtype>;
 }
 
 /// Export trait generate Part's informations and write it into files

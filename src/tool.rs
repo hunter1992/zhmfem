@@ -424,3 +424,20 @@ pub fn idx_subtract<const N: usize>(zero_disps_idx: Vec<usize>) -> Vec<usize> {
     result.sort();
     result
 }
+
+/// chunck the 1D vec into several n-elem sub Vec
+pub fn chunck_1d_vec(raw: Vec<Dtype>, n: usize) -> Vec<Vec<Dtype>> {
+    raw.chunks(n).map(|s| s.to_vec()).collect()
+}
+
+/// chunck the 1D vec into several N-elem sub arr
+pub fn chunck_vec2arr<const N: usize>(raw: Vec<Dtype>) -> Vec<[Dtype; N]> {
+    assert!(raw.len() % N == 0, "!!! raw的长度不是N的整数倍，无法切分");
+
+    let ptr = raw.as_ptr() as *mut [Dtype; N];
+    let len = raw.len() / N;
+    let cap = raw.capacity() / N;
+
+    std::mem::forget(raw);
+    unsafe { Vec::from_raw_parts(ptr, len, cap) }
+}

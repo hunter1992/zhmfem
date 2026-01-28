@@ -3,7 +3,7 @@ use crate::dtty::{
     matrix::CompressedMatrixSKS,
 };
 use crate::node::Node2D;
-use crate::port::K;
+use crate::port::{SData, StaticStiffness};
 use crate::tool::{compress_symmetry_matrix_sks, print_2darr};
 use na::SMatrix;
 use std::fmt::{self, Write};
@@ -35,9 +35,9 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         }
     }
 
-    /// Set Tri2D3N element's material parameter
-    pub fn set_material(&mut self, material_args: [Dtype; 2]) {
-        self.material = material_args;
+    /// Get element's id number
+    pub fn id(&self) -> usize {
+        self.id
     }
 
     /// Get Tri2D3N element's area value
@@ -47,8 +47,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///     |  \
     ///   A ----\B
     pub fn area(&self) -> Dtype {
-        let x = self.get_nodes_xcoords();
-        let y = self.get_nodes_ycoords();
+        let x = self.get_nodes_xcoord();
+        let y = self.get_nodes_ycoord();
         let dx_21 = x[1] - x[0];
         let dx_31 = x[2] - x[0];
         let dy_21 = y[1] - y[0];
@@ -57,7 +57,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// Get the x-coords of nodes in Tri2D3N element
-    pub fn get_nodes_xcoords(&self) -> [Dtype; 3] {
+    pub fn get_nodes_xcoord(&self) -> [Dtype; 3] {
         let mut x_list = [0.0; 3];
         for (idx, node) in self.nodes.iter().enumerate() {
             x_list[idx] = node.coords[0];
@@ -66,23 +66,12 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     }
 
     /// Get the y-coords of nodes in Tri2D3N element
-    pub fn get_nodes_ycoords(&self) -> [Dtype; 3] {
+    pub fn get_nodes_ycoord(&self) -> [Dtype; 3] {
         let mut y_list = [0.0; 3];
         for (idx, node) in self.nodes.iter().enumerate() {
             y_list[idx] = node.coords[1];
         }
         y_list
-    }
-
-    /// Transform area-coords [L1, L2, L3] into (x, y) coords
-    pub fn coords_transform_ltox(&self, area_coords: [Dtype; 2]) -> [Dtype; 2] {
-        assert!(2 == area_coords.len());
-        let xs = self.get_nodes_xcoords();
-        let ys = self.get_nodes_ycoords();
-        let l3 = 1.0 - area_coords[0] - area_coords[1];
-        let x = xs[0] * area_coords[0] + xs[1] * area_coords[1] + xs[2] * l3;
-        let y = ys[0] * area_coords[0] + ys[1] * area_coords[1] + ys[2] * l3;
-        [x, y]
     }
 
     /// Get nodes' disps vector in tri element
@@ -93,6 +82,16 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
             displacement[2 * idx + 1] = node.displs.borrow()[1];
         }
         displacement
+    }
+
+    /// Get nodes's force vector in tri element
+    pub fn get_nodes_force(&self) -> [Dtype; 6] {
+        let mut force = [0.0; 6];
+        for (idx, node) in self.nodes.iter().enumerate() {
+            force[2 * idx] = node.forces.borrow()[0];
+            force[2 * idx + 1] = node.forces.borrow()[1];
+        }
+        force
     }
 
     /// Get any point's disps vector in tri element
@@ -110,14 +109,15 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
         [u, v]
     }
 
-    /// Get nodes's force vector in tri element
-    pub fn get_nodes_force(&self) -> [Dtype; 6] {
-        let mut force = [0.0; 6];
-        for (idx, node) in self.nodes.iter().enumerate() {
-            force[2 * idx] = node.forces.borrow()[0];
-            force[2 * idx + 1] = node.forces.borrow()[1];
-        }
-        force
+    /// Transform area-coords [L1, L2, L3] into (x, y) coords
+    pub fn coords_transform_ltox(&self, area_coords: [Dtype; 2]) -> [Dtype; 2] {
+        assert!(2 == area_coords.len());
+        let xs = self.get_nodes_xcoord();
+        let ys = self.get_nodes_ycoord();
+        let l3 = 1.0 - area_coords[0] - area_coords[1];
+        let x = xs[0] * area_coords[0] + xs[1] * area_coords[1] + xs[2] * l3;
+        let y = ys[0] * area_coords[0] + ys[1] * area_coords[1] + ys[2] * l3;
+        [x, y]
     }
 
     /// Coefficient of shape function N(x, y)
@@ -135,8 +135,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     ///
     /// Ni = (1/2A) * (ai + bi * x + ci * y) (i -> j -> m)
     fn coef_a(&self, ith: usize) -> Dtype {
-        let xs = self.get_nodes_xcoords();
-        let ys = self.get_nodes_ycoords();
+        let xs = self.get_nodes_xcoord();
+        let ys = self.get_nodes_ycoord();
         let idx = |x: usize| (x % 3) as usize;
         let a: [Dtype; 3] = [
             xs[idx(0 + 1)] * ys[idx(0 + 2)] - xs[idx(0 + 2)] * ys[idx(0 + 1)],
@@ -149,7 +149,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// calculate coefficient b
     /// Bi =  Yj - Ym  (i -> j -> m)
     fn coef_b(&self, ith: usize) -> Dtype {
-        let ys = self.get_nodes_ycoords();
+        let ys = self.get_nodes_ycoord();
         let idx = |x: usize| (x % 3) as usize;
         let b: [Dtype; 3] = [
             ys[idx(0 + 1)] - ys[idx(0 + 2)],
@@ -162,7 +162,7 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// calculate coefficient c
     /// Ci = -(Xj - Xm)
     fn coef_c(&self, ith: usize) -> Dtype {
-        let xs = self.get_nodes_xcoords();
+        let xs = self.get_nodes_xcoord();
         let idx = |x: usize| (x % 3) as usize;
         let c: [Dtype; 3] = [
             xs[idx(0 + 2)] - xs[idx(0 + 1)],
@@ -221,8 +221,8 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
     /// J = [[dx/ds, dy/ds]
     ///      [dx/dt, dy/dt]]
     fn jacobian(&self) -> Jacobian2D {
-        let xs: [Dtype; 3] = self.get_nodes_xcoords();
-        let ys: [Dtype; 3] = self.get_nodes_ycoords();
+        let xs: [Dtype; 3] = self.get_nodes_xcoord();
+        let ys: [Dtype; 3] = self.get_nodes_ycoord();
         let dx_21 = xs[1] - xs[0];
         let dx_31 = xs[2] - xs[0];
         let dy_21 = ys[1] - ys[0];
@@ -293,29 +293,10 @@ impl<'tri2d3n> Tri2D3N<'tri2d3n> {
             self.id, stress[0], stress[1], stress[2]
         );
     }
-
-    /// Output element's calculation result
-    pub fn calc_result_info(&self, n_exp: Dtype) -> String {
-        format!(
-            "\n-----------------------------------------------------------------------------\nElem_Tri2D3N:\n\tId:\t{}\n\tArea: {:-12.6}\n\tMats: {:-12.6} (Young's modulus)\n\t      {:-12.6} (Poisson's ratio)\n\tNodes:{}{}{}\n\tStrain:\n\t\t{:-12.6?}\n\tStress:\n\t\t{:-12.6?}\n\n\tStiffness Matrix K{} =  (*10^{})\n{}",
-            self.id,
-            self.area(),
-            self.material[0],
-            self.material[1],
-            self.nodes[0],
-            self.nodes[1],
-            self.nodes[2],
-            self.calc_strain(),
-            self.calc_stress(),
-            self.id(),
-            n_exp,
-            self.k_string(n_exp),
-        )
-    }
 }
 
-/// Implement zhm::K trait for triangle element
-impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
+/// Implement zhm::StaticStiffness trait for triangle element
+impl<'tri2d3n> StaticStiffness for Tri2D3N<'tri2d3n> {
     /// Cache stiffness matrix for triangle element
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
@@ -328,14 +309,19 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
 
     /// Print triangle element's stiffness matrix
     fn k_printr(&self, n_exp: Dtype) {
-        let k_mat: [[Dtype; 6]; 6] = self.calc_k();
-        print_2darr("\nTri2D3N k", self.id(), &k_mat, n_exp);
+        print_2darr(
+            "\nTri2D3N k",
+            self.id(),
+            &self.k_matrix.as_ref().unwrap().recover_square_arr::<6>(),
+            n_exp,
+        );
     }
 
     /// Return triangle elem's stiffness matrix's format string
     fn k_string(&self, n_exp: Dtype) -> String {
         let mut k_matrix = String::new();
-        let elem_stiffness_mat: [[Dtype; 6]; 6] = self.calc_k();
+        let elem_stiffness_mat: &[[Dtype; 6]; 6] =
+            &self.k_matrix.as_ref().unwrap().recover_square_arr::<6>();
         for row in 0..6 {
             if row == 0 {
                 write!(k_matrix, "[[").expect("!!! Write tri k_mat failed!");
@@ -358,25 +344,27 @@ impl<'tri2d3n> K for Tri2D3N<'tri2d3n> {
         }
         k_matrix
     }
+}
 
-    /// Get the strain at integration point
-    fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
-        vec![self.calc_strain().to_vec()]
+impl<'tri2d3n> SData for Tri2D3N<'tri2d3n> {
+    fn elem_size(&self) -> Dtype {
+        self.area()
     }
 
-    /// Get the stress at integratiData point
-    fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
-        vec![self.calc_stress().to_vec()]
+    fn nodes_ids(&self) -> Vec<usize> {
+        let mut id: Vec<usize> = Vec::with_capacity(3);
+        for idx in 0..3 {
+            id.push(self.nodes[idx].id);
+        }
+        id
     }
 
-    /// Get element's info string
-    fn info(&self, n_exp: Dtype) -> String {
-        self.calc_result_info(n_exp)
+    fn strain_at_nodes(&mut self) -> Vec<Dtype> {
+        self.calc_strain().to_vec()
     }
 
-    /// Get element's id number
-    fn id(&self) -> usize {
-        self.id
+    fn stress_at_nodes(&mut self) -> Vec<Dtype> {
+        self.calc_stress().to_vec()
     }
 }
 

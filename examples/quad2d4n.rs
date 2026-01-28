@@ -28,18 +28,30 @@ fn main() {
 
     // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
-    const R: usize = 2; // rows of nodes
-    const C: usize = 2; // columns of nodes
+    const R: usize = 3; // rows of nodes
+    const C: usize = 3; // columns of nodes
     const M: usize = 4; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
-    // Manually set coords and grouped nodes index
-    let points = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
-    let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2, 3]];
+    // ------------ Manually set coords and grouped nodes index ------------
+    // let points = vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]];
+    // let grpdnidx: Vec<Vec<usize>> = vec![vec![0, 1, 2, 3]];
 
     // Set boundary conditions and external loads manually
-    let zero_disp_index: Vec<usize> = vec![0, 1, 6];
-    let force_index: Vec<usize> = vec![2, 4];
+    // let zero_disp_index: Vec<usize> = vec![0, 1, 6];
+    // let force_index: Vec<usize> = vec![2, 4];
+    // let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+    // ---------------------------------------------------------------------
+
+    // ---- Automatically generate coords and grouped nodes index ----
+    const W: Dtype = 1.0; // width
+    const H: Dtype = 1.0; // height
+    let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
+    let (points, grpdnidx) = solid1.mesh_with_quad2d4n(R, C);
+
+    // Set boundary conditions and external loads automatically
+    let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
+    let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
     let force_value: Vec<Dtype> = vec![-1.0, 1.0];
 
     // -------- Part 2:  Construct nodes, elements and parts --------

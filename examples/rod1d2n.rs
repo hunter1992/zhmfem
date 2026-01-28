@@ -38,10 +38,8 @@ fn main() {
     let nodes: Vec<Node1D> = nodes1d_vec(&points, &force_idx, &force_vlu);
 
     let mut rod_vec: Vec<Rod1D2N> = rod1d2n_vec(&nodes, &cpld, &section_areas, material);
-    print!("{}", &rod_vec[0]);
 
     let mut part: Part1D<Rod1D2N, { R * C }, F, M> = Part1D::new(1, &nodes, &mut rod_vec, &cpld);
-    part.k_printer(parallel_or_singllel, cpu_cores, E);
 
     let mut eqs: LinearEqs<{ R * C * F }> = LinearEqs::new(
         part.nodes_displacement(),

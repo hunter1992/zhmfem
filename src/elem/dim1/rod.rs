@@ -1,8 +1,9 @@
 use crate::dtty::{basic::Dtype, matrix::CompressedMatrixSKS};
 use crate::node::Node1D;
-use crate::port::K;
+use crate::port::StaticStiffness;
 use crate::tool::{compress_symmetry_matrix_sks, print_2darr};
-use na::SMatrix;
+// use na::SMatrix;
+use crate::port::SData;
 use std::fmt::{self, Write};
 
 /// One-dim rod element
@@ -31,15 +32,20 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         }
     }
 
+    /// Get element's id number
+    fn id(&self) -> usize {
+        self.id
+    }
+
+    /// Get Rod1D2N element's length value
+    fn length(&self) -> Dtype {
+        let x = self.get_nodes_xcoords();
+        (x[0] - x[1]).abs()
+    }
+
     /// Set element material_args
     pub fn set_material(&mut self, material_args: [Dtype; 2]) {
         self.material = material_args;
-    }
-
-    /// Get rod's length
-    pub fn length(&self) -> Dtype {
-        let x = self.get_nodes_xcoords();
-        (x[0] - x[1]).abs()
     }
 
     /// Get the x-coords of two nodes in Rod1D2N element
@@ -74,20 +80,19 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         self.calc_stress()[0] * self.cross_sectional_area
     }
 
-    /// Get shape matrix element N_i
+    /// Get Rod1D2N's shape matrix element N_i
+    /// The shape mat of Rod1D2N elem: [N1 N2] which is a 1x2 mat
+    /// N1 = 1 - x/L = 1 - epsilon
+    /// N2 =     x/L = epsilon
     fn shape_mat_i(&self, ith: usize) -> impl Fn(Dtype) -> Dtype {
-        /* The shape mat of rod elem:
-         * [N1 N2]  which is a 1x2 mat
-         * N1 = 1 - x/L = 1 - epsilon
-         * N2 = x/L     = epsilon      */
         let a: [Dtype; 2] = [1.0, 0.0];
         let b: [Dtype; 2] = [-1.0, 1.0];
-        let length = self.length();
         // a[0] + b[0]*epsilon构造出N1,a[1] + b[1]*epsilon构造出N2
-        move |x: Dtype| a[ith] + b[ith] * x / length
+        move |x: Dtype| a[ith] + b[ith] * x / self.length()
     }
 
-    /// Get point's disp in element coord
+    /// Displacement of points inside the element
+    /// (interpolated from displacements at nodes)
     pub fn point_disp(&self, point_coord: [Dtype; 1]) -> [Dtype; 1] {
         let x = point_coord[0];
         let n0 = self.shape_mat_i(0usize)(x);
@@ -98,17 +103,17 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
         [u]
     }
 
-    /// Return a 2x2 element stiffness matrix, elements are Dtype
+    /// Return Rod1D2N stiffness matrix
+    /// K = |  E*A/L  -E*A/L |
+    ///     | -E*A/L   E*A/L |
     fn calc_k(&self) -> [[Dtype; 2]; 2] {
         // println!(
         //     "\n>>> Calculating Rod1D2N(#{})'s stiffness matrix k{} ......",
         //     self.id, self.id
         // );
-        let ee = self.material[0];
+        let elem_value: Dtype = self.material[0] * self.cross_sectional_area / self.length();
         let stiffness_matrix: [[Dtype; 2]; 2] =
-            (SMatrix::<Dtype, 2, 2>::from([[1.0, -1.0], [-1.0, 1.0]])
-                * (ee * self.cross_sectional_area / self.length()))
-            .into();
+            [[elem_value, -elem_value], [-elem_value, elem_value]];
         stiffness_matrix
     }
 
@@ -146,8 +151,8 @@ impl<'rod1d2n> Rod1D2N<'rod1d2n> {
     }
 }
 
-/// Implement zhm::K trait for Rod1D2N element
-impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
+/// Implement zhm::StaticStiffness trait for Rod1D2N element
+impl<'rod1d2n> StaticStiffness for Rod1D2N<'rod1d2n> {
     /// Cache stiffness matrix for rod element
     fn k(&mut self) -> &CompressedMatrixSKS {
         if self.k_matrix.is_none() {
@@ -190,25 +195,31 @@ impl<'rod1d2n> K for Rod1D2N<'rod1d2n> {
         }
         k_matrix
     }
+}
 
-    /// Get the strain at (x,y) inside the element, in linear rod elem, strain is a const
-    fn strain_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
-        vec![self.calc_strain().to_vec()]
+impl<'rod1d2n> SData for Rod1D2N<'rod1d2n> {
+    /// Get rod1d2n element's id
+    fn nodes_ids(&self) -> Vec<usize> {
+        let mut id: Vec<usize> = Vec::with_capacity(2);
+        for idx in 0..2 {
+            id.push(self.nodes[idx].id);
+        }
+        id
     }
 
-    /// Get the stress at (x,y) insDatae the element, in linear rod elem, stress is a const
-    fn stress_at_intpt(&mut self) -> Vec<Vec<Dtype>> {
-        vec![self.calc_stress().to_vec()]
+    /// Get Rod1D2N element length
+    fn elem_size(&self) -> Dtype {
+        self.length()
     }
 
-    /// Get element's info string
-    fn info(&self, n_exp: Dtype) -> String {
-        self.calc_result_info(n_exp)
+    /// Get the strain at x inside the element, in linear rod elem, strain is a const
+    fn strain_at_nodes(&mut self) -> Vec<Dtype> {
+        self.calc_strain().to_vec()
     }
 
-    /// Get element's id number
-    fn id(&self) -> usize {
-        self.id
+    /// Get the stress at x inside the element, in linear rod elem, stress is a const
+    fn stress_at_nodes(&mut self) -> Vec<Dtype> {
+        self.calc_stress().to_vec()
     }
 }
 

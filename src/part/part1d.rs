@@ -4,9 +4,9 @@ use crate::dtty::{
     matrix::CompressedMatrixSKS,
 };
 use crate::node::Node1D;
-use crate::port::{Export, K};
+use crate::port::{Export, SData, StaticStiffness};
 use crate::tool::compress_symmetry_matrix_sks;
-use std::fmt::Write as _;
+use std::fmt::{Display, Write as _};
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -15,8 +15,13 @@ use std::time::Instant;
 use vtkio::model::*;
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
 /// In general, the value of F in a two-dimensional plane is 2
-pub struct Part1D<'part1d, Elem: K, const N: usize, const F: usize, const M: usize>
-where
+pub struct Part1D<
+    'part1d,
+    Elem: SData + StaticStiffness,
+    const N: usize,
+    const F: usize,
+    const M: usize,
+> where
     [[Dtype; N * F]; N * F]: Sized,
     [[Dtype; M * F]; M * F]: Sized,
 {
@@ -28,13 +33,13 @@ where
     pub assembly_time_consuming: Option<std::time::Duration>,
 }
 
-impl<'part1d, Elem: K, const N: usize, const F: usize, const M: usize>
+impl<'part1d, Elem: StaticStiffness + SData, const N: usize, const F: usize, const M: usize>
     Part1D<'part1d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
     [[Dtype; M * F]; M * F]: Sized,
 {
-    /// Construct a Part2D
+    /// Construct a Part1D
     /// Args: nodes --- Slice to all 1D nodes
     ///       elems --- Slice of all element stiffness matrix pointers
     ///       cplds --- Slice of the ID combinations of Node1D within a single cell
@@ -343,7 +348,7 @@ where
         let mut strain: Vec<Vec<Dtype>> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| strain.push(elem.strain_at_intpt().remove(0)))
+            .map(|elem| strain.push(elem.strain_at_nodes()))
             .count();
         strain
     }
@@ -353,7 +358,7 @@ where
         let mut stress: Vec<Vec<Dtype>> = Vec::with_capacity(self.cplds.len());
         self.elems
             .iter_mut()
-            .map(|elem| stress.push(elem.stress_at_intpt().remove(0)))
+            .map(|elem| stress.push(elem.stress_at_nodes()))
             .count();
         stress
     }
@@ -414,8 +419,13 @@ where
     }
 }
 
-impl<'part1d, Elem: K, const N: usize, const F: usize, const M: usize> Export
-    for Part1D<'part1d, Elem, N, F, M>
+impl<
+        'part1d,
+        Elem: Display + StaticStiffness + SData,
+        const N: usize,
+        const F: usize,
+        const M: usize,
+    > Export for Part1D<'part1d, Elem, N, F, M>
 where
     [[Dtype; N * F]; N * F]: Sized,
     [[Dtype; M * F]; M * F]: Sized,
@@ -463,7 +473,7 @@ where
             .expect("Write parts' result into txt file failed!!!");
 
         for elem in self.elems.iter() {
-            write!(text_writer, "{}\n", elem.info(n_exp)).expect("Write info failed!");
+            write!(text_writer, "{}\n", elem).expect("Write info failed!");
         }
 
         text_writer.flush().expect("!!! Flush txt file failed!");
