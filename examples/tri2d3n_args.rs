@@ -7,7 +7,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    const STACK_SIZE: usize = 1024 * 1024 * 1024; // MB = 1024 * 1024
+    const STACK_SIZE: usize = 5 * 1024 * 1024; // MB = 1024 * 1024
     let executor = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(|| {
@@ -23,8 +23,8 @@ fn main() {
             // "gs"       for gauss-seidel iteration algorithm
             // "pardiso"  for calling Panua Tech's PARDISO share lib
             // "auto"     for software automatic selection algorithm
-            let calc_method: &str = "pardiso";
-            let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
+            let calc_method: &str = "auto";
+            let calc_accuracy: Dtype = 0.000001; // Calculation accuracy of iterative algorithm
 
             let parallel_or_singllel: &str = "s"; // "s" or "singllel" or "p" or "parallel"
 
@@ -33,8 +33,8 @@ fn main() {
 
             // -------- Part 1:  Meshing and applying boundary conditions --------
             // Set mesh and freedom parameters
-            const R: usize = 21; // rows of nodes
-            const C: usize = 21; // columns of nodes
+            const R: usize = 2; // rows of nodes
+            const C: usize = 2; // columns of nodes
             const D: usize = R * C; // Dimension of part stiffness matrix
             const M: usize = 3; // num of nodes in single element
             const F: usize = 2; // num of degree freedom at single node

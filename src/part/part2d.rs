@@ -624,7 +624,7 @@ where
             }
 
             "Quad2D4N" => {
-                println!("\n>>> Writing calc results into vtk file ......");
+                print!("\n>>> Writing calc results into vtk file ......");
                 let vtk_quadrilateral = self.vtk_quad2d4n_legacy(elem_type);
                 vtk_quadrilateral
                     .write_legacy_ascii(&mut vtk_string)

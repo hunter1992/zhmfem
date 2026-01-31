@@ -23,13 +23,13 @@ fn main() {
     // "s" or "singllel" or "p" or "parallel"
     let parallel_or_singllel: &str = "s";
 
-    let thick: Dtype = 1.0; //Thickness of the plate
-    let material: [Dtype; 2] = [1.0, 0.25]; //Young's modulud & Poisson's ratio
+    let thick: Dtype = 10.0; //Thickness of the plate
+    let material: [Dtype; 2] = [210000.0, 0.30]; //Young's modulud & Poisson's ratio
 
     // -------- Part 1:  Meshing and applying boundary conditions --------
     // Set mesh and freedom parameters
-    const R: usize = 2; // rows of nodes
-    const C: usize = 2; // columns of nodes
+    const R: usize = 3; // rows of nodes
+    const C: usize = 3; // columns of nodes
     const M: usize = 4; // num of nodes in single element
     const F: usize = 2; // num of degree freedom at single node
 
@@ -44,15 +44,15 @@ fn main() {
     // ---------------------------------------------------------------------
 
     // ---- Automatically generate coords and grouped nodes index ----
-    const W: Dtype = 1.0; // width
-    const H: Dtype = 1.0; // height
+    const W: Dtype = 1000.0; // width
+    const H: Dtype = 1000.0; // height
     let solid1 = Rectangle::new([0.0 as Dtype, 0.0 as Dtype], [W, H]);
     let (points, grpdnidx) = solid1.mesh_with_quad2d4n(R, C);
 
     // Set boundary conditions and external loads automatically
     let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
     let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
-    let force_value: Vec<Dtype> = vec![-1.0, 1.0];
+    let force_value: Vec<Dtype> = vec![-100000.0, 100000.0];
 
     // -------- Part 2:  Construct nodes, elements and parts --------
     // Construct 2D nodes vector
@@ -123,12 +123,13 @@ fn main() {
     // -------- Part 5:  Write clac result into txt file --------
     let problem_type = "stress2D";
     let element_type = "Quad2D4N";
+    let element_nums = "4";
     let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
     let output_txt = format!(
-        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt"
+        "{output_path}{problem_type}_{element_type}_{element_nums}_{calc_method}_{parallel_or_singllel}.txt"
     );
     let output_vtk = format!(
-        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+        "{output_path}{problem_type}_{element_type}_{element_nums}_{calc_method}_{parallel_or_singllel}.vtk"
     );
 
     // Output Calculation result into txt file

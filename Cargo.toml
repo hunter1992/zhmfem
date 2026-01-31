@@ -9,4 +9,4 @@ atomic_float = "1.1.0"
 vtkio = { version = "0.7.0-rc1", default-features = false }
 
 [lib]
-#doctest = false
+doctest = false

@@ -50,7 +50,7 @@ fn main() {
             // Set boundary conditions and external loads automatically
             let zero_disp_index: Vec<usize> = vec![0, 1, C * (R - 1) * F];
             let force_index: Vec<usize> = vec![(C - 1) * F, (C * R - 1) * F];
-            let force_value: Vec<Dtype> = vec![-10000000.0, 10000000.0];
+            let force_value: Vec<Dtype> = vec![-100000.0, 100000.0];
 
             // -------- Part 2:  Construct nodes, elements and parts --------
             // Construct 2D nodes vector
@@ -112,9 +112,10 @@ fn main() {
             // -------- Part 5:  Write clac result into txt file --------
             let problem_type = "WEBexample";
             let element_type = "Quad2D4N";
+            let element_nums = "1600";
             let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
             let output_vtk = format!(
-        "{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk"
+        "{output_path}{problem_type}_{element_type}_{element_nums}_{calc_method}_{parallel_or_singllel}.vtk"
     );
 
             // Output Calculation result into vtk file
