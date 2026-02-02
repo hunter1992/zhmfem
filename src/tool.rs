@@ -5,7 +5,7 @@ use crate::dtty::{
 use crate::elem::{
     dim1::rod::Rod1D2N,
     //dim1::{beam::Beam1D2N, rod::Rod1D2N},
-    dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
+    dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N},
 };
 use crate::node::{Node1D, Node2D, Node3D};
 use na::SMatrix;
@@ -319,14 +319,13 @@ pub fn rod1d2n_vec<'rod1d2n>(
     rod1d2n
 }
 
-/*
 /// Constructe a rod2d2n elements vector
 /// every rod with same cross sectional area
 pub fn rod2d2n_vec<'rod2d2n>(
     nodes: &'rod2d2n [Node2D],
     coupled_nodes_idx: &[Vec<usize>],
     cross_sectional_area: &'rod2d2n [Dtype],
-    material: &'rod2d2n (Dtype, Dtype),
+    material: [Dtype; 2],
 ) -> Vec<Rod2D2N<'rod2d2n>> {
     let mut rod2d2n: Vec<Rod2D2N> = Vec::with_capacity(coupled_nodes_idx.len());
     for (ele_idx, cpld) in coupled_nodes_idx.iter().enumerate() {
@@ -339,7 +338,6 @@ pub fn rod2d2n_vec<'rod2d2n>(
     }
     rod2d2n
 }
-*/
 
 /*
 /// Constructe a beam1d2n elements vector

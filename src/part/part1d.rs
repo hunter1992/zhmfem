@@ -13,6 +13,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 use vtkio::model::*;
+
 /// Three generic const: N for N_NODE, F for N_FREEDOM, M for N_NODE in single element
 /// In general, the value of F in a two-dimensional plane is 2
 pub struct Part1D<

@@ -25,8 +25,7 @@ pub use dtty::{
 };
 pub use elem::{
     dim1::rod::Rod1D2N,
-    //dim1::{beam::Beam1D2N, rod::Rod1D2N},
-    dim2::{quadrila::Quad2D4N, triangle::Tri2D3N},
+    dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N},
 };
 pub use mesh::plane::Rectangle;
 pub use node::{Node1D, Node2D, Node3D};
@@ -58,18 +57,16 @@ mod testing {
     fn gen_elements() {
         let material: [Dtype; 2] = [1.0, 0.25];
 
-        /*
         // 1D
         let node_a = Node1D::new(1, [0.0]);
         let node_b = Node1D::new(2, [1.0]);
         let node_c = Node1D::new(3, [3.0]);
 
-        let rod1 = Rod1D2N::new(1, 1.0, [&node_a, &node_b], &material);
-        let rod2 = Rod1D2N::new(2, 1.0, [&node_b, &node_c], &material);
+        let rod1 = Rod1D2N::new(1, 1.0, [&node_a, &node_b], material);
+        let rod2 = Rod1D2N::new(2, 1.0, [&node_b, &node_c], material);
         assert_eq!(1usize, rod1.id);
         assert_ne!(2usize, rod1.id);
         assert_eq!(2usize, rod2.id);
-        */
 
         // 2D
         let node1 = Node2D::new(1, [0.0, 0.0]);

@@ -1,3 +1,4 @@
+// Fundamentals of Finite Element Analysis PAGE17 example2.3(1)
 use std::time::Instant;
 
 use zhmfem::*;
@@ -16,7 +17,7 @@ fn main() {
     let calc_method: &str = "gs";
 
     // Calculation accuracy of iterative algorithm
-    let calc_accuracy: Dtype = 0.0001;
+    let calc_accuracy: Dtype = 0.000001;
 
     // "s" or "singllel" or "p" or "parallel"
     let parallel_or_singllel: &str = "s";

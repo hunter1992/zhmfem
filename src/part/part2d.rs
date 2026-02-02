@@ -542,6 +542,61 @@ where
             }),
         }
     }
+
+    /// Wtrie rod elements into vtk file
+    pub fn vtk_rod2d2n_legacy(&mut self, vtk_file_name: &str) -> Vtk {
+        let elem_num: usize = self.cplds.len();
+        let coords = self.vtk_nodes_coordinate();
+        let displs = self.vtk_nodes_displacement();
+        let forces = self.vtk_nodes_force();
+
+        let mut vtk_cpld: Vec<u32> = vec![0; 3 * elem_num];
+        for idx in 0..elem_num {
+            vtk_cpld[idx * 3] = 2;
+            vtk_cpld[idx * 3 + 1] = self.cplds[idx][0] as u32;
+            vtk_cpld[idx * 3 + 2] = self.cplds[idx][1] as u32;
+        }
+
+        let strain = self.tri2d3n_elem_strain();
+        let stress = self.tri2d3n_elem_stress();
+
+        let mut cell_strain: Vec<Dtype> = vec![0.0; elem_num];
+
+        let mut cell_stress: Vec<Dtype> = vec![0.0; elem_num];
+
+        for idx in 0..elem_num {
+            cell_strain[idx] = strain[idx][0];
+            cell_stress[idx] = stress[idx][0];
+        }
+
+        Vtk {
+            version: Version::Legacy { major: 4, minor: 2 },
+            title: String::from(vtk_file_name),
+            byte_order: ByteOrder::BigEndian,
+            file_path: None,
+            data: DataSet::inline(UnstructuredGridPiece {
+                // points: IOBuffer::F32(coords),
+                points: IOBuffer::F64(coords),
+                cells: Cells {
+                    cell_verts: VertexNumbers::Legacy {
+                        num_cells: elem_num as u32,
+                        vertices: vtk_cpld,
+                    },
+                    types: vec![CellType::Line; elem_num],
+                },
+                data: Attributes {
+                    point: vec![
+                        Attribute::vectors("displacement").with_data(displs),
+                        Attribute::vectors("force").with_data(forces),
+                    ],
+                    cell: vec![
+                        Attribute::scalars("e_axial", 1).with_data(cell_strain),
+                        Attribute::scalars("s_axial", 1).with_data(cell_stress),
+                    ],
+                },
+            }),
+        }
+    }
 }
 
 impl<
@@ -630,6 +685,20 @@ where
                     .write_legacy_ascii(&mut vtk_string)
                     .expect(
                     "!!! Construct VTK string for Tri2D3N failed! from zhmfem/src/part/part2d.rs",
+                );
+
+                write!(vtk_writer, "{}", vtk_string.as_str())
+                    .expect("!!! Write .vtk file failed! from zhmfem/src/part/part2d.rs");
+                print!("  Down!");
+
+                Ok(true)
+            }
+
+            "Rod2D2N" => {
+                print!("\n>>> Writing calc results into vtk file ......");
+                let vtk_rod2d2n = self.vtk_rod2d2n_legacy(elem_type);
+                vtk_rod2d2n.write_legacy_ascii(&mut vtk_string).expect(
+                    "!!! Construct VTK string for Rod2D2N failed! from zhmfem/src/part/part2d.rs",
                 );
 
                 write!(vtk_writer, "{}", vtk_string.as_str())

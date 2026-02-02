@@ -1,0 +1,95 @@
+>>> ZHMFEM calculating results:
+
+>>> System energy:
+			E_d:      0.218538 (deform energy)
+			W_f:      0.437076 (exforce works)
+			E_p:     -0.218538 (potential energy)
+
+>>> Solver time consuming: 2.762µs
+
+>>> Part2D stiffness matrix:
+
+Part #1  K =  (* 10^0)
+[[  40000.000000  -40000.000000       0.000000       0.000000  ]
+ [ -40000.000000  100000.000000  -60000.000000       0.000000  ]
+ [      0.000000  -60000.000000  180000.000000  -120000.000000  ]
+ [      0.000000       0.000000  -120000.000000  120000.000000 ]]
+
+>>> Details of each element:
+Elem_Rod1d2N:
+	Id:	0
+	Area:     0.020000
+	Mats: 200000.000000 (Young's modulus)
+	          0.250000 (Poisson's ratio)
+	Nodes:
+		Node_1D:
+			Id: 0
+			Coords: [    0.0000]
+			Displs: [   -0.0046]
+			Forces: [  -99.9623]
+
+		Node_1D:
+			Id: 1
+			Coords: [    0.1000]
+			Displs: [   -0.0021]
+			Forces: [    0.0189]
+
+	Strain:
+		[    0.024991]
+	Stress:
+		[ 4998.113455]
+	Stiffness Matrix K0 = (*10^0)
+[[ 40000.000000  -40000.000000 ]
+ [ -40000.000000  40000.000000 ]]
+
+Elem_Rod1d2N:
+	Id:	1
+	Area:     0.030000
+	Mats: 200000.000000 (Young's modulus)
+	          0.250000 (Poisson's ratio)
+	Nodes:
+		Node_1D:
+			Id: 1
+			Coords: [    0.1000]
+			Displs: [   -0.0021]
+			Forces: [    0.0189]
+
+		Node_1D:
+			Id: 2
+			Coords: [    0.2000]
+			Displs: [   -0.0004]
+			Forces: [   50.0000]
+
+	Strain:
+		[    0.016657]
+	Stress:
+		[ 3331.446789]
+	Stiffness Matrix K1 = (*10^0)
+[[ 60000.000000  -60000.000000 ]
+ [ -60000.000000  60000.000000 ]]
+
+Elem_Rod1d2N:
+	Id:	2
+	Area:     0.060000
+	Mats: 200000.000000 (Young's modulus)
+	          0.250000 (Poisson's ratio)
+	Nodes:
+		Node_1D:
+			Id: 2
+			Coords: [    0.2000]
+			Displs: [   -0.0004]
+			Forces: [   50.0000]
+
+		Node_1D:
+			Id: 3
+			Coords: [    0.3000]
+			Displs: [    0.0000]
+			Forces: [   49.9434]
+
+	Strain:
+		[    0.004162]
+	Stress:
+		[  832.390061]
+	Stiffness Matrix K2 = (*10^0)
+[[ 120000.000000  -120000.000000 ]
+ [ -120000.000000  120000.000000 ]]
