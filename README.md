@@ -3,7 +3,7 @@
 
 # zhmfem
 
-A finite element calculation command line software based on Rust
+A high-performance, robust FEM engine built in pure Rust
 
 <!-- PROJECT SHIELDS -->
 <!--
