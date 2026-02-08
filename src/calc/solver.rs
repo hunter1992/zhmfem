@@ -257,6 +257,7 @@ impl<const D: usize> LinearEqs<D> {
         }
 
         // write result into fields
+        let x = unsafe { x.into_vec() };
         let _: Vec<_> = disps_unknown_idx
             .iter()
             .enumerate()

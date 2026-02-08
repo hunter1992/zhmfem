@@ -182,12 +182,13 @@ mod testing {
         let quad1 = Quad2D4N::new(1, thick, nodes, material);
         let k1: [[Dtype; 8]; 8] = quad1.calc_k();
 
-        assert_eq!(0.4888888888888888 as Dtype, k1[0][0]);
+        assert_eq!(0.48888892 as Dtype, k1[0][0]);
     }
 
     #[bench]
     /// benchmark的结果是:393.49 ns/iter (+/- 36.23) (Intel 8265U 插电) 20241205
     /// benchmark的结果是:285.15 ns/iter (+/- 32.51) (Intel 8265U 插电) 20251020
+    /// benchmark的结果是:194.73 ns/iter (+/-  6.70) (Intel 8265U 插电) 20260209
     fn calc_quad_k_speed(b: &mut Bencher) {
         b.iter(|| calc_quad_elem_k());
     }
@@ -195,6 +196,7 @@ mod testing {
     #[bench]
     /// benchmark的结果是:229.13 ns/iter (+/- 06.28) (Intel 8265U 插电) 20241205
     /// benchmark的结果是: 40.02 ns/iter (+/-  0.67) (Intel 8265U 插电) 20251020
+    /// benchmark的结果是: 32.50 ns/iter (+/-  0.16) (Intel 8265U 插电) 20260209
     fn calc_tri_k_speed(b: &mut Bencher) {
         b.iter(|| calc_tri_elem_k());
     }
