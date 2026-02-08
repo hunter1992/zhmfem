@@ -19,6 +19,7 @@ pub use calc::{
     solver::LinearEqs,
 };
 pub use dtty::{
+    aligndata::AlignedF64,
     basic::{ADtype, Dtype, Jacobian2D, Jacobian3D},
     matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
     sdata::NodeSData2D,
@@ -26,6 +27,7 @@ pub use dtty::{
 pub use elem::{
     dim1::rod::Rod1D2N,
     dim2::{quadrila::Quad2D4N, rod::Rod2D2N, triangle::Tri2D3N},
+    dim3::hexahedron::Hex3D8N,
 };
 pub use mesh::plane::Rectangle;
 pub use node::{Node1D, Node2D, Node3D};

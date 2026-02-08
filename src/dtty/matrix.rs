@@ -1,4 +1,7 @@
-use crate::dtty::basic::Dtype;
+use crate::dtty::{
+    aligndata::{AlignedF64, AlignedI32},
+    basic::Dtype,
+};
 use crate::tool::{compress_symmetry_matrix_csr, compress_symmetry_matrix_sks};
 use std::fmt;
 
@@ -182,6 +185,7 @@ impl CompressedMatrixCSR {
         let mut counter: usize = 0;
         for row_idx in 0..squaredim {
             for col_idx in row_idx..squaredim {
+                //右上三角
                 if 0.0 == mat[row_idx][col_idx] {
                     continue;
                 } else {
@@ -287,11 +291,13 @@ impl CompressedMatrixCSR {
     pub fn as_panua_pardiso_arg(self) -> CSRforPanuaPARDISO {
         let colidx: Vec<i32> = self.colidx.into_iter().map(|val| val as i32).collect();
         let rowptr: Vec<i32> = self.rowptr.into_iter().map(|val| val as i32).collect();
-        CSRforPanuaPARDISO {
-            values: self.values,
-            colidx,
-            rowptr,
-            squaredim: self.squaredim,
+        unsafe {
+            CSRforPanuaPARDISO {
+                values: AlignedF64::from_slice(&self.values),
+                colidx: AlignedI32::from_slice(&colidx),
+                rowptr: AlignedI32::from_slice(&rowptr),
+                squaredim: self.squaredim,
+            }
         }
     }
 }
@@ -310,11 +316,10 @@ impl fmt::Display for CompressedMatrixCSR {
 /// Panua Tech is slightly different from the usual CSR matrix:
 /// 1) CSR for Panua's PARDISO is 1-based;
 /// 2) colum index & row pointer element is i32 not usize
-#[derive(Clone)]
 pub struct CSRforPanuaPARDISO {
-    pub values: Vec<Dtype>, // matrix element data
-    pub colidx: Vec<i32>,   // data in which colum
-    pub rowptr: Vec<i32>,   // rows head's pointer
+    pub values: AlignedF64, // matrix element data
+    pub colidx: AlignedI32, // data in which colum
+    pub rowptr: AlignedI32, // rows head's pointer
     pub squaredim: usize,
 }
 
@@ -326,18 +331,63 @@ impl CSRforPanuaPARDISO {
         csr.as_panua_pardiso_arg()
     }
 
+    /// Compresse a matrix in CSR form from a full square matrix Vec
+    pub fn from_vec(mat: Vec<Vec<Dtype>>) -> Self {
+        let mut values: Vec<Dtype> = vec![];
+        let mut colidx: Vec<i32> = vec![];
+        let mut rowptr: Vec<i32> = vec![];
+        let squaredim: usize = mat.len();
+
+        let mut no_head_in_current_row: bool = true;
+        let mut counter: usize = 0;
+        for row_idx in 0..squaredim {
+            for col_idx in row_idx..squaredim {
+                if 0.0 == mat[row_idx][col_idx] {
+                    continue;
+                } else {
+                    values.push(mat[row_idx][col_idx]);
+                    colidx.push(col_idx as i32);
+                    if no_head_in_current_row {
+                        rowptr.push(counter as i32);
+                        no_head_in_current_row = false;
+                    }
+                    counter += 1;
+                }
+            }
+            no_head_in_current_row = true;
+        }
+
+        rowptr.push(counter as i32);
+
+        for idx in colidx.iter_mut() {
+            *idx += 1;
+        }
+        for ptr in rowptr.iter_mut() {
+            *ptr += 1;
+        }
+
+        unsafe {
+            CSRforPanuaPARDISO {
+                values: AlignedF64::from_slice(&values),
+                colidx: AlignedI32::from_slice(&colidx),
+                rowptr: AlignedI32::from_slice(&rowptr),
+                squaredim,
+            }
+        }
+    }
+
     pub fn to_normal_csr(self) -> CompressedMatrixCSR {
-        let colidx: Vec<usize> = self.colidx.into_iter().map(|val| val as usize).collect();
-        let rowptr: Vec<usize> = self.rowptr.into_iter().map(|val| val as usize).collect();
-        let mut csr = CompressedMatrixCSR {
-            values: self.values,
-            colidx,
-            rowptr,
-            baseinfo: 1,
-            squaredim: self.squaredim,
-        };
-        csr.convert_0base();
-        csr
+        unsafe {
+            let mut csr = CompressedMatrixCSR {
+                values: self.values.into_vec(),
+                colidx: self.colidx.into_vec_usize(),
+                rowptr: self.rowptr.into_vec_usize(),
+                baseinfo: 1,
+                squaredim: self.squaredim,
+            };
+            csr.convert_0base();
+            csr
+        }
     }
 }
 
@@ -345,8 +395,8 @@ impl fmt::Display for CSRforPanuaPARDISO {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "\n\tdata: {:?}\n\tcolumn index: {:?}\n\tpointer: {:?}\n",
-            self.values, self.colidx, self.rowptr
+            "\n\tdata: {:?}\n\tcolumn index: {:?}\n\tpointer: {:?}\n\tbase_from: {}\n",
+            self.values, self.colidx, self.rowptr, self.squaredim
         )
     }
 }

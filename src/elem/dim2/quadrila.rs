@@ -133,10 +133,10 @@ impl<'quad2d4n> Quad2D4N<'quad2d4n> {
     ///   4  |  -1  |   1
     /// -------------------
     ///
-    /// N1 = 0.25 * (1 - xi_i * s) * (1 - eta_i * t)
-    /// N2 = 0.25 * (1 + xi_i * s) * (1 - eta_i * t)
-    /// N3 = 0.25 * (1 + xi_i * s) * (1 + eta_i * t)
-    /// N4 = 0.25 * (1 - xi_i * s) * (1 + eta_i * t)
+    /// N1 = 0.25 * (1 - s) * (1 - t)
+    /// N2 = 0.25 * (1 + s) * (1 - t)
+    /// N3 = 0.25 * (1 + s) * (1 + t)
+    /// N4 = 0.25 * (1 - s) * (1 + t)
     fn shape_func_st(&self, ith: usize) -> impl Fn(Dtype, Dtype) -> Dtype {
         let s_sign = [-1.0, 1.0, 1.0, -1.0];
         let t_sign = [-1.0, -1.0, 1.0, 1.0];

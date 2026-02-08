@@ -1,6 +1,7 @@
 use crate::dtty::{
+    aligndata::AlignedF64,
     basic::Dtype,
-    matrix::{CSRforPanuaPARDISO, CompressedMatrixCSR, CompressedMatrixSKS},
+    matrix::{CSRforPanuaPARDISO, CompressedMatrixSKS},
 };
 use crate::tool::idx_subtract;
 use na::{DMatrix, DVector, SMatrix, SVector};
@@ -69,7 +70,6 @@ impl<const D: usize> LinearEqs<D> {
         }
     }
 
-    /// Solve the "A*x = b" with direct method using Panua Tech's PARDISO
     pub fn panua_pardiso_direct_solver(&mut self, cpus: usize) -> Result<bool, i32> {
         use crate::calc::panua;
         use std::env;
@@ -78,17 +78,17 @@ impl<const D: usize> LinearEqs<D> {
 
         // STEP 0. Prepare the coefficient matrix and RHS vector needed for calculation
         let disps_unknown_idx: Vec<usize> = idx_subtract::<D>(self.disps_0_idx.clone());
-        let mut b: Vec<Dtype> = disps_unknown_idx
+
+        let arg_matrix: CSRforPanuaPARDISO =
+            CSRforPanuaPARDISO::from_vec(self.static_kmat.get_sub_matrix(&disps_unknown_idx));
+
+        let rhs: Vec<Dtype> = disps_unknown_idx
             .iter()
             .map(|&idx| self.loads[idx])
             .collect();
-        let mut csr: CompressedMatrixCSR =
-            CompressedMatrixCSR::from_vec(self.static_kmat.get_sub_matrix(&disps_unknown_idx));
+        let mut b = unsafe { AlignedF64::from_slice(&rhs) };
 
-        csr.convert_1base();
-        let matrix: CSRforPanuaPARDISO = csr.as_panua_pardiso_arg();
-
-        let mut x: Vec<Dtype> = vec![0.0; matrix.squaredim];
+        let mut x: AlignedF64 = unsafe { AlignedF64::from_slice(&vec![0.0; arg_matrix.squaredim]) };
 
         // STEP 1. Set environment variables and shared library file paths
         unsafe {
@@ -109,10 +109,10 @@ impl<const D: usize> LinearEqs<D> {
         let mut mnum: i32 = 1;
         let mut mtype: i32 = 2;
         let mut phase: i32;
-        let mut n: i32 = matrix.squaredim as i32;
-        let a: Vec<Dtype> = matrix.values;
-        let ia: Vec<i32> = matrix.rowptr;
-        let ja: Vec<i32> = matrix.colidx;
+        let mut n: i32 = arg_matrix.squaredim as i32;
+        let a: *mut f64 = arg_matrix.values.ptr;
+        let ia: *mut i32 = arg_matrix.rowptr.ptr;
+        let ja: *mut i32 = arg_matrix.colidx.ptr;
         let mut nrhs: i32 = NRHS as i32;
         let mut iparm: [i32; 64] = [0; 64];
         let mut msglvl: i32 = 1;
@@ -120,11 +120,25 @@ impl<const D: usize> LinearEqs<D> {
         let mut error: i32 = 0;
         let mut solver: i32 = 0;
 
+        // 对iparm进行设置，充分利用内存对齐带来的性能提升
+        iparm[0] = 1; //  关闭非默认设置
+        iparm[1] = 2; //  METIS排序，减少 Fill-in 降低O(n^3)运算量
+        iparm[9] = 8; //  eps pivot
+        iparm[10] = 1; // 提高矩阵的条件数
+        iparm[12] = 1; // matching
+        iparm[20] = 1; // 让内存控制器更高效地命中Cache Line
+        iparm[23] = 1; // 启用并行分解 (Parallel Factorization)
+        iparm[24] = 1; // 并行求解
+        iparm[27] = 1; // 并行重排序
+        iparm[33] = 0; // 启用 BLAS 级并行/优化
+        iparm[34] = 1; // C-style (0-indexed)，避免内部拷贝导致对齐失效
+        iparm[56] = 1; // 压缩超节点中的小奇异值
+
         unsafe {
             // ---------------------
             // Initialization
             // ---------------------
-            iparm[0] = 0;
+            // iparm[0] = 0;
             panua::pardisoinit(
                 pt.as_mut_ptr(),
                 &mut mtype,
@@ -153,9 +167,9 @@ impl<const D: usize> LinearEqs<D> {
                 &mut mtype,
                 &mut phase,
                 &mut n,
-                a.as_ptr() as *mut f64,
-                ia.as_ptr() as *mut i32,
-                ja.as_ptr() as *mut i32,
+                a,
+                ia,
+                ja,
                 ptr::null_mut(),
                 &mut nrhs,
                 iparm.as_mut_ptr(),
@@ -183,9 +197,9 @@ impl<const D: usize> LinearEqs<D> {
                 &mut mtype,
                 &mut phase,
                 &mut n,
-                a.as_ptr() as *mut f64,
-                ia.as_ptr() as *mut i32,
-                ja.as_ptr() as *mut i32,
+                a,
+                ia,
+                ja,
                 ptr::null_mut(),
                 &mut nrhs,
                 iparm.as_mut_ptr(),
@@ -212,9 +226,9 @@ impl<const D: usize> LinearEqs<D> {
                 &mut mtype,
                 &mut phase,
                 &mut n,
-                a.as_ptr() as *mut f64,
-                ia.as_ptr() as *mut i32,
-                ja.as_ptr() as *mut i32,
+                a,
+                ia,
+                ja,
                 ptr::null_mut(),
                 &mut nrhs,
                 iparm.as_mut_ptr(),
@@ -254,6 +268,194 @@ impl<const D: usize> LinearEqs<D> {
 
         Ok(self.state)
     }
+
+    /*
+        /// Solve the "A*x = b" with direct method using Panua Tech's PARDISO
+        pub fn panua_pardiso_direct_solver_old(&mut self, cpus: usize) -> Result<bool, i32> {
+            use crate::calc::panua;
+            use std::env;
+            use std::os::raw::c_void;
+            use std::ptr;
+
+            // STEP 0. Prepare the coefficient matrix and RHS vector needed for calculation
+            let disps_unknown_idx: Vec<usize> = idx_subtract::<D>(self.disps_0_idx.clone());
+            let mut b: Vec<Dtype> = disps_unknown_idx
+                .iter()
+                .map(|&idx| self.loads[idx])
+                .collect();
+            let mut csr: CompressedMatrixCSR =
+                CompressedMatrixCSR::from_vec(self.static_kmat.get_sub_matrix(&disps_unknown_idx));
+
+            csr.convert_1base();
+            let matrix: CSRforPanuaPARDISO = csr.as_panua_pardiso_arg();
+
+            let mut x: Vec<Dtype> = vec![0.0; matrix.squaredim];
+
+            // STEP 1. Set environment variables and shared library file paths
+            unsafe {
+                env::set_var("PARDISO_LIC_PATH", "/opt/panua-pardiso-20240229-linux/lic");
+                env::set_var("PARDISO_PATH", "/opt/panua-pardiso-20240229-linux/lib");
+                env::set_var("PARDISOLICMESSAGE", "1"); // 抑制许可证检查信息输出
+            }
+            let pardiso_path = env::var("PARDISO_PATH").expect("!!! PARDISO_PATH must be set!");
+            let pardiso_lic_path =
+                env::var("PARDISO_LIC_PATH").expect("!!! PARDISO_LIC_PATH must be set!");
+            println!("\n>>> PARDISO_PATH = {:?}", pardiso_path);
+            println!("\n>>> PARDISO_LIC_PATH= {:?}", pardiso_lic_path);
+
+            // STEP 2. Set PARDISO parameters
+            const NRHS: usize = 1;
+            let mut pt: [*mut c_void; 64] = [ptr::null_mut(); 64];
+            let mut maxfct: i32 = 1;
+            let mut mnum: i32 = 1;
+            let mut mtype: i32 = 2;
+            let mut phase: i32;
+            let mut n: i32 = matrix.squaredim as i32;
+            let a: Vec<f64> = matrix.values;
+            let ia: Vec<i32> = matrix.rowptr;
+            let ja: Vec<i32> = matrix.colidx;
+            let mut nrhs: i32 = NRHS as i32;
+            let mut iparm: [i32; 64] = [0; 64];
+            let mut msglvl: i32 = 1;
+            let mut dparm: [f64; 64] = [0.0; 64];
+            let mut error: i32 = 0;
+            let mut solver: i32 = 0;
+
+            unsafe {
+                // ---------------------
+                // Initialization
+                // ---------------------
+                iparm[0] = 0;
+                panua::pardisoinit(
+                    pt.as_mut_ptr(),
+                    &mut mtype,
+                    &mut solver,
+                    iparm.as_mut_ptr(),
+                    dparm.as_mut_ptr(),
+                    &mut error,
+                );
+                if error != 0 {
+                    println!("\n[PARDISO]: !!!ERROR during Reordering");
+                    return Err(error);
+                } else {
+                    println!("\n[PARDISO]: Initialization complete.");
+                }
+
+                // ---------------------
+                // Ordering
+                // ---------------------
+                iparm[2] = cpus as i32;
+                phase = 11;
+                let time_start1 = Instant::now();
+                panua::pardiso(
+                    pt.as_mut_ptr(),
+                    &mut maxfct,
+                    &mut mnum,
+                    &mut mtype,
+                    &mut phase,
+                    &mut n,
+                    a.as_ptr() as *mut f64,
+                    ia.as_ptr() as *mut i32,
+                    ja.as_ptr() as *mut i32,
+                    ptr::null_mut(),
+                    &mut nrhs,
+                    iparm.as_mut_ptr(),
+                    &mut msglvl,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    &mut error,
+                    dparm.as_mut_ptr(),
+                );
+                let time_end1 = time_start1.elapsed();
+                if error != 0 {
+                    println!("\n[PARDISO]: !!!ERROR during Reordering");
+                    return Err(error);
+                }
+
+                // ------------------------
+                // Numerical Factorization
+                // ------------------------
+                phase = 22;
+                let time_start2 = Instant::now();
+                panua::pardiso(
+                    pt.as_mut_ptr(),
+                    &mut maxfct,
+                    &mut mnum,
+                    &mut mtype,
+                    &mut phase,
+                    &mut n,
+                    a.as_ptr() as *mut f64,
+                    ia.as_ptr() as *mut i32,
+                    ja.as_ptr() as *mut i32,
+                    ptr::null_mut(),
+                    &mut nrhs,
+                    iparm.as_mut_ptr(),
+                    &mut msglvl,
+                    ptr::null_mut(),
+                    ptr::null_mut(),
+                    &mut error,
+                    dparm.as_mut_ptr(),
+                );
+                let time_end2 = time_start2.elapsed();
+                if error != 0 {
+                    return Err(error);
+                }
+
+                // ------------------------
+                // Solving
+                // ------------------------
+                phase = 33;
+                let time_start3 = Instant::now();
+                panua::pardiso(
+                    pt.as_mut_ptr(),
+                    &mut maxfct,
+                    &mut mnum,
+                    &mut mtype,
+                    &mut phase,
+                    &mut n,
+                    a.as_ptr() as *mut f64,
+                    ia.as_ptr() as *mut i32,
+                    ja.as_ptr() as *mut i32,
+                    ptr::null_mut(),
+                    &mut nrhs,
+                    iparm.as_mut_ptr(),
+                    &mut msglvl,
+                    b.as_mut_ptr(),
+                    x.as_mut_ptr(),
+                    &mut error,
+                    dparm.as_mut_ptr(),
+                );
+                let time_end3 = time_start3.elapsed();
+                let time_end4 = time_start1.elapsed();
+                if error != 0 {
+                    return Err(error);
+                }
+
+                println!("\n>>> PARDISO calculation down!");
+                println!(
+                    "\tN of equations:                       {}",
+                    disps_unknown_idx.len()
+                );
+                println!("\tAnalysis time consuming:              {:?}", time_end1);
+                println!("\tNumeric Factorization time consuming: {:?}", time_end2);
+                println!("\tSolve time consuming:                 {:?}", time_end3);
+                println!("\tTotal time consuming:                 {:?}", time_end4);
+                self.solver_time_consuming = Some(time_end4);
+            }
+
+            // write result into fields
+            let _: Vec<_> = disps_unknown_idx
+                .iter()
+                .enumerate()
+                .map(|(i, &idx)| self.disps[idx] = x[i])
+                .collect();
+            let static_kmat = SMatrix::<Dtype, D, D>::from(self.static_kmat.recover_square_arr());
+            self.external_force = Some((static_kmat * SVector::from(self.disps)).into());
+            self.state = true;
+
+            Ok(self.state)
+        }
+    */
 
     /// Solve "A * x = b" with direct method using LU decomposition
     pub fn lu_direct_solver(&mut self) -> Result<bool, i32> {

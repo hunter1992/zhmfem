@@ -70,7 +70,7 @@ impl NodeSData2D {
                 s12 += sdata_vec[2] * area;
             })
             .count();
-        let inv: Dtype = self.area_arround_node.iter().sum::<f64>().recip();
+        let inv: Dtype = self.area_arround_node.iter().sum::<Dtype>().recip();
         [s11 * inv, s22 * inv, s12 * inv]
     }
 }

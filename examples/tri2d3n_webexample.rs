@@ -18,7 +18,7 @@ fn main() {
 
             // -------- Part 0: Set initial parameters --------
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
-            let cpu_cores: usize = 8;
+            let cpu_cores: usize = 4;
 
             // "lu"       for LU       decomposition algorithm or
             // "cholesky" for Cholesky decomposition algorithm or
@@ -128,10 +128,11 @@ fn main() {
                 (strain_energy, external_force_work, potential_energy),
             )
             .expect(">>> !!! Failed to output text result file !!!");
-            */
+
 
             part.vtk_writer(&output_vtk, element_type)
                 .expect(">>> !!! Failed to output vtk file!");
+            */
 
             let total_time = time_start.elapsed();
             println!("\n>>> Total time consuming: {:?}", total_time);

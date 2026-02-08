@@ -1,0 +1,306 @@
+1) Before:
+$ cargo run -j 8 --release --example tri2d3n_webexample
+   Compiling zhmfem v0.1.0 (/home/zhm/Documents/Scripts/Rust/zhmfem)
+
+warning: `zhmfem` (lib) generated 7 warnings (run `cargo fix --lib -p zhmfem` to apply 6 suggestions)
+    Finished `release` profile [optimized] target(s) in 2.58s
+     Running `target/release/examples/tri2d3n_webexample`
+
+>>> Assembling Part2D(#1)'s stiffness matrix K1(size: 3362x3362) in single thread ......
+
+>>> Assembly Down!
+        time consuming: 440.142µs
+
+>>> PARDISO_PATH = "/opt/panua-pardiso-20240229-linux/lib"
+
+>>> PARDISO_LIC_PATH= "/opt/panua-pardiso-20240229-linux/lic"
+
+[PARDISO]: Initialization complete.
+
+================  PARDISO: solving a symm. posit. def. system  ================
+
+
+Summary PARDISO 8.2: ( reorder to reorder )
+=======================
+
+Times:
+======
+
+      Time fulladj: 0.000068 s
+      Time reorder: 0.008337 s
+      Time symbfct: 0.001657 s
+      Time parlist: 0.000424 s
+      Time malloc : -0.000288 s
+      Time total  : 0.011817 s total - sum: 0.001619 s
+
+Statistics:
+===========
+ < Parallel Direct Factorization with #cores: >              8
+ <                                and #nodes: >              1
+ < Numerical Factorization with BLAS3 and O(n) synchronization >
+
+ < Linear system Ax = b>
+             #equations:                                     3359
+             #non-zeros in A:                                21344
+             non-zeros in A (%):                             0.189172
+             #right-hand sides:                              1
+
+< Factors L and U >
+             #columns for each panel:                        64
+             # of independent subgraphs:                     0
+ < preprocessing with state of the art partitioning metis 4.0.1>
+             #supernodes:                                    1562
+             size of largest supernode:                      126
+             number of nonzeros in L                         152295
+             number of nonzeros in U                         1
+             number of nonzeros in L+U                       152296
+             number of perturbed pivots                      0
+             number of nodes in solve                        3359
+             Gflop   for the numerical factorization:        0.010967
+
+================  PARDISO: solving a symm. posit. def. system  ================
+
+
+Summary PARDISO 8.2: ( factorize to factorize )
+=======================
+
+Times:
+======
+
+      Time A to LU: 0.000000 s
+      Time numfct : 0.019968 s
+      Time malloc : -0.000019 s
+      Time total  : 0.019995 s total - sum: 0.000046 s
+
+Statistics:
+===========
+ < Parallel Direct Factorization with #cores: >              8
+ <                                and #nodes: >              1
+ < Numerical Factorization with BLAS3 and O(n) synchronization >
+
+ < Linear system Ax = b>
+             #equations:                                     3359
+             #non-zeros in A:                                21344
+             non-zeros in A (%):                             0.189172
+             #right-hand sides:                              1
+
+< Factors L and U >
+             #columns for each panel:                        64
+             # of independent subgraphs:                     0
+ < preprocessing with state of the art partitioning metis 4.0.1>
+             #supernodes:                                    1562
+             size of largest supernode:                      126
+             number of nonzeros in L                         152295
+             number of nonzeros in U                         1
+             number of nonzeros in L+U                       152296
+             number of perturbed pivots                      0
+             number of nodes in solve                        3359
+             Gflop   for the numerical factorization:        0.010967
+             Gflop/s for the numerical factorization:        0.549218
+
+================  PARDISO: solving a symm. posit. def. system  ================
+
+
+Summary PARDISO 8.2: ( solve to solve )
+=======================
+
+Times:
+======
+
+      Time solve  : 0.000209 s
+      Time total  : 0.000234 s total - sum: 0.000025 s
+
+Statistics:
+===========
+ < Parallel Direct Factorization with #cores: >              8
+ <                                and #nodes: >              1
+ < Numerical Factorization with BLAS3 and O(n) synchronization >
+
+ < Linear system Ax = b>
+             #equations:                                     3359
+             #non-zeros in A:                                21344
+             non-zeros in A (%):                             0.189172
+             #right-hand sides:                              1
+
+< Factors L and U >
+             #columns for each panel:                        64
+             # of independent subgraphs:                     0
+ < preprocessing with state of the art partitioning metis 4.0.1>
+             #supernodes:                                    1562
+             size of largest supernode:                      126
+             number of nonzeros in L                         152295
+             number of nonzeros in U                         1
+             number of nonzeros in L+U                       152296
+             number of perturbed pivots                      0
+             number of nodes in solve                        3359
+             Gflop   for the numerical factorization:        0.010967
+             Gflop/s for the numerical factorization:        0.549218
+
+>>> PARDISO calculation down!
+        N of equations:                       3359
+        Analysis time consuming:              12.734747ms
+        Numeric Factorization time consuming: 20.185353ms
+        Solve time consuming:                 543.763µs
+        Total time consuming:                 33.464407ms
+
+>>> System energy:
+        E_d: 744597908.497827 (deform energy)
+        W_f: 1489195816.995654 (exforce works)
+        E_p: -744597908.497827 (potential energy)
+
+>>> Writing calc results into vtk file ......  Down!
+>>> Total time consuming: 280.106736ms
+
+==============================================================================================
+
+2) After:
+$ cargo run -j 4 --release --example tri2d3n_webexample
+   Compiling zhmfem v0.1.0 (/home/zhm/Documents/Scripts/Rust/zhmfem)
+
+warning: `zhmfem` (example "tri2d3n_webexample") generated 1 warning (run `cargo fix --example "tri2d3n_webexample" -p zhmfem` to apply 1 suggestion)
+    Finished `release` profile [optimized] target(s) in 1.89s
+     Running `/home/zhm/Documents/Scripts/Rust/zhmfem/target/release/examples/tri2d3n_webexample`
+
+>>> Assembling Part2D(#1)'s stiffness matrix K1(size: 3362x3362) in single thread ......
+
+>>> Assembly Down!
+        time consuming: 1.049342ms
+
+>>> PARDISO_PATH = "/opt/panua-pardiso-20240229-linux/lib"
+
+>>> PARDISO_LIC_PATH= "/opt/panua-pardiso-20240229-linux/lic"
+
+[PARDISO]: Initialization complete.
+
+================  PARDISO: solving a symm. posit. def. system  ================
+
+
+Summary PARDISO 8.2: ( reorder to reorder )
+=======================
+
+Times:
+======
+
+      Time fulladj: 0.000064 s
+      Time reorder: 0.008339 s
+      Time symbfct: 0.001615 s
+      Time parlist: 0.000375 s
+      Time malloc : -0.000239 s
+      Time total  : 0.011654 s total - sum: 0.001500 s
+
+Statistics:
+===========
+ < Parallel Direct Factorization with #cores: >              4
+ <                                and #nodes: >              1
+ < Numerical Factorization with BLAS3 and O(n) synchronization >
+
+ < Linear system Ax = b>
+             #equations:                                     3359
+             #non-zeros in A:                                21344
+             non-zeros in A (%):                             0.189172
+             #right-hand sides:                              1
+
+< Factors L and U >
+             #columns for each panel:                        80
+             # of independent subgraphs:                     0
+ < preprocessing with state of the art partitioning metis 4.0.1>
+             #supernodes:                                    1562
+             size of largest supernode:                      126
+             number of nonzeros in L                         152583
+             number of nonzeros in U                         1
+             number of nonzeros in L+U                       152584
+             number of perturbed pivots                      0
+             number of nodes in solve                        3359
+             Gflop   for the numerical factorization:        0.010878
+
+================  PARDISO: solving a symm. posit. def. system  ================
+
+
+Summary PARDISO 8.2: ( factorize to factorize )
+=======================
+
+Times:
+======
+
+      Time A to LU: 0.000000 s
+      Time numfct : 0.002086 s
+      Time malloc : -0.000022 s
+      Time total  : 0.002116 s total - sum: 0.000052 s
+
+Statistics:
+===========
+ < Parallel Direct Factorization with #cores: >              4
+ <                                and #nodes: >              1
+ < Numerical Factorization with BLAS3 and O(n) synchronization >
+
+ < Linear system Ax = b>
+             #equations:                                     3359
+             #non-zeros in A:                                21344
+             non-zeros in A (%):                             0.189172
+             #right-hand sides:                              1
+
+< Factors L and U >
+             #columns for each panel:                        80
+             # of independent subgraphs:                     0
+ < preprocessing with state of the art partitioning metis 4.0.1>
+             #supernodes:                                    1562
+             size of largest supernode:                      126
+             number of nonzeros in L                         152583
+             number of nonzeros in U                         1
+             number of nonzeros in L+U                       152584
+             number of perturbed pivots                      0
+             number of nodes in solve                        3359
+             Gflop   for the numerical factorization:        0.010878
+             Gflop/s for the numerical factorization:        5.214488
+
+================  PARDISO: solving a symm. posit. def. system  ================
+
+
+Summary PARDISO 8.2: ( solve to solve )
+=======================
+
+Times:
+======
+
+      Time solve  : 0.000230 s
+      Time total  : 0.000254 s total - sum: 0.000024 s
+
+Statistics:
+===========
+ < Parallel Direct Factorization with #cores: >              4
+ <                                and #nodes: >              1
+ < Numerical Factorization with BLAS3 and O(n) synchronization >
+
+ < Linear system Ax = b>
+             #equations:                                     3359
+             #non-zeros in A:                                21344
+             non-zeros in A (%):                             0.189172
+             #right-hand sides:                              1
+
+< Factors L and U >
+             #columns for each panel:                        80
+             # of independent subgraphs:                     0
+ < preprocessing with state of the art partitioning metis 4.0.1>
+             #supernodes:                                    1562
+             size of largest supernode:                      126
+             number of nonzeros in L                         152583
+             number of nonzeros in U                         1
+             number of nonzeros in L+U                       152584
+             number of perturbed pivots                      0
+             number of nodes in solve                        3359
+             Gflop   for the numerical factorization:        0.010878
+             Gflop/s for the numerical factorization:        5.214488
+
+>>> PARDISO calculation down!
+        N of equations:                       3359
+        Analysis time consuming:              12.777633ms
+        Numeric Factorization time consuming: 2.361756ms
+        Solve time consuming:                 2.069179ms
+        Total time consuming:                 17.208974ms
+
+>>> System energy:
+        E_d: 744597908.497818 (deform energy)
+        W_f: 1489195816.995636 (exforce works)
+        E_p: -744597908.497818 (potential energy)
+
+>>> Total time consuming: 242.866926ms

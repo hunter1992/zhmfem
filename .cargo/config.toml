@@ -1,3 +1,11 @@
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+rustflags = [
+    "-C", "target-cpu=native",#有针对作者使用的CPU(Intel Core i5-8265U)的优化
+    "-C", "link-arg=-fuse-ld=mold"#使用mold加快链接速度
+]
+
+[build]
+# 非 Linux 平台（如 macOS/Windows）默认也用 native
+# 但在 Linux 上，上面的 target 配置会覆盖这个全局配置
+rustflags = ["-C", "target-cpu=native"]
