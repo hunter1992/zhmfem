@@ -16,7 +16,7 @@ fn main() {
 
             // -------- Part 0: Set initial parameters --------
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
-            let cpu_cores: usize = 4;
+            let cpu_cores: usize = 2;
 
             // "lu"       for LU       decomposition algorithm or
             // "cholesky" for Cholesky decomposition algorithm or

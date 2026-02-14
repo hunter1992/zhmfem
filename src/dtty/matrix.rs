@@ -1,7 +1,4 @@
-use crate::dtty::{
-    aligndata::{AlignedF64, AlignedI32},
-    basic::Dtype,
-};
+use crate::dtty::{aligndata::AlignedVec, basic::Dtype};
 use crate::tool::{compress_symmetry_matrix_csr, compress_symmetry_matrix_sks};
 use std::fmt;
 
@@ -291,13 +288,11 @@ impl CompressedMatrixCSR {
     pub fn as_panua_pardiso_arg(self) -> CSRforPanuaPARDISO {
         let colidx: Vec<i32> = self.colidx.into_iter().map(|val| val as i32).collect();
         let rowptr: Vec<i32> = self.rowptr.into_iter().map(|val| val as i32).collect();
-        unsafe {
-            CSRforPanuaPARDISO {
-                values: AlignedF64::from_slice(&self.values),
-                colidx: AlignedI32::from_slice(&colidx),
-                rowptr: AlignedI32::from_slice(&rowptr),
-                squaredim: self.squaredim,
-            }
+        CSRforPanuaPARDISO {
+            values: AlignedVec::<f64>::from_slice(&self.values),
+            colidx: AlignedVec::<i32>::from_slice(&colidx),
+            rowptr: AlignedVec::<i32>::from_slice(&rowptr),
+            squaredim: self.squaredim,
         }
     }
 }
@@ -317,9 +312,9 @@ impl fmt::Display for CompressedMatrixCSR {
 /// 1) CSR for Panua's PARDISO is 1-based;
 /// 2) colum index & row pointer element is i32 not usize
 pub struct CSRforPanuaPARDISO {
-    pub values: AlignedF64, // matrix element data
-    pub colidx: AlignedI32, // data in which colum
-    pub rowptr: AlignedI32, // rows head's pointer
+    pub values: AlignedVec<f64>, // matrix element data
+    pub colidx: AlignedVec<i32>, // data in which colum
+    pub rowptr: AlignedVec<i32>, // rows head's pointer
     pub squaredim: usize,
 }
 
@@ -329,6 +324,60 @@ impl CSRforPanuaPARDISO {
         let mut csr: CompressedMatrixCSR = compress_symmetry_matrix_csr(square_mat);
         csr.convert_1base();
         csr.as_panua_pardiso_arg()
+    }
+
+    /// 对 CSR 矩阵的所有组件进行内存预热
+    #[inline(always)]
+    pub fn warm_up(&self) {
+        #[cfg(feature = "parallel")]
+        {
+            // 只有开启了特性，且当前 CPU 核心数 > 1 时才使用并行
+            // 这样可以兼顾编译速度和运行时的极端性能
+            rayon::join(
+                || self.warm_up_slice(&self.values),
+                || {
+                    rayon::join(
+                        || self.warm_up_slice(&self.colidx),
+                        || self.warm_up_slice(&self.rowptr),
+                    )
+                },
+            );
+        }
+
+        #[cfg(not(feature = "parallel"))]
+        {
+            // 默认走超轻量级的单线程预热，编译极快
+            self.warm_up_slice(&self.values);
+            self.warm_up_slice(&self.colidx);
+            self.warm_up_slice(&self.rowptr);
+        }
+    }
+
+    /// 内部辅助函数：以 64 字节（Cache Line）为步长进行强制读取
+    #[inline(always)]
+    pub fn warm_up_slice<T>(&self, data: &[T]) {
+        if data.is_empty() {
+            return;
+        }
+
+        let ptr = data.as_ptr() as *const u8;
+        let size = data.len() * std::mem::size_of::<T>();
+        let mut offset = 0;
+
+        unsafe {
+            while offset < size {
+                // 使用 volatile 读取每个缓存行的第一个字节
+                // 这会强制触发 MMU 填充 TLB，并让硬件预取器感知到流式访问
+                std::ptr::read_volatile(ptr.add(offset));
+                // 现代 CPU 缓存行通常为 64 字节，步进 64 可实现最高效率覆盖
+                offset += 64;
+            }
+
+            // 确保最后一个字节也被触碰到，防止大对象末尾页缺失
+            if size > 0 {
+                std::ptr::read_volatile(ptr.add(size - 1));
+            }
+        }
     }
 
     /// Compresse a matrix in CSR form from a full square matrix Vec
@@ -366,28 +415,24 @@ impl CSRforPanuaPARDISO {
             *ptr += 1;
         }
 
-        unsafe {
-            CSRforPanuaPARDISO {
-                values: AlignedF64::from_slice(&values),
-                colidx: AlignedI32::from_slice(&colidx),
-                rowptr: AlignedI32::from_slice(&rowptr),
-                squaredim,
-            }
+        CSRforPanuaPARDISO {
+            values: AlignedVec::<f64>::from_slice(&values),
+            colidx: AlignedVec::<i32>::from_slice(&colidx),
+            rowptr: AlignedVec::<i32>::from_slice(&rowptr),
+            squaredim,
         }
     }
 
     pub fn to_normal_csr(self) -> CompressedMatrixCSR {
-        unsafe {
-            let mut csr = CompressedMatrixCSR {
-                values: self.values.into_vec(),
-                colidx: self.colidx.into_vec_usize(),
-                rowptr: self.rowptr.into_vec_usize(),
-                baseinfo: 1,
-                squaredim: self.squaredim,
-            };
-            csr.convert_0base();
-            csr
-        }
+        let mut csr = CompressedMatrixCSR {
+            values: self.values.into_vec(),
+            colidx: self.colidx.into_vec(),
+            rowptr: self.rowptr.into_vec(),
+            baseinfo: 1,
+            squaredim: self.squaredim,
+        };
+        csr.convert_0base();
+        csr
     }
 }
 

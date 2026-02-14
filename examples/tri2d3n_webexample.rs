@@ -9,7 +9,7 @@ use std::time::Instant;
 use zhmfem::*;
 
 fn main() {
-    const STACK_SIZE: usize = 1024 * 1024 * 1024; // MB = 1024 * 1024
+    const STACK_SIZE: usize = 16 * 1024 * 1024 * 1024; // MB = 1024 * 1024
     let executor = thread::Builder::new()
         .stack_size(STACK_SIZE)
         .spawn(|| {
@@ -18,15 +18,15 @@ fn main() {
 
             // -------- Part 0: Set initial parameters --------
             const _E: Dtype = 0.0; // Exponent in scientific notation to base 10
-            let cpu_cores: usize = 4;
+            let cpu_cores: usize = 2;
 
             // "lu"       for LU       decomposition algorithm or
             // "cholesky" for Cholesky decomposition algorithm or
             // "pardiso"  for calling  Panua Tech's PARDISO
             // "gs"       for gauss-seidel iteration algorithm
-            // let calc_method: &str = "cholesky"; 
-            //let calc_method: &str = "auto"; 
-            let calc_method: &str = "auto"; 
+            // let calc_method: &str = "cholesky";
+            //let calc_method: &str = "auto";
+            let calc_method: &str = "auto";
 
             let calc_accuracy: Dtype = 0.001; // Calculation accuracy of iterative algorithm
 
@@ -37,11 +37,11 @@ fn main() {
 
             // -------- Part 1:  Meshing and applying boundary conditions --------
             // Set mesh and freedom parameters
-            const R: usize = 41;     // rows of nodes
-            const C: usize = 41;     // columns of nodes
-            const D: usize = R * C;  // Dimension of part stiffness matrix
-            const N: usize = 3;      // num of nodes in single element
-            const F: usize = 2;      // num of degree freedom at single node
+            const R: usize = 41; // rows of nodes
+            const C: usize = 41; // columns of nodes
+            const D: usize = R * C; // Dimension of part stiffness matrix
+            const N: usize = 3; // num of nodes in single element
+            const F: usize = 2; // num of degree freedom at single node
 
             // Automatically set coords and grouped nodes index
             // Auto-mesh generate coords and grouped nodes index
@@ -79,7 +79,7 @@ fn main() {
 
             let _ = eqs.solve(calc_method, calc_accuracy, cpu_cores);
 
-            let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
+            //let _calc_time: std::time::Duration = eqs.solver_time_consuming.unwrap();
 
             // write the displacement and force result into Node2D's field
             part.write_result(&eqs);
@@ -111,7 +111,6 @@ fn main() {
                     println!("{}", elem.info(0.0));
                 })
                 .count();
-            */
 
             // -------- Part 5:  Write clac result into txt file --------
             let problem_type = "WEBexample";
@@ -119,6 +118,7 @@ fn main() {
             let output_path = "/home/zhm/Documents/Scripts/Rust/zhmfem/results/";
             let _output_txt = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.txt");
             let output_vtk = format!("{output_path}{problem_type}_{element_type}_{calc_method}_{parallel_or_singllel}.vtk");
+            */
 
             /*
             part.txt_writer(

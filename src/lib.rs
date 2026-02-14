@@ -19,7 +19,7 @@ pub use calc::{
     solver::LinearEqs,
 };
 pub use dtty::{
-    aligndata::AlignedF64,
+    aligndata::AlignedVec,
     basic::{ADtype, Dtype, Jacobian2D, Jacobian3D},
     matrix::{CompressedMatrixCSR, CompressedMatrixSKS},
     sdata::NodeSData2D,
@@ -97,6 +97,18 @@ mod testing {
         assert_eq!(0.5 as Dtype, tri1.area());
         assert_eq!(0.5 as Dtype, tri2.area());
         // assert_eq!(1.0 as Dtype, rec1.area());
+
+        // ----- 3D -----
+        let n1 = Node3D::new(1, [-1., -1., -1.]);
+        let n2 = Node3D::new(2, [1., -1., -1.]);
+        let n3 = Node3D::new(3, [1., 1., -1.]);
+        let n4 = Node3D::new(4, [-1., 1., -1.]);
+        let n5 = Node3D::new(5, [-1., -1., 1.]);
+        let n6 = Node3D::new(6, [1., -1., 1.]);
+        let n7 = Node3D::new(7, [1., 1., 1.]);
+        let n8 = Node3D::new(8, [-1., 1., 1.]);
+
+        let _hex = Hex3D8N::new(1, [&n1, &n2, &n3, &n4, &n5, &n6, &n7, &n8], material);
     }
 
     #[test]

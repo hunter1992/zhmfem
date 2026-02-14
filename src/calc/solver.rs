@@ -1,5 +1,5 @@
 use crate::dtty::{
-    aligndata::AlignedF64,
+    aligndata::AlignedVec,
     basic::Dtype,
     matrix::{CSRforPanuaPARDISO, CompressedMatrixSKS},
 };
@@ -79,16 +79,17 @@ impl<const D: usize> LinearEqs<D> {
         // STEP 0. Prepare the coefficient matrix and RHS vector needed for calculation
         let disps_unknown_idx: Vec<usize> = idx_subtract::<D>(self.disps_0_idx.clone());
 
-        let arg_matrix: CSRforPanuaPARDISO =
+        let mut arg_matrix: CSRforPanuaPARDISO =
             CSRforPanuaPARDISO::from_vec(self.static_kmat.get_sub_matrix(&disps_unknown_idx));
 
         let rhs: Vec<Dtype> = disps_unknown_idx
             .iter()
             .map(|&idx| self.loads[idx])
             .collect();
-        let mut b = unsafe { AlignedF64::from_slice(&rhs) };
+        let mut b: AlignedVec<f64> = AlignedVec::from_slice::<Dtype>(&rhs);
 
-        let mut x: AlignedF64 = unsafe { AlignedF64::from_slice(&vec![0.0; arg_matrix.squaredim]) };
+        let mut x: AlignedVec<f64> =
+            AlignedVec::from_slice(&vec![0.0 as Dtype; arg_matrix.squaredim]);
 
         // STEP 1. Set environment variables and shared library file paths
         unsafe {
@@ -107,12 +108,12 @@ impl<const D: usize> LinearEqs<D> {
         let mut pt: [*mut c_void; 64] = [ptr::null_mut(); 64];
         let mut maxfct: i32 = 1;
         let mut mnum: i32 = 1;
-        let mut mtype: i32 = 2;
+        let mut mtype: i32 = 2; // mat type: 2--real spd, -2--real si
         let mut phase: i32;
         let mut n: i32 = arg_matrix.squaredim as i32;
-        let a: *mut f64 = arg_matrix.values.ptr;
-        let ia: *mut i32 = arg_matrix.rowptr.ptr;
-        let ja: *mut i32 = arg_matrix.colidx.ptr;
+        let a: *mut f64 = arg_matrix.values.as_mut_ptr();
+        let ia: *mut i32 = arg_matrix.rowptr.as_mut_ptr();
+        let ja: *mut i32 = arg_matrix.colidx.as_mut_ptr();
         let mut nrhs: i32 = NRHS as i32;
         let mut iparm: [i32; 64] = [0; 64];
         let mut msglvl: i32 = 1;
@@ -120,25 +121,31 @@ impl<const D: usize> LinearEqs<D> {
         let mut error: i32 = 0;
         let mut solver: i32 = 0;
 
-        // 对iparm进行设置，充分利用内存对齐带来的性能提升
-        iparm[0] = 1; //  关闭非默认设置
-        iparm[1] = 2; //  METIS排序，减少 Fill-in 降低O(n^3)运算量
-        iparm[9] = 8; //  eps pivot
-        iparm[10] = 1; // 提高矩阵的条件数
-        iparm[12] = 1; // matching
-        iparm[20] = 1; // 让内存控制器更高效地命中Cache Line
-        iparm[23] = 1; // 启用并行分解 (Parallel Factorization)
-        iparm[24] = 1; // 并行求解
-        iparm[27] = 1; // 并行重排序
-        iparm[33] = 0; // 启用 BLAS 级并行/优化
-        iparm[34] = 1; // C-style (0-indexed)，避免内部拷贝导致对齐失效
-        iparm[56] = 1; // 压缩超节点中的小奇异值
+        // PARDISO 针对 SPD 矩阵与内存对齐的极致优化设置
+        // ---------------------------------------------------------
+        iparm[0] = 1; //   非默认设置启用
+        iparm[1] = 3; //   并行嵌套分簇排序 (Parallel Nested Dissection)，比 METIS(2) 更快
+        iparm[2] = cpus as i32; // 明确指定计算线程数
+        iparm[7] = 2; //   自动进行两次迭代精炼，确保 SPD 矩阵的数值稳定性
+        iparm[9] = 13; //  扰动参数，对病态矩阵增加鲁棒性
+        iparm[10] = 0; //  SPD 矩阵无需 Scaling
+        iparm[11] = 0; //  显式选择非转置矩阵 (Solve Ax = b)
+        iparm[12] = 0; //  SPD 矩阵无需 Matching 预处理（Matching 会破坏正定性）
+        iparm[17] = -1; // 报告非零元数量 (L + U)
+        iparm[18] = -1; // 报告总 Gflop 消耗
+        iparm[20] = 1; //  Pivoting 模式：对于正定矩阵，1 (Bunch-Kaufman) 更高效且安全
+        iparm[23] = 10; // 开启新的二层并行数值分解模式 (Panua 专属优化)
+        iparm[24] = 1; //  开启并行求解
+        iparm[26] = 1; //  开启矩阵结构核对（检查 ia, ja 是否合法）
+        iparm[27] = 1; //  使用双精度计算
+        iparm[33] = 0; //  禁用 MKL 内部自动并行，完全交由 PARDISO 控制（防止冲突）
+        iparm[34] = 0; //  0 表示 1-based 索引 (Fortran 风格)
+        iparm[55] = 0; //  禁用内点法预处理
 
         unsafe {
             // ---------------------
             // Initialization
             // ---------------------
-            // iparm[0] = 0;
             panua::pardisoinit(
                 pt.as_mut_ptr(),
                 &mut mtype,
@@ -157,7 +164,7 @@ impl<const D: usize> LinearEqs<D> {
             // ---------------------
             // Ordering
             // ---------------------
-            iparm[2] = cpus as i32;
+            arg_matrix.warm_up();
             phase = 11;
             let time_start1 = Instant::now();
             panua::pardiso(
@@ -217,6 +224,8 @@ impl<const D: usize> LinearEqs<D> {
             // ------------------------
             // Solving
             // ------------------------
+            b.warm_up();
+            x.warm_up();
             phase = 33;
             let time_start3 = Instant::now();
             panua::pardiso(
@@ -257,7 +266,7 @@ impl<const D: usize> LinearEqs<D> {
         }
 
         // write result into fields
-        let x = unsafe { x.into_vec() };
+        let x: Vec<Dtype> = x.into_vec();
         let _: Vec<_> = disps_unknown_idx
             .iter()
             .enumerate()

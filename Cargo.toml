@@ -6,7 +6,17 @@ edition = "2024"
 [dependencies]
 nalgebra = "0.34.1"
 atomic_float = "1.1.0"
+rayon = { version = "1.8", optional = true }
 vtkio = { version = "0.7.0-rc1", default-features = false }
+
+[features]
+parallel = ["dep:rayon"]
 
 [lib]
 doctest = false
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"

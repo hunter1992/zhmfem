@@ -1,3 +1,4 @@
+备忘：cargo build --release --features parallel
 1) Before:
 $ cargo run -j 8 --release --example tri2d3n_webexample
    Compiling zhmfem v0.1.0 (/home/zhm/Documents/Scripts/Rust/zhmfem)

@@ -457,8 +457,8 @@ where
             byte_order: ByteOrder::BigEndian,
             file_path: None,
             data: DataSet::inline(UnstructuredGridPiece {
-                points: IOBuffer::F32(coords),
-                // points: IOBuffer::F64(coords),
+                // points: IOBuffer::F32(coords),
+                points: IOBuffer::F64(coords),
                 cells: Cells {
                     cell_verts: VertexNumbers::Legacy {
                         num_cells: elem_num as u32,
@@ -517,8 +517,8 @@ where
             byte_order: ByteOrder::BigEndian,
             file_path: None,
             data: DataSet::inline(UnstructuredGridPiece {
-                points: IOBuffer::F32(coords),
-                // points: IOBuffer::F64(coords),
+                // points: IOBuffer::F32(coords),
+                points: IOBuffer::F64(coords),
                 cells: Cells {
                     cell_verts: VertexNumbers::Legacy {
                         num_cells: elem_num as u32,
@@ -575,8 +575,8 @@ where
             byte_order: ByteOrder::BigEndian,
             file_path: None,
             data: DataSet::inline(UnstructuredGridPiece {
-                points: IOBuffer::F32(coords),
-                // points: IOBuffer::F64(coords),
+                // points: IOBuffer::F32(coords),
+                points: IOBuffer::F64(coords),
                 cells: Cells {
                     cell_verts: VertexNumbers::Legacy {
                         num_cells: elem_num as u32,
